@@ -1,0 +1,17 @@
+# One-click deploy to Render as a single web service.
+# Set ANTHROPIC_API_KEY in the Render dashboard after the first deploy.
+services:
+  - type: web
+    name: campaign-forge
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: ANTHROPIC_API_KEY
+        sync: false   # entered in the dashboard, never committed
+      - key: MOCK_CLAUDE
+        value: "0"    # set to "1" to demo without spending tokens
