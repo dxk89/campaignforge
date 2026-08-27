@@ -25,4 +25,5 @@ Rules for the builder:
 | 03-phase2-workspace.md | Editing, regenerate, versions, claims registry, compliance gate, approvals | detailed |
 | 04-phase3-authority.md | Provenance, rescan, landing page, results, verdicts, learnings, exemplars, image review, calendar | detailed |
 | 05-phase4-rigour.md | Evals, gate, prompt versions, model audit, export pack, ceiling, telemetry | detailed |
+| 07-tooling.md | Free repos and tools per agent, with limits, licences and the phase each lands in | detailed |
 | 06-agent-training.md | Per-agent expertise, methods, knowledge packs, procedures, rubrics, adversarial cases, feedback loops; built alongside the phases on the schedule in its §4 | detailed |
