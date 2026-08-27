@@ -23,7 +23,8 @@ Rules for the builder:
 | Spec | Scope | Status |
 |---|---|---|
 | 01-week2-reviewers.md | Critic, Art Director, Scout, citation checks, fast path, golden sets | detailed |
-| 02-phase1-foundation.md | Next.js + Firebase, client library, persisted campaigns, ledger, export | detailed |
+| 02-phase1-foundation.md | Next.js + Firebase, client library, persisted campaigns, ledger, export | **tasks 1-8, 10 built** |
+| 02b-phase1-remaining.md | The 10 tasks left to finish Phase 1: nav, source and asset wiring, brief upload, image UI, exports, tracking table, memory on Firestore, emulator run, deploy runbook | **next** |
 | 03-phase2-workspace.md | Editing, regenerate, versions, claims registry, compliance gate, approvals | detailed |
 | 04-phase3-authority.md | Provenance, rescan, landing page, results, verdicts, learnings, exemplars, image review, calendar | detailed |
 | 05-phase4-rigour.md | Evals, gate, prompt versions, model audit, export pack, ceiling, telemetry | detailed |
