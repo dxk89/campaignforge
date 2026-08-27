@@ -10,6 +10,8 @@ claude
   After each task run `npm test` and show me the result. Do not start the next phase.
 ```
 
+Each phase opens with the assumptions it inherits from the previous one. The builder verifies them on entry and adapts field names to what actually shipped, noting the adaptation in the first commit of the phase. Contracts within a phase are fixed.
+
 Rules for the builder:
 - One task at a time, in order. Each task ends with `npm test` passing and a commit.
 - Contracts in these specs are fixed. If a contract cannot be met, stop and say why rather than changing it.
@@ -21,5 +23,5 @@ Rules for the builder:
 | 01-week2-reviewers.md | Critic, Art Director, Scout, citation checks, fast path, golden sets | detailed |
 | 02-phase1-foundation.md | Next.js + Firebase, client library, persisted campaigns, ledger, export | detailed |
 | 03-phase2-workspace.md | Editing, regenerate, versions, claims registry, compliance gate, approvals | detailed |
-| 04-phase3-authority.md | Provenance, landing page, results, learnings, image review, calendar | outline; detail after Phase 2 |
-| 05-phase4-rigour.md | Evals, prompt versions, model compliance, export pack | outline; detail after Phase 3 |
+| 04-phase3-authority.md | Provenance, rescan, landing page, results, verdicts, learnings, exemplars, image review, calendar | detailed |
+| 05-phase4-rigour.md | Evals, gate, prompt versions, model audit, export pack, ceiling, telemetry | detailed |
