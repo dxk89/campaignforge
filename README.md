@@ -4,6 +4,8 @@ Brief in, campaign out. An agentic marketing campaign system built for working o
 
 Built as a portfolio piece by a marketer who ships production apps with AI assistance. The code is meant to be read.
 
+**Working on this repository?** Start with `HANDOVER.md`, then `CLAUDE.md`, then the current spec in `docs/build/`.
+
 ## What it does
 
 1. **Brief.** Five fields: product, description, audience, objective, tone. Or upload a briefing document (PDF, DOCX, TXT, MD) and the fields fill in; the document is kept as a source.
