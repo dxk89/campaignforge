@@ -16,8 +16,12 @@ export const newId = () => randomUUID();
 export const hashOf = (v: unknown) => createHash('sha256').update(JSON.stringify(v ?? null)).digest('hex').slice(0, 32);
 
 // ---- in-memory fallback ------------------------------------------------------
+// Pinned to globalThis: Next bundles route handlers and server components into
+// separate module graphs, so a module-level Map would exist twice and a client
+// created by a POST would be invisible to the page that renders it.
 type Mem = { clients: Map<string, any>; sub: Map<string, Map<string, any>> };
-const mem: Mem = { clients: new Map(), sub: new Map() };
+declare global { var __cfMem: Mem | undefined; }
+const mem: Mem = globalThis.__cfMem ?? (globalThis.__cfMem = { clients: new Map(), sub: new Map() });
 const memKey = (...parts: string[]) => parts.join('/');
 function memCol(key: string) {
   if (!mem.sub.has(key)) mem.sub.set(key, new Map());

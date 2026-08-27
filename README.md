@@ -21,16 +21,21 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
 
 ```bash
 git clone <this repo> && cd campaign-forge
-npm install
-cp .env.example .env        # add ANTHROPIC_API_KEY; GEMINI_API_KEY is optional, for images
-npm start                   # http://localhost:3000
+npm install                 # shared lib/ and the legacy app
+cd web && npm install && cd ..
+cp .env.example .env        # ANTHROPIC_API_KEY; everything else is optional
+npm run web                 # http://localhost:3000
 ```
 
-No key? Run the interface on fixtures:
+No key, no Firebase project, no accounts:
 
 ```bash
-MOCK_CLAUDE=1 npm start
+MOCK_CLAUDE=1 MOCK_AUTH=1 npm run web
 ```
+
+That runs the whole product on fixtures against an in-memory store. It is how the test suites run, and it is deliberate: a reviewer should be able to see everything working in one command.
+
+`npm test` runs five suites: the agent runtime against a scripted model, the data layer, the API contract, server-rendered pages, and the legacy front end.
 
 Mock mode returns a fixture campaign for a fictional product (Ledgerline). One Google headline in the fixture is deliberately over the limit so you can see the validation flag.
 
@@ -52,9 +57,12 @@ vercel --prod
 ## Layout
 
 ```
-server.js               Long-running entry point (local, Render)
-api/index.js            Serverless entry point (Vercel); both serve lib/app.js
-lib/app.js              Express: static front end, sources, agent routes, /api/generate
+web/                    The product: Next.js app, auth, Firestore layer, pages
+web/server/db.ts        Typed data layer; in-memory fallback when Firebase is absent
+web/server/inputs.ts    Assembles each agent's inputs from stored artifacts; staleness
+web/app/api/            One route per agent run, clients, sources, images, ledger, export
+legacy/                 The prototype Express app and front end, kept for one release
+lib/app.js              Express routes for the legacy app
 lib/agents/runtime.js   The loop every agent runs on: tools, submit schema, validators as gates, budgets, trace
 lib/agents/orchestrator.js  Runs one agent with its packet and memory, or the default campaign plan
 lib/agents/roster/      One file per agent: role, model, tools, schema, packet, validate

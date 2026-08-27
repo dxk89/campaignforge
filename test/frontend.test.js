@@ -5,7 +5,7 @@ const fs = require('fs');
 const { JSDOM } = require('jsdom');
 
 const root = path.join(__dirname, '..');
-const server = spawn('node', ['server.js'], { cwd: root, env: { ...process.env, MOCK_CLAUDE: '1', PORT: '3111' }, stdio: 'ignore' });
+const server = spawn('node', ['legacy/server.js'], { cwd: root, env: { ...process.env, MOCK_CLAUDE: '1', PORT: '3111' }, stdio: 'ignore' });
 const site = spawn('python3', ['-m', 'http.server', '8099'], { cwd: path.join(__dirname, 'fixture-site'), stdio: 'ignore' });
 const stop = () => { server.kill(); site.kill(); };
 process.on('exit', stop);
@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
   await wait(1500);
-  const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8').replace(/<link[^>]+googleapis[^>]*>/g, '');
+  const html = fs.readFileSync(path.join(root, 'legacy/public/index.html'), 'utf8').replace(/<link[^>]+googleapis[^>]*>/g, '');
   const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'http://localhost:3111/', pretendToBeVisual: true });
   const w = dom.window;
   w.fetch = (u, o) => fetch(new URL(u, 'http://localhost:3111/').href, o);
@@ -25,7 +25,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   w.HTMLAnchorElement.prototype.click = function () { console.log('download:', this.download); };
   const errors = [];
   w.addEventListener('error', (e) => errors.push(e.message));
-  w.eval(fs.readFileSync(path.join(root, 'public/app.js'), 'utf8'));
+  w.eval(fs.readFileSync(path.join(root, 'legacy/public/app.js'), 'utf8'));
   const d = w.document;
 
   d.querySelector('#site-input').value = 'http://localhost:8099'; d.querySelector('#site-scan').click(); await wait(800);

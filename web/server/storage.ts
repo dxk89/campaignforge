@@ -5,7 +5,10 @@
  */
 import { bucket, storeEnabled, uid } from './firebase';
 
-const memFiles = new Map<string, { buffer: Buffer; mime: string }>();
+// Pinned to globalThis for the same reason as the db store: separate module
+// graphs for route handlers and server components.
+declare global { var __cfFiles: Map<string, { buffer: Buffer; mime: string }> | undefined; }
+const memFiles = globalThis.__cfFiles ?? (globalThis.__cfFiles = new Map<string, { buffer: Buffer; mime: string }>());
 
 const key = (p: string) => `users/${uid()}/${p}`;
 

@@ -1,11 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" }
-  ],
+  "buildCommand": "cd web && npm install && npm run build",
+  "outputDirectory": "web/.next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
   "functions": {
-    "api/index.js": {
-      "maxDuration": 300
-    }
+    "web/app/api/**/*.ts": { "maxDuration": 300 }
   }
 }

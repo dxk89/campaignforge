@@ -5,11 +5,12 @@
   "main": "server.js",
   "private": true,
   "scripts": {
-    "start": "node server.js",
+    "start": "node legacy/server.js",
     "dev": "node --watch server.js",
-    "test": "node test/runtime.test.js && node test/db.test.js && node test/api.test.js && node test/frontend.test.js",
+    "test": "node test/runtime.test.js && node test/db.test.js && node test/api.test.js && node test/pages.test.js && node test/frontend.test.js",
     "web": "cd web && next dev",
-    "web:build": "cd web && next build"
+    "web:build": "cd web && next build",
+    "legacy": "node legacy/server.js"
   },
   "engines": {
     "node": ">=20"

@@ -4,8 +4,8 @@
  */
 require('dotenv').config();
 
-const app = require('./lib/app');
-const { MOCK } = require('./lib/claude');
+const app = require('../lib/app');
+const { MOCK } = require('../lib/claude');
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
