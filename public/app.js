@@ -36,6 +36,9 @@ let sources = [];
 let result = null;
 let briefUsage = null;
 let brandKit = null;
+let imagesAvailable = false;
+let imageUsage = { images: 0, costEur: 0 };
+fetch('/api/health').then((r) => r.json()).then((h) => { imagesAvailable = Boolean(h.images); }).catch(() => {});
 let activeTab = 'strategy';
 let activeLang = 'en';
 
@@ -260,7 +263,7 @@ $('#site-scan').addEventListener('click', async () => {
   try {
     const data = await postJson('/api/sources/site', { url });
     data.sources.forEach(addSource);
-    brandKit = data.brandKit;
+    brandKit = { ...data.brandKit, assets: brandKit?.assets || { logo: null, artwork: [] } };
     renderBrandKit();
     if (!$('#brief-form').elements.clientName.value && brandKit.siteName) $('#brief-form').elements.clientName.value = brandKit.siteName;
     if (!$('#brief-form').elements.companyUrl.value) $('#brief-form').elements.companyUrl.value = url;
@@ -271,6 +274,71 @@ $('#site-scan').addEventListener('click', async () => {
   btn.textContent = 'Scan site';
 });
 $('#site-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#site-scan').click(); } });
+
+/** Read an image file, downscale it, return a data URL. Logos keep PNG (transparency); artwork becomes JPEG. */
+function fileToDataUrl(file, { max, png }) {
+  return new Promise((resolve, reject) => {
+    if (file.type === 'image/svg+xml') {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Not a readable image')); };
+    img.src = url;
+  });
+}
+
+function ensureKit() {
+  if (!brandKit) brandKit = { siteName: $('#brief-form').elements.clientName.value.trim() || $('#brief-form').elements.productName.value.trim() || '', palette: null, fonts: [], pages: [] };
+  if (!brandKit.assets) brandKit.assets = { logo: null, artwork: [] };
+  return brandKit;
+}
+
+$('#logo-input').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try { ensureKit().assets.logo = await fileToDataUrl(f, { max: 600, png: true }); renderAssets(); } catch (err) { showSourceError(err.message); }
+  e.target.value = '';
+});
+
+$('#artwork-input').addEventListener('change', async (e) => {
+  const kit = ensureKit();
+  for (const f of Array.from(e.target.files).slice(0, 6 - kit.assets.artwork.length)) {
+    try { kit.assets.artwork.push(await fileToDataUrl(f, { max: 1024, png: false })); } catch (err) { showSourceError(err.message); }
+  }
+  renderAssets();
+  e.target.value = '';
+});
+
+function renderAssets() {
+  const el = $('#asset-strip');
+  const a = brandKit?.assets;
+  if (!a || (!a.logo && !a.artwork.length)) { el.hidden = true; return; }
+  el.innerHTML =
+    (a.logo ? `<div class="thumb logo" title="Logo"><img src="${a.logo}" alt="logo"><button type="button" data-rm="logo" aria-label="Remove logo">×</button></div>` : '') +
+    a.artwork.map((d, i) => `<div class="thumb" title="Artwork ${i + 1}"><img src="${d}" alt=""><button type="button" data-rm="${i}" aria-label="Remove">×</button></div>`).join('');
+  el.hidden = false;
+}
+
+$('#asset-strip').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-rm]');
+  if (!b) return;
+  if (b.dataset.rm === 'logo') brandKit.assets.logo = null; else brandKit.assets.artwork.splice(Number(b.dataset.rm), 1);
+  renderAssets();
+});
 
 function renderBrandKit() {
   const el = $('#brand-kit');
@@ -349,6 +417,7 @@ $('#brief-form').addEventListener('submit', async (e) => {
   const passes = {};
   const started = Date.now();
   let current = null;
+  imageUsage = { images: 0, costEur: 0 };
 
   const run = async (pass, body) => {
     current = pass;
@@ -713,11 +782,78 @@ function renderSocial(cal) {
         ${p.cta ? `<div class="snote">CTA: ${esc(p.cta)}</div>` : ''}
         <div class="post-foot"><span class="count ${len > max ? 'over' : ''}">${len}/${max}</span><button type="button" class="copy-btn" data-copy="${esc(copy)}">Copy</button></div>
       </div>
-      ${p.graphic?.svg ? `<div class="gfx">${p.graphic.svg}<button type="button" class="mini-copy" data-png="${p.i}">Download PNG</button></div>` : ''}
+      ${p.graphic?.svg ? `<div class="gfx">
+        ${p.graphic.image ? `<div class="gfx-tabs"><button type="button" data-view="card" data-i="${p.i}" aria-pressed="${p.graphic.view !== 'photo'}">Card</button><button type="button" data-view="photo" data-i="${p.i}" aria-pressed="${p.graphic.view === 'photo'}">Photo</button></div>` : ''}
+        ${p.graphic.view === 'photo' && p.graphic.image ? `<img src="${p.graphic.image}" alt="">` : p.graphic.svg}
+        ${imagesAvailable && !p.graphic.image && p.graphic.image_prompt ? `<button type="button" class="mini-copy" data-gen="${p.i}">Generate image</button>` : ''}
+        ${p.graphic.image_prompt ? `<div class="img-prompt">${esc(p.graphic.image_prompt)}</div>` : ''}
+        <button type="button" class="mini-copy" data-png="${p.i}">Download PNG</button>
+      </div>` : ''}
     </article>`;
   };
-  return `<div class="pillars">${(cal.pillars || []).map((pl) => `<div><b>${esc(pl.name)}</b>${esc(pl.theme)}</div>`).join('')}</div>
+  const pending = cal.posts.filter((p) => p.graphic?.image_prompt && !p.graphic.image).length;
+  const bar = imagesAvailable
+    ? `<div class="social-bar"><span>${pending} post${pending === 1 ? '' : 's'} with a visual brief and no image yet.</span>${pending ? `<button type="button" class="btn-secondary" id="gen-all">Generate all ${pending} images (≈ €${(pending * 0.058).toFixed(2)})</button>` : ''}</div>`
+    : `<div class="social-bar"><span>Image generation is off: add GEMINI_API_KEY to the server to turn the visual briefs below into pictures. The typographic cards work without it.</span></div>`;
+  return bar + `<div class="pillars">${(cal.pillars || []).map((pl) => `<div><b>${esc(pl.name)}</b>${esc(pl.theme)}</div>`).join('')}</div>
     ${weeks.map((w, i) => w.length ? `<div class="week"><h3>Week ${i + 1} · ${w.length} posts</h3>${w.map(post).join('')}</div>` : '').join('')}`;
+}
+
+async function generateFor(i) {
+  const p = result.social.posts[i];
+  const btn = document.querySelector(`[data-gen="${i}"]`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+  try {
+    const data = await postJson('/api/images/generate', { prompt: p.graphic.image_prompt, brandKit: result.brandKit || brandKit || undefined, aspect: '1:1' });
+    p.graphic.image = `data:${data.mime};base64,${data.data}`;
+    p.graphic.view = 'photo';
+    imageUsage.images += data.usage.images;
+    imageUsage.costEur += data.usage.costEur;
+    renderEconomics();
+  } catch (err) {
+    toast(`Image failed: ${err.message}`);
+  }
+}
+
+$('#tab-panel').addEventListener('click', async (e) => {
+  const gen = e.target.closest('[data-gen]');
+  if (gen && result) { await generateFor(Number(gen.dataset.gen)); renderTab(); return; }
+  const all = e.target.closest('#gen-all');
+  if (all && result) {
+    all.disabled = true;
+    const targets = result.social.posts.map((p, i) => (p.graphic?.image_prompt && !p.graphic.image ? i : -1)).filter((i) => i >= 0);
+    for (const i of targets) { await generateFor(i); all.textContent = `Generating… ${targets.indexOf(i) + 1}/${targets.length}`; }
+    renderTab();
+    return;
+  }
+  const view = e.target.closest('[data-view]');
+  if (view && result) { result.social.posts[Number(view.dataset.i)].graphic.view = view.dataset.view; renderTab(); }
+});
+
+/** Draw an image (data URL) onto a 1080 canvas, composite the logo bottom-right, return the canvas. */
+function loadImg(src) {
+  return new Promise((resolve, reject) => { const im = new Image(); im.onload = () => resolve(im); im.onerror = reject; im.src = src; });
+}
+
+async function compositePng(src, name) {
+  const c = document.createElement('canvas');
+  c.width = 1080; c.height = 1080;
+  const ctx = c.getContext('2d');
+  const im = await loadImg(src);
+  // cover-fit
+  const s = Math.max(1080 / im.width, 1080 / im.height);
+  ctx.drawImage(im, (1080 - im.width * s) / 2, (1080 - im.height * s) / 2, im.width * s, im.height * s);
+  const logo = (result?.brandKit || brandKit)?.assets?.logo;
+  if (logo) {
+    try {
+      const lg = await loadImg(logo);
+      const w = 220, h = w * (lg.height / lg.width);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(1080 - 96 - w - 24, 1080 - 96 - h - 24, w + 48, h + 48);
+      ctx.drawImage(lg, 1080 - 96 - w, 1080 - 96 - h, w, h);
+    } catch { /* logo unreadable; ship without */ }
+  }
+  c.toBlob((png) => download(name, 'image/png', png), 'image/png');
 }
 
 /** SVG string -> PNG download via canvas. Fonts fall back to system sans. */
@@ -740,8 +876,9 @@ $('#tab-panel').addEventListener('click', (e) => {
   const b = e.target.closest('[data-png]');
   if (!b || !result) return;
   const p = result.social.posts[Number(b.dataset.png)];
-  const client = (result.brief?.clientName || result.brief?.productName || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  downloadPng(p.graphic.svg, `${client}-day${p.day}-${p.channel}.png`);
+  const name = `${clientSlug()}-day${p.day}-${p.channel}.png`;
+  if (p.graphic.view === 'photo' && p.graphic.image) compositePng(p.graphic.image, name);
+  else downloadPng(p.graphic.svg, name);
 });
 
 $('#tabs').addEventListener('click', (e) => {
@@ -774,13 +911,14 @@ function renderEconomics() {
   const extraCost = briefUsage?.costEur || 0;
 
   $('#econ-tokens').innerHTML = `${fmtInt(e.totalTokens + extraIn + extraOut)} <small>(${fmtInt(e.inputTokens + extraIn)} in / ${fmtInt(e.outputTokens + extraOut)} out)</small>`;
-  $('#econ-cost').textContent = fmtEur(e.costEur + extraCost);
+  $('#econ-cost').textContent = fmtEur(e.costEur + extraCost + imageUsage.costEur);
   $('#econ-time').textContent = fmtMs(e.generationMs);
   $('#econ-searches').textContent = e.webSearches ? String(e.webSearches) : '0';
   $('#econ-sources').textContent = e.sourceChars ? `${fmtInt(e.sourceChars)} ch` : 'none';
 
   const passes = Object.entries(e.passes).map(([k, p]) => `<span>${esc(k)} <b>${fmtInt(p.input + p.output)}</b> · ${fmtEur(p.costEur)} · ${fmtMs(p.ms)}</span>`);
   if (briefUsage) passes.unshift(`<span>brief parse <b>${fmtInt(extraIn + extraOut)}</b> · ${fmtEur(extraCost)}</span>`);
+  if (imageUsage.images) passes.push(`<span>images <b>${imageUsage.images}</b> · ${fmtEur(imageUsage.costEur)}</span>`);
   $('#econ-passes').innerHTML = passes.join('');
   $('#economics').hidden = false;
 }

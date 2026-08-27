@@ -20,9 +20,9 @@ The month of posts exports as CSV with day, channel and text, which every schedu
 
 The scanner fetches HTML and CSS directly, which covers server-rendered marketing sites. Client-rendered sites return an empty shell; production would render them in a headless browser (Playwright) and read the computed styles rather than the stylesheets, which also gives a more honest palette: what is actually on screen, weighted by area, rather than what is declared in CSS. A client library would keep the scan and the brand kit between sessions so a returning client is a lookup, not a re-crawl.
 
-## Graphics
+## Graphics and images
 
-The templates are typographic on purpose: text on brand colour is the format that survives any palette and never looks wrong. Photography and illustration would come from an image generation API behind a brand-safe prompt built from the same brand kit, reviewed before use. That is a separate pass with its own cost line, not a change to the existing one.
+The templates are typographic on purpose: text on brand colour is the format that survives any palette and never looks wrong. Generated images sit alongside them as an option per post, made from a visual brief Claude wrote and reference artwork the client supplied, with the logo composited in the browser. In production the compositing would move server-side (same canvas logic in a headless renderer), a brand-safety review step would sit between generation and publishing, and a client library would keep approved images so a returning client's visual style is a lookup rather than a regeneration. Multi-turn editing ("same scene, warmer light") is a small addition on the same endpoint.
 
 ## Email sequences
 

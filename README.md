@@ -13,7 +13,7 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
    - *Strategy* proposes three angles grounded in that context and picks one.
    - *Assets* writes 3 Meta ads, 3 LinkedIn ads, a Google RSA (8 headlines, 4 descriptions) and a 3-email nurture sequence with a branch note, all executing the chosen angle in the company's voice.
    - *Localisation* (if Portuguese is ticked) adapts, rather than translates, everything into pt-PT using the glossary.
-4. **Check.** Every character limit is stated in the prompt and then validated in code. Breaches are flagged in the interface, not silently accepted.
+5. **Check.** Every character limit is stated in the prompt and then validated in code. Breaches are flagged in the interface, not silently accepted.
 5. **Economics.** Tokens in and out per pass, web searches, cost in EUR at dated rates, generation time.
 6. **Export.** Copy any asset. Export everything as JSON, or as CSV with one row per field.
 
@@ -22,7 +22,7 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
 ```bash
 git clone <this repo> && cd campaign-forge
 npm install
-cp .env.example .env        # add your ANTHROPIC_API_KEY
+cp .env.example .env        # add ANTHROPIC_API_KEY; GEMINI_API_KEY is optional, for images
 npm start                   # http://localhost:3000
 ```
 
@@ -82,4 +82,4 @@ An agency or a fractional marketer has never met the client's buyer and does not
 
 ## Not included
 
-Live posting to ad platforms or social schedulers, CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI, generated photography (the graphics are typographic by design), headless-browser scraping. See `ARCHITECTURE.md` for how each would be added.
+Live posting to ad platforms or social schedulers, CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI, headless-browser scraping, image editing after generation. See `ARCHITECTURE.md` for how each would be added.
