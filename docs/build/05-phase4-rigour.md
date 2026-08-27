@@ -79,3 +79,14 @@ users/{uid}/telemetry/{yyyy-mm}
 ## After Phase 4 (not specified; open for a later stage)
 
 Queue for unattended and scheduled runs (weekly rescan, monthly social); publishing integrations when a client's scheduler is a daily friction; multi-user (allowlist → roles); vector retrieval when a client's exemplars exceed a few thousand; photography via a second image pass with a brand-safety review; multi-language beyond pt-PT.
+
+## Tooling tasks (from 07-tooling.md)
+
+### Task 10: promptfoo as the eval harness
+Replace `evals/run.js` with `evals/promptfooconfig.yaml`: providers = our agents via a custom provider (`evals/provider.js` calls `orchestrator.runAgent`), tests = the ten golden briefs, assertions = `javascript` assertions that call `evals/score.js` (limits, avoidLeak, claimTrace, structure, citations, complete) plus `llm-rubric` assertions for the human-style quality rating using the Critic's rubric text. `npx promptfoo eval` writes results; `evals/import.js` stores the run in Firestore with prompt versions so `/evals` and `scripts/gate.js` are unchanged. Test: a config dry-run in mock mode passes all assertions on fixtures.
+
+### Task 11: decide Langfuse vs own pages
+At phase entry, spike Langfuse (MIT, self-host or free cloud) for two hours: traces per agent, cost, prompt versions with a UI. If it covers `/prompts` and `/evals` needs, adopt it (SDK in `runtime.js`, prompt store reads Langfuse) and drop Tasks 3 and 4; if not, build as specified. Record the decision in the commit.
+
+### Task 12: telemetry via PostHog or Umami
+Prefer PostHog free tier (hosted, EU region) with the JS snippet on the client and `posthog-node` on the server for the counters in the contract; Umami self-host if you want no third party. Replace the hand-rolled counters; keep the `/telemetry` page as a PostHog embed or a small query. Test: two regenerations produce two events.

@@ -80,3 +80,25 @@ Not run in `npm test` (spend). Document the command in README.
 ## Order and commits
 
 1 → 2 → 3 → 4 → 5 → 6 → 7. One commit per task. Update README's roster paragraph when 1, 3 and 4 land.
+
+## Tooling tasks (from 07-tooling.md)
+
+Wire these as tools in `lib/agents/tools/`. Each is a pure function with a JSON schema; each degrades gracefully (returns `{ error }`, never throws into the agent loop). Add a scripted-model case per tool.
+
+### Task 8: `read_url` via Jina Reader
+`lib/agents/tools/read_url.js`. `GET https://r.jina.ai/<url>` with `Accept: text/markdown` and `Authorization: Bearer $JINA_API_KEY` when set (free key raises the limit from 20 to 200 requests/min). Returns `{ url, title, markdown (capped 12k), chars, via: 'jina' }`. On non-200 or timeout (10 s) fall back to `sources.extractUrl` and set `via: 'fetch'`. Replace `fetch_url` in Scout, Brand Analyst and Customer Researcher with `read_url`; keep `fetch_url` for tests. `scanSite` gains an option `reader: 'jina'|'fetch'` and uses Jina per page when a key is present; the client-rendered flag is set only if both paths return under 500 chars. Test: fixture page returns markdown; simulated 429 falls back.
+
+### Task 9: `read_sitemap`
+`sitemapper` (MIT). `read_sitemap({ url })` → `{ urls: string[] (≤200), found: boolean }`. Scout calls it before `scan_site` and merges sitemap URLs into the priority ranking (pricing, customers, case studies first). Test: fixture site gains `sitemap.xml`; Scout's coverage improves to include a page not linked from nav.
+
+### Task 10: `search_hn`
+Hacker News Algolia API (`https://hn.algolia.com/api/v1/search?query=&tags=comment`). `search_hn({ query, limit })` → `{ hits: [{ text (stripped, ≤600 chars), url (item permalink), points, date }] }`. Customer Researcher gets it as a tool and its procedure says: HN first for technical buyers. Test: mocked response parsed; citations carry the permalink.
+
+### Task 11: `autocomplete`
+Google suggest endpoint (unofficial; wrap and degrade). `autocomplete({ seed, locale })` → `{ suggestions: string[] }` or `{ error }`. Customer Researcher uses it to fill `search_terms`; results are marked `source: 'autocomplete'`. Test: mocked; error path returns empty suggestions without failing the run.
+
+### Task 12: contrast and schema validation in code
+- `wcag-contrast` (MIT): `graphics.js` scheme selection checks body ≥ 4.5:1 and display ≥ 3:1 and swaps fg/bg or falls to the dark scheme when it fails. Test: a near-white accent renders with dark text.
+- `ajv` (MIT): `lib/agents/runtime.js` validates `submit` input against `agent.schema` before `validate()`, returning schema errors as gate problems (the API enforces tool input shape, but stored versions and tests need the same check). Test: a submit missing a required key is bounced with the ajv message.
+
+Env additions: `JINA_API_KEY` (optional). Update `.env.example`, README, CLAUDE.md commands.

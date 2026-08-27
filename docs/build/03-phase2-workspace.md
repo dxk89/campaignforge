@@ -64,3 +64,16 @@ users/{uid}/clients/{clientId}/claims/{claimId}
 8. Export gating; force flag; warning banner.
 9. Critic final review on approve-all (`POST campaigns/:cid/review`); results shown; must_fix blocks approve-all until acknowledged.
 10. e2e: edit → flag → fix → approve → export.
+
+## Tooling tasks (from 07-tooling.md)
+
+### Task 11: prose scanners in `check_compliance`
+`retext` (MIT) pipeline: `retext-readability` (grade per sentence, threshold configurable per client, default grade 10), `retext-simplify` (plain-language substitutions), `retext-equality` (non-inclusive phrasing), `retext-intensify` (weasel words), plus `text-readability` (Flesch, grade per asset). Output joins `flags` as `severity: 'warning'` with `rule: 'readability'|'simplify'|'equality'|'intensify'`. Asset docs store `readability: { flesch, grade }`. The Critic's packet includes these findings so must-fix items cite a rule. Test: a 40-word sentence is flagged; "utilize" suggests "use".
+
+### Task 12: LanguageTool
+`lib/agents/tools/check_grammar.js`. `POST $LANGUAGETOOL_URL/v2/check` (default `https://api.languagetool.org`, self-host via Docker `erikvl87/languagetool` when `LANGUAGETOOL_URL` is set) with `language: 'en-GB'` or `'pt-PT'`, `disabledRules` for the noise (WHITESPACE_RULE, UPPERCASE_SENTENCE_START in headlines). Returns `{ matches: [{ path, message, rule, replacements, offset, length }] }`. Wired as a tool for Copywriter and Localiser; in Localiser's gate, `pt-PT` matches in categories GRAMMAR and TYPOS are violations, style is advisory. Rate limit: back off on 429 and return `{ error }` so the gate does not block on an outage. Test: "Você pode gerenciar" returns matches with pt-PT; outage path returns error and the run completes.
+
+### Task 13: lexicon in code
+`wink-nlp` (MIT) `lexicon({ sources })` → `{ terms: [{ term, count, examples }], bigrams: [...] }` over all source text, stopwords removed, brand-specific terms ranked by frequency × specificity (rare in a general corpus). Brand Analyst calls it to seed `preferred_terms`; the library shows the counts beside each voice term. Test: fixture sources produce "exceptions" above "errors".
+
+Env additions: `LANGUAGETOOL_URL` (optional).

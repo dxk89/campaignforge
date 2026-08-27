@@ -12,6 +12,8 @@ claude
 
 Each phase opens with the assumptions it inherits from the previous one. The builder verifies them on entry and adapts field names to what actually shipped, noting the adaptation in the first commit of the phase. Contracts within a phase are fixed.
 
+Tools from `07-tooling.md` are incorporated into each phase as "Tooling tasks" at the end of the spec; build them in the phase where they appear, after the phase's main tasks.
+
 Rules for the builder:
 - One task at a time, in order. Each task ends with `npm test` passing and a commit.
 - Contracts in these specs are fixed. If a contract cannot be met, stop and say why rather than changing it.

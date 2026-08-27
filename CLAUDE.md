@@ -25,6 +25,7 @@ Run `npm test` before and after every change. Both suites must pass. Add a test 
 8. **Nothing about a client is assumed.** The tool reads the site, the sources and the web. If it does not know, it says so (gaps), it does not invent.
 9. **API keys never reach the browser.** Server-side only.
 10. **British English** in prompts, UI copy and docs. Brand name spelling exactly as registered. No em-dashes in generated copy.
+11. **Third-party tools degrade, never block.** Every external tool (Jina, LanguageTool, Pexels, autocomplete, HN) returns `{ error }` on failure and the agent continues; a gate may only depend on a tool when a fallback exists. Licences: MIT/Apache/ISC/MPL embed freely; AGPL only behind an API boundary and noted in README; respect the terms listed in `docs/build/07-tooling.md`.
 
 ## Layout
 

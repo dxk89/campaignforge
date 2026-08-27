@@ -116,3 +116,22 @@ social.posts[]: + date:'YYYY-MM-DD' (computed from startDate + day - 1); social-
 ## Order and commits
 
 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10. One commit per task. Update README feature list at 3, 5, 7.
+
+## Tooling tasks (from 07-tooling.md)
+
+### Task 11: stock photography via Pexels
+`lib/agents/tools/find_photo.js`: `GET https://api.pexels.com/v1/search?query=&orientation=square&per_page=8` with `PEXELS_API_KEY`. Returns `{ photos: [{ id, url (large), thumb, photographer, avg_color }] }`. The Art Director gains a third option per graphic: `card`, `generated`, `stock`; for `stock` it searches with the visual brief, reviews candidates with `review_image` (same criteria), picks one, records `{ source: 'pexels', id, photographer }` on the image doc. Composite logo as for generated. Licence note stored with the image. Test: mocked search; review rejects one candidate; a pick is recorded with provenance.
+
+### Task 12: Satori + resvg-js + sharp renderer
+Replace `graphics.js` internals: templates become small HTML/CSS components rendered by `satori` (MIT) with `brandKit.fontUrl` fonts loaded (fallback bundled Inter), rasterised by `@resvg/resvg-js` (MPL-2.0) to PNG server-side; `sharp` (Apache-2.0) composites the logo and produces 1:1 and 4:5 variants. Same template contract (`quote|stat|tip|list|announce`, same slots); `render_card` returns `{ svg, png (storageRef), truncated }`. The browser canvas path is removed. Test: the five fixture cards render to PNG with the real font; pixel size 1080×1080; the 39-character stat falls to the smaller size.
+
+### Task 13: lifecycle diagram
+`mermaid` (MIT): `lib/agents/tools/diagram.js` turns `activation.lifecycle.steps` into a flowchart definition; rendered client-side on the Lifecycle tab and server-side (via `@mermaid-js/mermaid-cli` or `mermaid.ink` request, *decide*) into the export pack. Test: fixture lifecycle produces a definition with one node per step and edges for yes/no.
+
+### Task 14: accessibility on the landing page
+`axe-core` (MPL-2.0) in `jsdom`: `check_accessibility({ html })` → `{ violations: [{ id, impact, nodes }] }`. Runs on `landing.html` at generation and on export; serious and critical violations are compliance violations on the landing assets, others warnings. Test: a form without labels is flagged; fixed HTML passes.
+
+### Task 15: statistics behind verdicts
+`simple-statistics` (ISC): the verdict engine computes a two-proportion z-test on conversion rates and reports `pValue` and a 95% interval on the delta; `insufficient` when the interval crosses zero or either variant is below `minSample`; `met` when p < 0.05 and the delta exceeds the decision-rule percentage. Stored on the verdict. Test: three synthetic sets → the same met / not_met / insufficient as before, with p-values.
+
+Env additions: `PEXELS_API_KEY` (optional).

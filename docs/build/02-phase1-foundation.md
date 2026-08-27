@@ -102,3 +102,14 @@ Inputs for `run/:agent` are built by a server function `buildInputs(agent, campa
 - `test/runtime.test.js` unchanged.
 - `test/db.test.js`: emulator; create client → source → campaign → version; stale detection flips when upstream changes.
 - `test/e2e.spec.ts` (Playwright, mock mode): login bypass via `MOCK_AUTH=1`, new client from fixture site, generate all agents, reload page, every tab still populated, export-all returns a zip.
+
+## Tooling tasks (from 07-tooling.md)
+
+### Task 11: readable extraction
+`@mozilla/readability` + `jsdom` in `lib/sources.js`: when we fetch HTML ourselves (no Jina), extract main content with Readability, fall back to the regex stripper if it returns under 300 chars. Test: fixture page with nav/footer noise → body text only.
+
+### Task 12: palette from imagery
+`node-vibrant` (MIT) in `lib/scraper.js`: after CSS palette extraction, download the logo and og:image (size cap 2 MB, timeout 5 s), extract vibrant/muted swatches, merge into `palette.accents` when distinct from CSS colours (same distance rule). Record `palette.sources: ['css','logo','og']`. Test: fixture logo PNG with a colour absent from CSS appears in accents.
+
+### Task 13: real fonts for renders
+Google Fonts: `lib/fonts.js` resolves `brandKit.fonts[0]` against the Google Fonts list (cached JSON, refreshed monthly); if found, records `brandKit.fontUrl`. Used by the Satori renderer in Phase 3; in Phase 1 the front end loads `fontUrl` so the SVG cards preview in the real font. Test: "Inter" resolves; "Helvetica Neue" does not and falls back.
