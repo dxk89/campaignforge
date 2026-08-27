@@ -101,4 +101,9 @@ Google suggest endpoint (unofficial; wrap and degrade). `autocomplete({ seed, lo
 - `wcag-contrast` (MIT): `graphics.js` scheme selection checks body ≥ 4.5:1 and display ≥ 3:1 and swaps fg/bg or falls to the dark scheme when it fails. Test: a near-white accent renders with dark text.
 - `ajv` (MIT): `lib/agents/runtime.js` validates `submit` input against `agent.schema` before `validate()`, returning schema errors as gate problems (the API enforces tool input shape, but stored versions and tests need the same check). Test: a submit missing a required key is bounced with the ajv message.
 
+### Task 13: orient and self-check tools (from 06-agent-training.md)
+- `note_questions({ questions: string[3] })`: no-op tool; records the orient step in the trace. Offered to every agent.
+- `self_check({ answers: { [id]: true|false|'n/a' } })`: checklist items come from `knowledge/<agent>/selfcheck.md` (`- [id] required? text`); the runtime records the last call and rejects `submit` with "self-check not run" or "self-check item <id> is false" as gate problems. Add `selfCheck` to the roster contract and a scripted test: submit without self-check is bounced; a false required item is bounced; a clean check passes.
+- `knowledge/` scaffold and `lib/agents/knowledge.js` role compiler (expertise + procedure + selfcheck + rubric + contract); shared packs; full packs for Copywriter, Strategist and Critic.
+
 Env additions: `JINA_API_KEY` (optional). Update `.env.example`, README, CLAUDE.md commands.
