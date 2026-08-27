@@ -1,0 +1,71 @@
+# CLAUDE.md — working in this repository
+
+Campaign Forge: an agentic campaign builder for one marketer running several clients. Read this before changing anything. The design documents are `docs/Campaign-Forge-Product-and-Build-Plan.docx` (the plan), `AGENTS.md` (agent architecture), `INFRASTRUCTURE.md` (target infrastructure), `ARCHITECTURE.md` (production integration). Build specs per phase are in `docs/build/`. Work from the spec for the current phase; do not skip ahead.
+
+## Commands
+
+```
+npm install
+npm start                 # real API; needs ANTHROPIC_API_KEY (GEMINI_API_KEY optional)
+MOCK_CLAUDE=1 npm start   # fixtures, no key, no spend
+npm test                  # runtime test (scripted model) + front-end test (jsdom vs mock server)
+```
+
+Run `npm test` before and after every change. Both suites must pass. Add a test when you add a behaviour.
+
+## Invariants (do not break these)
+
+1. **Judgement to the model, determinism to code.** Anything that must be identical every run (limits, compliance, UTMs, graphics, activation structure, pricing) is code. Never ask a model to do it.
+2. **Every agent output is gated.** An agent's final output arrives via the `submit` tool, checked against its schema and `validate()`. Violations go back to the agent. Never accept an output that fails its gate; never silently fix it.
+3. **Validators are tools and gates.** The same function is offered as a tool (agent checks early) and enforced on submit (runtime insists).
+4. **Packets are assembled in code** (`lib/agents/packets.js`). No agent is prompted by another agent's prose.
+5. **Flags, never silent edits.** Over-limit, avoid term, unapproved claim: flag it in the output for the person. Do not trim, rewrite or drop.
+6. **Every model call is priced** at its model's rate and returned as `usage` (`lib/pricing.js`). New models get a rate with a date in the comment.
+7. **Images are on demand**, never generated automatically, always with the cost shown first.
+8. **Nothing about a client is assumed.** The tool reads the site, the sources and the web. If it does not know, it says so (gaps), it does not invent.
+9. **API keys never reach the browser.** Server-side only.
+10. **British English** in prompts, UI copy and docs. Brand name spelling exactly as registered. No em-dashes in generated copy.
+
+## Layout
+
+```
+server.js, api/index.js      entry points (process, serverless); both serve lib/app.js
+lib/app.js                   Express routes
+lib/agents/runtime.js        the loop: tools, submit schema, gate, budgets, trace, ledger
+lib/agents/orchestrator.js   runAgent(name, inputs) with memory + packet; runCampaign(brief)
+lib/agents/roster/<agent>.js name, fixture, model, role, tools, budget, schema, packet(), validate(), postProcess()
+lib/agents/tools/            functions agents may call; each { name, description, input_schema, run(input, packet) }
+lib/agents/tools/compliance.js  checkCompliance(output, rules) → flags
+lib/agents/packets.js        contextBlock(), buildRules(), loadMemory()
+lib/memory/                  exemplars, learnings, corrections, approvedClaims (stubbed empty until Phase 1)
+lib/prompts/<agent>.js       role text + user prompt builders (roster imports these)
+lib/limits.js                LIMITS, SOCIAL_LIMITS, validateAssets, validateSocial
+lib/utm.js graphics.js scraper.js images.js sources.js pricing.js brief.js
+lib/mock.js                  FIXTURES per agent + USAGE; MOCK_CLAUDE=1 returns these
+public/                      front end (plain JS; rebuilt in Next.js in Phase 1)
+test/                        runtime.test.js, frontend.test.js, fixture-site/
+docs/build/                  phase specs
+```
+
+## Conventions
+
+- Plain Node, CommonJS, no build step for `lib/`. Small modules with a header comment saying what the file is for and why it is shaped that way.
+- An agent file is data plus small functions. Role text lives in `lib/prompts/`. The role must ask for the `submit` tool, never for "JSON only".
+- A new tool: add to `lib/agents/tools/index.js` with a JSON schema; keep `run` pure where possible.
+- A new agent: add to `lib/agents/roster/index.js`, a fixture in `lib/mock.js` under its `fixture` key, a scripted-model case in `test/runtime.test.js`.
+- Route shapes the front end reads (`/api/pass/*`) are contracts. Change them and the front end together, with the test.
+- Errors are JSON `{ error, pass? , details? }` with a real status code. Messages say what to do, not just what failed.
+- Commit messages: one line what, then a paragraph why. No emoji.
+
+## Testing notes
+
+- `test/runtime.test.js` stubs `client.messages.create` with a scripted queue of responses. Use it to test gates, tool round-trips and budgets without spend.
+- `test/frontend.test.js` starts the mock server on 3111 and the fixture site on 8099, drives `public/app.js` in jsdom through scan → generate → every tab → exports. It must end with `JS errors: []`.
+- Real-API tests are manual. Record cost and duration per agent in the PR description when you run one.
+
+## Do not
+
+- Do not add a database, auth or framework before the Phase 1 spec says so.
+- Do not remove mock mode. A reviewer must be able to run the UI with no key.
+- Do not put prompts in the front end.
+- Do not "improve" generated copy in code. Flag it.

@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node test/runtime.test.js && node test/frontend.test.js"
   },
   "engines": {
     "node": ">=20"
@@ -19,5 +20,8 @@
     "mammoth": "^1.8.0",
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.1"
   }
 }
