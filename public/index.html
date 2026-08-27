@@ -24,6 +24,7 @@
     <li data-pass="research"><span class="chain-dot"></span>Research</li>
     <li data-pass="strategy"><span class="chain-dot"></span>Strategy</li>
     <li data-pass="assets"><span class="chain-dot"></span>Assets</li>
+    <li data-pass="activation"><span class="chain-dot"></span>Activation</li>
     <li data-pass="localise"><span class="chain-dot"></span>pt-PT</li>
   </ol>
 </header>
@@ -79,6 +80,11 @@
             </select>
           </label>
         </div>
+
+        <label class="field">
+          <span>Landing page URL <em class="opt">optional, used for tracking links</em></span>
+          <input name="landingUrl" type="url" inputmode="url" placeholder="https://yourcompany.com/campaign">
+        </label>
 
         <fieldset class="field langs">
           <legend>Languages</legend>
@@ -137,13 +143,13 @@
 
     <div class="results-empty" id="results-empty">
       <p class="empty-title">Nothing generated yet.</p>
-      <p>Fill in the brief (or upload one), load the builder with your company's material, and generate. Four passes run in sequence: research the material into a company context, choose an angle, write every channel, then adapt for Portugal if you asked for it.</p>
+      <p>Fill in the brief (or upload one), load the builder with your company's material, and generate. Five passes run in sequence: research the material into a company context, choose an angle, write every channel, build the lifecycle workflow, sales handoff and measurement plan, then adapt for Portugal if you asked for it.</p>
       <p>No key handy? The server runs with <code>MOCK_CLAUDE=1</code> and returns a fixture campaign so you can see the interface work.</p>
     </div>
 
     <div class="results-loading" id="results-loading" hidden>
       <p class="loading-line" id="loading-line">Starting…</p>
-      <p class="loading-sub">One request, sequential passes. The steps above fill as each one finishes.</p>
+      <p class="loading-sub">Sequential passes, one request each. The steps above fill as each one finishes.</p>
     </div>
 
     <div class="results-body" id="results-body" hidden>
@@ -155,6 +161,9 @@
           <button role="tab" data-tab="linkedin" aria-selected="false">LinkedIn</button>
           <button role="tab" data-tab="google" aria-selected="false">Google</button>
           <button role="tab" data-tab="email" aria-selected="false">Email</button>
+          <button role="tab" data-tab="lifecycle" aria-selected="false">Lifecycle</button>
+          <button role="tab" data-tab="handoff" aria-selected="false">Handoff</button>
+          <button role="tab" data-tab="measurement" aria-selected="false">Measurement</button>
         </div>
         <div class="lang-toggle" id="lang-toggle" hidden role="group" aria-label="Language">
           <button type="button" data-lang="en" aria-pressed="true">EN</button>

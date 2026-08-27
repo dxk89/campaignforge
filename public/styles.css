@@ -154,6 +154,7 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .block-lead { margin: -6px 0 12px; color: var(--muted); font-size: 13px; }
 
 .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field .opt { font-weight: 400; font-style: normal; color: var(--muted); margin-left: 4px; }
 .field > span, .field legend { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.01em; }
 .field input, .field textarea, .field select, .inline-add input, .paste input, .paste textarea {
   width: 100%;
@@ -415,3 +416,31 @@ fieldset.langs legend { margin-bottom: 6px; padding: 0; }
   .chain li::before, .chain li, .btn-primary { transition: none; }
   .chain-dot, .loading-line::after { animation: none; }
 }
+
+/* ---------- Activation views ---------- */
+.flow { display: grid; gap: 6px; max-width: 720px; }
+.flow-step { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 10px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--panel); }
+.flow-step .sid { font-family: var(--mono); font-size: 11px; color: var(--muted); padding-top: 2px; }
+.flow-step .stype { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; text-align: center; }
+.flow-step.email .stype { background: var(--teal-soft); color: var(--teal-ink); }
+.flow-step.wait .stype { background: var(--panel-2); color: var(--muted); }
+.flow-step.branch { border-color: var(--teal); }
+.flow-step.branch .stype { background: var(--teal); color: #fff; }
+.flow-step.handoff .stype { background: var(--ember-soft); color: var(--ember); }
+.flow-step.exit .stype { background: var(--panel-2); color: var(--muted); }
+.flow-step .smain { font-weight: 500; }
+.flow-step .snote { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.flow-step .sbranch { font-family: var(--mono); font-size: 12px; margin-top: 4px; }
+.flow-step .sbranch b { color: var(--teal-ink); font-weight: 500; }
+.problems { padding: 10px 14px; border-radius: 4px; background: var(--amber-soft); color: var(--amber); font-size: 13px; }
+.grid-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.grid-table th { text-align: left; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.grid-table td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.grid-table td.mono { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+.grid-table td.num { font-family: var(--mono); text-align: right; }
+.grid-table tr.total td { border-top: 2px solid var(--line); font-weight: 600; }
+.stage-tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; background: var(--panel-2); color: var(--muted); }
+.stage-tag.pipeline, .stage-tag.revenue { background: var(--ember-soft); color: var(--ember); }
+.utm-url { font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--muted); }
+.talk { padding: 10px 12px; border-left: 3px solid var(--teal); background: var(--teal-soft); border-radius: 0 4px 4px 0; }
+.talk .obj { font-weight: 600; margin-top: 8px; }

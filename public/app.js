@@ -24,6 +24,7 @@ const PASS_LABELS = {
   research: 'Researching your company material',
   strategy: 'Choosing the angle',
   assets: 'Writing every channel',
+  activation: 'Building the lifecycle, handoff and measurement plan',
   localise: 'Adapting for Portugal',
 };
 
@@ -275,6 +276,7 @@ function readBrief() {
     languages,
     webResearch: $('#web-research').checked,
     companyUrl: form.elements.companyUrl.value.trim() || undefined,
+    landingUrl: form.elements.landingUrl.value.trim() || undefined,
     sources: sources.map(({ name, kind, text }) => ({ name, kind, text })),
   };
 }
@@ -304,7 +306,7 @@ $('#brief-form').addEventListener('submit', async (e) => {
 
   // The browser drives the chain one pass at a time. Progress is therefore
   // real, and each request is short enough for a serverless host.
-  const { sources: srcs, webResearch, companyUrl, ...briefFields } = brief;
+  const { sources: srcs, webResearch, companyUrl, landingUrl, ...briefFields } = brief;
   const passes = {};
   const started = Date.now();
   let current = null;
@@ -334,6 +336,8 @@ $('#brief-form').addEventListener('submit', async (e) => {
     const a = await run('assets', { brief: briefFields, strategy: s.strategy, context });
     const issues = [...(a.issues || [])];
 
+    const act = await run('activation', { brief: briefFields, strategy: s.strategy, assets: a.assets, context, landingUrl });
+
     let localised = null;
     if (brief.languages.includes('pt')) {
       const l = await run('localise', { assets: a.assets, glossary: context?.glossary || [] });
@@ -349,6 +353,9 @@ $('#brief-form').addEventListener('submit', async (e) => {
       strategy: s.strategy,
       assets: a.assets,
       localised,
+      activation: act.activation,
+      activationProblems: act.problems || [],
+      tracking: localised ? extendTracking(act.tracking, localised) : act.tracking,
       issues,
       economics: summarise(passes, { generationMs: Date.now() - started, sourceChars }),
     };
@@ -368,6 +375,18 @@ $('#brief-form').addEventListener('submit', async (e) => {
   btn.disabled = false;
   btn.textContent = 'Generate campaign';
 });
+
+/** The server built EN tracking rows before pt-PT existed; add the PT rows using the same convention. */
+function extendTracking(tracking, localised) {
+  const rows = [...tracking.rows];
+  const en = tracking.rows.filter((r) => r.language === 'en');
+  for (const r of en) {
+    const content = r.utm_content.replace(/-en$/, '-pt');
+    const url = r.url.replace(/utm_content=[^&]*/, 'utm_content=' + content);
+    rows.push({ ...r, language: 'pt', utm_content: content, url });
+  }
+  return { ...tracking, rows };
+}
 
 /** Sum per-pass usage into the footer numbers. Cost per pass comes from the server. */
 function summarise(passes, extra) {
@@ -486,6 +505,12 @@ function renderTab() {
     panel.innerHTML =
       card('Google RSA · 8 headlines', rows(a.google?.headlines || [], LIMITS.google.headline), (a.google?.headlines || []).join('\n')) +
       card('Google RSA · 4 descriptions', rows(a.google?.descriptions || [], LIMITS.google.description), (a.google?.descriptions || []).join('\n'));
+  } else if (activeTab === 'lifecycle') {
+    panel.innerHTML = renderLifecycle(result.activation, result.activationProblems);
+  } else if (activeTab === 'handoff') {
+    panel.innerHTML = renderHandoff(result.activation?.handoff);
+  } else if (activeTab === 'measurement') {
+    panel.innerHTML = renderMeasurement(result.activation, result.tracking);
   } else if (activeTab === 'email') {
     const e = a.email || {};
     panel.innerHTML =
@@ -530,6 +555,66 @@ function renderResearch(c) {
     ${c.glossary?.length ? `<section><h3>Glossary for localisation</h3><dl class="kv">${c.glossary.map((g) => `<dt>${esc(g.term)}</dt><dd>${esc(g.treatment)}</dd>`).join('')}</dl></section>` : ''}
     <section><h3>Gaps</h3><ul class="gap-list">${(c.gaps || []).map((g) => `<li>${esc(g)}</li>`).join('') || '<li>None</li>'}</ul></section>
     ${c.sources_used?.length ? `<section><h3>Sources used</h3>${tags(c.sources_used)}</section>` : ''}
+  </div>`;
+}
+
+function renderLifecycle(act, problems) {
+  const lc = act?.lifecycle;
+  if (!lc) return '<div class="prose"><p>No lifecycle generated.</p></div>';
+  const steps = (lc.steps || []).map((st) => {
+    let main = '';
+    if (st.type === 'email') main = `Send email ${st.email}`;
+    else if (st.type === 'wait') main = `Wait ${st.days} day${st.days === 1 ? '' : 's'}`;
+    else if (st.type === 'branch') main = `If: ${esc(st.signal)}`;
+    else if (st.type === 'handoff') main = 'Hand off to sales';
+    else main = 'Exit';
+    return `<div class="flow-step ${esc(st.type)}"><span class="sid">${esc(st.id)}</span><span class="stype">${esc(st.type)}</span>
+      <div><div class="smain">${main}</div>${st.note ? `<div class="snote">${esc(st.note)}</div>` : ''}
+      ${st.type === 'branch' ? `<div class="sbranch">yes → <b>${esc(st.yes)}</b> &nbsp; no → <b>${esc(st.no)}</b></div>` : ''}</div></div>`;
+  }).join('');
+  const list = (arr) => arr?.length ? `<ul>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p>—</p>';
+  return `<div class="prose">
+    ${problems?.length ? `<div class="problems"><strong>Structural checks flagged ${problems.length} issue${problems.length === 1 ? '' : 's'}:</strong> ${problems.map(esc).join('; ')}. Shown as generated; fix before building the workflow.</div>` : ''}
+    <section><h3>Enrolment</h3><p>${esc(lc.entry)}</p></section>
+    <section><h3>Workflow</h3><div class="flow">${steps}</div></section>
+    <section><h3>Signals used</h3>${list(lc.signals_used)}</section>
+    <section><h3>Exit rules</h3>${list(lc.exit_rules)}</section>
+  </div>`;
+}
+
+function renderHandoff(h) {
+  if (!h) return '<div class="prose"><p>No handoff plan generated.</p></div>';
+  const list = (arr) => arr?.length ? `<ul>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p>—</p>';
+  const ol = (arr) => arr?.length ? `<ol>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>` : '<p>—</p>';
+  const max = (h.lead_score || []).reduce((n, r) => n + (Number(r.points) || 0), 0);
+  return `<div class="prose">
+    <section><h3>MQL definition</h3>${list(h.mql_definition)}</section>
+    <section><h3>Lead score <span class="stage-tag">threshold ${esc(h.threshold)} of ${max}</span></h3>
+      <table class="grid-table"><tr><th>Signal</th><th>Points</th><th>Why</th></tr>
+      ${(h.lead_score || []).map((r) => `<tr><td>${esc(r.signal)}</td><td class="num">${esc(r.points)}</td><td>${esc(r.why)}</td></tr>`).join('')}</table></section>
+    <section><h3>Service level</h3><p>${esc(h.sla)}</p></section>
+    <section><h3>BDR procedure</h3>${ol(h.bdr_sop)}</section>
+    <section><h3>Talk track</h3><div class="talk"><div>${esc(h.talk_track?.opening)}</div>
+      ${(h.talk_track?.objections || []).map((o) => `<div class="obj">"${esc(o.objection)}"</div><div>${esc(o.response)}</div>`).join('')}</div></section>
+    <section><h3>Disqualifiers</h3>${list(h.disqualifiers)}</section>
+  </div>`;
+}
+
+function renderMeasurement(act, tracking) {
+  const m = act?.measurement;
+  const list = (arr) => arr?.length ? `<ul>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p>—</p>';
+  return `<div class="prose" style="max-width:none">
+    ${m ? `<section><h3>KPI tree</h3><table class="grid-table"><tr><th>Stage</th><th>Metric</th><th>Target</th><th>Source of record</th></tr>
+      ${(m.kpi_tree || []).map((k) => `<tr><td><span class="stage-tag ${esc(String(k.stage).toLowerCase())}">${esc(k.stage)}</span></td><td>${esc(k.metric)}</td><td class="mono">${esc(k.target)}</td><td>${esc(k.source)}</td></tr>`).join('')}</table></section>
+    <section><h3>Funnel definitions</h3><dl class="kv">${(m.funnel || []).map((f) => `<dt>${esc(f.stage)}</dt><dd>${esc(f.definition)}</dd>`).join('')}</dl></section>
+    <section><h3>Reporting</h3><p>${esc(m.reporting_cadence)}</p></section>
+    <section><h3>Data quality</h3>${list(m.data_quality)}</section>` : ''}
+    <section><h3>Experiments</h3><table class="grid-table"><tr><th>Channel</th><th>Hypothesis</th><th>Variants</th><th>Metric</th><th>Decision rule</th></tr>
+      ${(act?.experiments || []).map((x) => `<tr><td class="mono">${esc(x.channel)}</td><td>${esc(x.hypothesis)}</td><td>${esc(x.variants)}</td><td>${esc(x.primary_metric)}</td><td>${esc(x.decision_rule)}</td></tr>`).join('')}</table></section>
+    <section><h3>Tracking links <span class="stage-tag">campaign ${esc(tracking?.campaign)}</span></h3>
+      <p class="snote">One convention, generated in code, stamped on every asset${tracking?.landing ? '' : '. No landing page given, so example.com is the placeholder'}.</p>
+      <table class="grid-table"><tr><th>Asset</th><th>Lang</th><th>URL</th><th></th></tr>
+      ${(tracking?.rows || []).map((r) => `<tr><td class="mono">${esc(r.channel)}-${esc(r.unit)}</td><td class="mono">${esc(r.language)}</td><td class="utm-url">${esc(r.url)}</td><td><button type="button" class="mini-copy" data-copy="${esc(r.url)}" aria-label="Copy">⧉</button></td></tr>`).join('')}</table></section>
   </div>`;
 }
 
@@ -588,15 +673,16 @@ function download(name, mime, content) {
 }
 
 /** One row per asset field: channel, type, language, field, text, char count. */
-function flattenAssets(assets, language) {
+function flattenAssets(assets, language, tracking) {
   const rows = [];
-  (assets.meta || []).forEach((ad, i) => ['primary_text', 'headline', 'description'].forEach((f) => rows.push(['meta', `variant ${i + 1}`, language, f, ad[f]])));
-  (assets.linkedin || []).forEach((ad, i) => ['intro_text', 'headline'].forEach((f) => rows.push(['linkedin', `variant ${i + 1}`, language, f, ad[f]])));
-  (assets.google?.headlines || []).forEach((h, i) => rows.push(['google', `headline ${i + 1}`, language, 'headline', h]));
-  (assets.google?.descriptions || []).forEach((d, i) => rows.push(['google', `description ${i + 1}`, language, 'description', d]));
-  (assets.email?.emails || []).forEach((m, i) => ['subject', 'preview_text', 'body'].forEach((f) => rows.push(['email', `email ${i + 1}`, language, f, m[f]])));
-  if (assets.email?.branch_note) rows.push(['email', 'branch', language, 'branch_note', assets.email.branch_note]);
-  return rows.map((r) => [...r, String(r[4] || '').length]);
+  const utm = (channel, unit) => tracking?.rows.find((r) => r.channel === channel && r.unit === unit && r.language === language)?.url || '';
+  (assets.meta || []).forEach((ad, i) => ['primary_text', 'headline', 'description'].forEach((f) => rows.push(['meta', `variant ${i + 1}`, language, f, ad[f], utm('meta', `v${i + 1}`)])));
+  (assets.linkedin || []).forEach((ad, i) => ['intro_text', 'headline'].forEach((f) => rows.push(['linkedin', `variant ${i + 1}`, language, f, ad[f], utm('linkedin', `v${i + 1}`)])));
+  (assets.google?.headlines || []).forEach((h, i) => rows.push(['google', `headline ${i + 1}`, language, 'headline', h, utm('google', 'rsa')]));
+  (assets.google?.descriptions || []).forEach((d, i) => rows.push(['google', `description ${i + 1}`, language, 'description', d, utm('google', 'rsa')]));
+  (assets.email?.emails || []).forEach((m, i) => ['subject', 'preview_text', 'body'].forEach((f) => rows.push(['email', `email ${i + 1}`, language, f, m[f], utm('email', String(i + 1))])));
+  if (assets.email?.branch_note) rows.push(['email', 'branch', language, 'branch_note', assets.email.branch_note, '']);
+  return rows.map((r) => [r[0], r[1], r[2], r[3], r[4], String(r[4] || '').length, r[5]]);
 }
 
 function csvCell(v) {
@@ -612,9 +698,9 @@ $('#export-json').addEventListener('click', () => {
 
 $('#export-csv').addEventListener('click', () => {
   if (!result) return;
-  const rows = [['channel', 'type', 'language', 'field', 'text', 'char_count']];
-  rows.push(...flattenAssets(result.assets, 'en'));
-  if (result.localised) rows.push(...flattenAssets(result.localised, 'pt'));
+  const rows = [['channel', 'type', 'language', 'field', 'text', 'char_count', 'tracking_url']];
+  rows.push(...flattenAssets(result.assets, 'en', result.tracking));
+  if (result.localised) rows.push(...flattenAssets(result.localised, 'pt', result.tracking));
   const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n');
   download('campaign-forge-assets.csv', 'text/csv;charset=utf-8', '\ufeff' + csv);
 });
