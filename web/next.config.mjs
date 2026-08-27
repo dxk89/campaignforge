@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // lib/ lives outside web/ and is plain CommonJS; it is imported by route
-  // handlers only, never by client components. This keeps the agent runtime
-  // in one place shared by the Express app and the Next app during migration.
-  outputFileTracingRoot: new URL('..', import.meta.url).pathname,
+  // core/ is the agent runtime: plain CommonJS, imported by route handlers
+  // only, never by client components. It lives inside web/ so Vercel traces
+  // and installs it from the project root directory.
   serverExternalPackages: ['pdf-parse', 'mammoth', 'firebase-admin', 'archiver'],
 };
 export default nextConfig;

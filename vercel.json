@@ -1,10 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd web && npm install && npm run build",
-  "outputDirectory": "web/.next",
-  "framework": "nextjs",
-  "installCommand": "npm install",
+  "$comment": "Set the Vercel project's Root Directory to `web`. Everything the deployment needs lives inside it, including core/ (the agent runtime). This file only raises the function timeout; Next is detected automatically.",
   "functions": {
-    "web/app/api/**/*.ts": { "maxDuration": 300 }
+    "app/api/**/*.ts": { "maxDuration": 300 }
   }
 }

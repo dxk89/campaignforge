@@ -34,8 +34,9 @@ INFRASTRUCTURE.md       Target infrastructure rationale
 ARCHITECTURE.md         How this reaches real ad platforms and CRMs, one day
 README.md               For a person arriving at the repo
 
-lib/                    The agent runtime and everything deterministic. Plain CommonJS.
-                        Shared by web/ and legacy/. Do not rewrite it in TypeScript.
+web/core/               The agent runtime and everything deterministic. Plain CommonJS.
+                        Lives inside web/ so Vercel traces and installs it.
+                        lib/ holds thin re-export shims for legacy/ and the tests.
   agents/runtime.js     The loop every agent runs on
   agents/orchestrator.js  runAgent(name, inputs); runCampaign(brief)
   agents/roster/        One file per agent: role, model, tools, schema, packet, validate
@@ -195,3 +196,24 @@ Stop after task 12 and summarise what changed.
 ```
 
 Tasks 11 and 12 are small and touch the parts you will work in for weeks. They are a good way to find out whether this document told you the truth.
+
+---
+
+## 11. Deploying to Vercel
+
+The build failed originally because `lib/` sat outside `web/`: Vercel installs
+dependencies and traces files from the project's **Root Directory**, and
+anything above it is not reliably included. The runtime now lives at
+`web/core/`, and `web/package.json` carries every dependency it needs.
+
+In the Vercel project settings, **Root Directory must be `web`**. Framework
+preset Next.js (detected automatically). No build or install command overrides;
+`vercel.json` only raises the function timeout to 300 seconds.
+
+To check a change will deploy, simulate it locally:
+
+```bash
+cd web && rm -rf node_modules .next && npm install && npm run build
+```
+
+If that passes from a clean copy, Vercel will build.

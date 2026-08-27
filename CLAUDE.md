@@ -42,7 +42,8 @@ Run `npm test` before and after every change. Both suites must pass. Add a test 
 ```
 server.js, api/index.js      entry points (process, serverless); both serve lib/app.js
 lib/app.js                   Express routes
-lib/agents/runtime.js        the loop: tools, submit schema, gate, budgets, trace, ledger
+web/core/agents/runtime.js   the loop: tools, submit schema, gate, budgets, trace, ledger
+lib/*.js                     thin shims re-exporting web/core (for legacy/ and tests)
 lib/agents/orchestrator.js   runAgent(name, inputs) with memory + packet; runCampaign(brief)
 lib/agents/roster/<agent>.js name, fixture, model, role, tools, budget, schema, packet(), validate(), postProcess()
 lib/agents/tools/            functions agents may call; each { name, description, input_schema, run(input, packet) }
