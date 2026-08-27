@@ -1,6 +1,6 @@
 # Campaign Forge
 
-Brief in, campaign out. A working demo of an agentic marketing campaign system: load it with your company's voice, give it a brief, and a four-pass prompt chain researches the material, chooses an angle, writes every channel, and adapts it for Portugal, with the token cost shown for every step.
+Brief in, campaign out. An agentic marketing campaign system built for working on someone else's company: point it at a client's website, give it a brief, and a chain of passes reads the site for voice and style, researches the customer, chooses an angle, writes every channel, plans a month of social with on-brand graphics, builds the lifecycle, handoff and measurement layer, and adapts it for Portugal. The token cost of every step is shown.
 
 Built as a portfolio piece by a marketer who ships production apps with AI assistance. The code is meant to be read.
 
@@ -66,6 +66,10 @@ public/                 index.html, styles.css, app.js. No framework, no build s
 ARCHITECTURE.md         How this would be wired into real ad platforms and a CRM
 ```
 
+## Built for third-party work
+
+An agency or a fractional marketer has never met the client's buyer and does not have the brand book to hand. So the tool goes and gets both: the site scan for voice and style, the audience pass for the customer. Every output is labelled and exported per client, and nothing is stored between sessions, so switching clients is a page refresh.
+
 ## Design decisions worth knowing
 
 - **Research is a separate pass, and later passes never see the raw sources.** A 40,000-character brand guide is read once and becomes a few hundred tokens of distilled context that three later passes can afford to include. That is the main cost lever in the system.
@@ -78,4 +82,4 @@ ARCHITECTURE.md         How this would be wired into real ad platforms and a CRM
 
 ## Not included
 
-Live posting to ad platforms, CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI. See `ARCHITECTURE.md` for how each would be added.
+Live posting to ad platforms or social schedulers, CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI, generated photography (the graphics are typographic by design), headless-browser scraping. See `ARCHITECTURE.md` for how each would be added.

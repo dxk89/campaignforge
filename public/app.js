@@ -21,9 +21,11 @@ const LIMITS = {
 };
 
 const PASS_LABELS = {
-  research: 'Researching your company material',
+  research: 'Researching the company material',
+  audience: 'Understanding the customer',
   strategy: 'Choosing the angle',
   assets: 'Writing every channel',
+  social: 'Planning a month of social and drawing the graphics',
   activation: 'Building the lifecycle, handoff and measurement plan',
   localise: 'Adapting for Portugal',
 };
@@ -33,6 +35,7 @@ const MAX_TOTAL_SOURCE_CHARS = 60000;
 let sources = [];
 let result = null;
 let briefUsage = null;
+let brandKit = null;
 let activeTab = 'strategy';
 let activeLang = 'en';
 
@@ -246,6 +249,40 @@ $('#paste-add').addEventListener('click', async () => {
   }
 });
 
+$('#site-scan').addEventListener('click', async () => {
+  const input = $('#site-input');
+  const url = input.value.trim();
+  if (!url) return;
+  showSourceError('');
+  const btn = $('#site-scan');
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  try {
+    const data = await postJson('/api/sources/site', { url });
+    data.sources.forEach(addSource);
+    brandKit = data.brandKit;
+    renderBrandKit();
+    if (!$('#brief-form').elements.clientName.value && brandKit.siteName) $('#brief-form').elements.clientName.value = brandKit.siteName;
+    if (!$('#brief-form').elements.companyUrl.value) $('#brief-form').elements.companyUrl.value = url;
+  } catch (err) {
+    showSourceError(err.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Scan site';
+});
+$('#site-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#site-scan').click(); } });
+
+function renderBrandKit() {
+  const el = $('#brand-kit');
+  if (!brandKit) { el.hidden = true; return; }
+  const p = brandKit.palette || {};
+  const swatches = [...(p.accents || []), p.dark, p.light].filter(Boolean).map((c) => `<span class="swatch" style="background:${esc(c)}" title="${esc(c)}"></span>`).join('');
+  el.innerHTML = `<div class="swatches">${swatches}</div>
+    <div class="kit-line"><b>${esc(brandKit.siteName)}</b>${brandKit.tagline ? ` · ${esc(brandKit.tagline)}` : ''}</div>
+    <div class="kit-line">Fonts: <b>${esc((brandKit.fonts || []).join(', ') || 'none found')}</b> · ${(brandKit.pages || []).length} pages read${brandKit.logo ? ` · <img class="kit-logo" src="${esc(brandKit.logo)}" alt="logo">` : ''}</div>`;
+  el.hidden = false;
+}
+
 $('#web-research').addEventListener('change', (e) => {
   $('#company-url-field').hidden = !e.target.checked;
 });
@@ -268,6 +305,7 @@ function readBrief() {
   const languages = ['en'];
   if (form.querySelector('input[name="languages"][value="pt"]').checked) languages.push('pt');
   return {
+    clientName: form.elements.clientName.value.trim() || undefined,
     productName: form.elements.productName.value.trim(),
     productDescription: form.elements.productDescription.value.trim(),
     targetAudience: form.elements.targetAudience.value.trim(),
@@ -277,6 +315,7 @@ function readBrief() {
     webResearch: $('#web-research').checked,
     companyUrl: form.elements.companyUrl.value.trim() || undefined,
     landingUrl: form.elements.landingUrl.value.trim() || undefined,
+    brandKit: brandKit || undefined,
     sources: sources.map(({ name, kind, text }) => ({ name, kind, text })),
   };
 }
@@ -306,7 +345,7 @@ $('#brief-form').addEventListener('submit', async (e) => {
 
   // The browser drives the chain one pass at a time. Progress is therefore
   // real, and each request is short enough for a serverless host.
-  const { sources: srcs, webResearch, companyUrl, landingUrl, ...briefFields } = brief;
+  const { sources: srcs, webResearch, companyUrl, landingUrl, brandKit: kit, ...briefFields } = brief;
   const passes = {};
   const started = Date.now();
   let current = null;
@@ -332,11 +371,22 @@ $('#brief-form').addEventListener('submit', async (e) => {
       setPass('research', 'skipped');
     }
 
-    const s = await run('strategy', { brief: briefFields, context });
-    const a = await run('assets', { brief: briefFields, strategy: s.strategy, context });
+    let audienceData = null;
+    if (webResearch) {
+      const au = await run('audience', { brief: briefFields, context, webResearch: true });
+      audienceData = au.audience;
+    } else {
+      setPass('audience', 'skipped');
+    }
+
+    const s = await run('strategy', { brief: briefFields, context, audience: audienceData });
+    const a = await run('assets', { brief: briefFields, strategy: s.strategy, context, audience: audienceData });
     const issues = [...(a.issues || [])];
 
-    const act = await run('activation', { brief: briefFields, strategy: s.strategy, assets: a.assets, context, landingUrl });
+    const so = await run('social', { brief: briefFields, strategy: s.strategy, assets: a.assets, context, audience: audienceData, brandKit: kit });
+    issues.push(...(so.issues || []));
+
+    const act = await run('activation', { brief: briefFields, strategy: s.strategy, assets: a.assets, context, audience: audienceData, landingUrl });
 
     let localised = null;
     if (brief.languages.includes('pt')) {
@@ -350,8 +400,11 @@ $('#brief-form').addEventListener('submit', async (e) => {
     result = {
       brief: briefFields,
       context,
+      audience: audienceData,
+      brandKit: kit || null,
       strategy: s.strategy,
       assets: a.assets,
+      social: so.social,
       localised,
       activation: act.activation,
       activationProblems: act.problems || [],
@@ -505,6 +558,10 @@ function renderTab() {
     panel.innerHTML =
       card('Google RSA · 8 headlines', rows(a.google?.headlines || [], LIMITS.google.headline), (a.google?.headlines || []).join('\n')) +
       card('Google RSA · 4 descriptions', rows(a.google?.descriptions || [], LIMITS.google.description), (a.google?.descriptions || []).join('\n'));
+  } else if (activeTab === 'audience') {
+    panel.innerHTML = renderAudience(result.audience);
+  } else if (activeTab === 'social') {
+    panel.innerHTML = renderSocial(result.social);
   } else if (activeTab === 'lifecycle') {
     panel.innerHTML = renderLifecycle(result.activation, result.activationProblems);
   } else if (activeTab === 'handoff') {
@@ -618,6 +675,75 @@ function renderMeasurement(act, tracking) {
   </div>`;
 }
 
+function renderAudience(a) {
+  if (!a) return '<div class="prose"><p>Audience research runs when "Research online" is ticked. It uses web search to find how the customer actually talks about the problem.</p></div>';
+  const list = (arr) => arr?.length ? `<ul>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p>—</p>';
+  const tags = (arr) => arr?.length ? `<div class="tag-list">${arr.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>` : '<p>—</p>';
+  return `<div class="prose">
+    <section><h3>Who</h3><p>${esc(a.who)}</p></section>
+    <section><h3>Their words</h3>${tags(a.language)}</section>
+    <section><h3>Pains</h3>${list(a.pains)}</section>
+    <section><h3>Triggers</h3>${list(a.triggers)}</section>
+    <section><h3>Objections</h3>${list(a.objections)}</section>
+    <section><h3>Where they gather</h3>${list(a.where_they_gather)}</section>
+    <section><h3>What they read</h3>${list(a.content_they_consume)}</section>
+    <section><h3>What competitors tell them</h3>${(a.competitor_messages || []).length ? `<dl class="kv">${a.competitor_messages.map((c) => `<dt>${esc(c.competitor)}</dt><dd>"${esc(c.message)}" <span class="src">weak on: ${esc(c.weakness)}</span></dd>`).join('')}</dl>` : '<p>—</p>'}</section>
+    <section><h3>Search terms</h3>${tags(a.search_terms)}</section>
+    ${a.sources?.length ? `<section><h3>Sources</h3><ul>${a.sources.map((u) => `<li class="utm-url">${esc(u)}</li>`).join('')}</ul></section>` : ''}
+  </div>`;
+}
+
+const SOCIAL_MAX = { linkedin: 3000, x: 280, instagram: 2200 };
+
+function renderSocial(cal) {
+  if (!cal?.posts?.length) return '<div class="prose"><p>No social calendar generated.</p></div>';
+  const weeks = [[], [], [], []];
+  cal.posts.forEach((p, i) => weeks[Math.min(3, Math.floor((p.day - 1) / 7))].push({ ...p, i }));
+  const post = (p) => {
+    const tags = (p.hashtags || []).map((t) => '#' + String(t).replace(/^#/, ''));
+    const full = p.channel === 'x' ? [p.text, ...tags].join(' ') : p.text;
+    const max = SOCIAL_MAX[p.channel] || 3000;
+    const len = String(full || '').length;
+    const copy = [p.text, tags.join(' ')].filter(Boolean).join('\n\n');
+    return `<article class="post ${p.graphic?.svg ? '' : 'no-graphic'}">
+      <div>
+        <div class="post-head"><span class="post-day">Day ${p.day}</span><span class="chan ${esc(p.channel)}">${esc(p.channel)}</span><span class="pill">${esc(p.pillar)}</span></div>
+        <div class="post-text">${esc(p.text)}</div>
+        ${tags.length ? `<div class="post-tags">${esc(tags.join(' '))}</div>` : ''}
+        ${p.cta ? `<div class="snote">CTA: ${esc(p.cta)}</div>` : ''}
+        <div class="post-foot"><span class="count ${len > max ? 'over' : ''}">${len}/${max}</span><button type="button" class="copy-btn" data-copy="${esc(copy)}">Copy</button></div>
+      </div>
+      ${p.graphic?.svg ? `<div class="gfx">${p.graphic.svg}<button type="button" class="mini-copy" data-png="${p.i}">Download PNG</button></div>` : ''}
+    </article>`;
+  };
+  return `<div class="pillars">${(cal.pillars || []).map((pl) => `<div><b>${esc(pl.name)}</b>${esc(pl.theme)}</div>`).join('')}</div>
+    ${weeks.map((w, i) => w.length ? `<div class="week"><h3>Week ${i + 1} · ${w.length} posts</h3>${w.map(post).join('')}</div>` : '').join('')}`;
+}
+
+/** SVG string -> PNG download via canvas. Fonts fall back to system sans. */
+function downloadPng(svg, name) {
+  const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = 1080; c.height = 1080;
+    c.getContext('2d').drawImage(img, 0, 0, 1080, 1080);
+    URL.revokeObjectURL(url);
+    c.toBlob((png) => download(name, 'image/png', png), 'image/png');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); download(name.replace(/\.png$/, '.svg'), 'image/svg+xml', svg); };
+  img.src = url;
+}
+
+$('#tab-panel').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-png]');
+  if (!b || !result) return;
+  const p = result.social.posts[Number(b.dataset.png)];
+  const client = (result.brief?.clientName || result.brief?.productName || 'client').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  downloadPng(p.graphic.svg, `${client}-day${p.day}-${p.channel}.png`);
+});
+
 $('#tabs').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-tab]');
   if (!b || !result) return;
@@ -664,7 +790,7 @@ function renderEconomics() {
 // ---------------------------------------------------------------------------
 
 function download(name, mime, content) {
-  const blob = new Blob([content], { type: mime });
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = name;
@@ -692,8 +818,7 @@ function csvCell(v) {
 
 $('#export-json').addEventListener('click', () => {
   if (!result) return;
-  const name = (result.strategy?.lead_angle || 'campaign').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  download(`campaign-forge-${name}.json`, 'application/json', JSON.stringify({ ...result, briefParse: briefUsage || undefined }, null, 2));
+  download(`${clientSlug()}-campaign.json`, 'application/json', JSON.stringify({ ...result, briefParse: briefUsage || undefined }, null, 2));
 });
 
 $('#export-csv').addEventListener('click', () => {
@@ -702,5 +827,20 @@ $('#export-csv').addEventListener('click', () => {
   rows.push(...flattenAssets(result.assets, 'en', result.tracking));
   if (result.localised) rows.push(...flattenAssets(result.localised, 'pt', result.tracking));
   const csv = rows.map((r) => r.map(csvCell).join(',')).join('\n');
-  download('campaign-forge-assets.csv', 'text/csv;charset=utf-8', '\ufeff' + csv);
+  download(`${clientSlug()}-assets.csv`, 'text/csv;charset=utf-8', '\ufeff' + csv);
+});
+
+function clientSlug() {
+  return (result?.brief?.clientName || result?.brief?.productName || 'campaign').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+$('#export-social').addEventListener('click', () => {
+  if (!result?.social?.posts) return;
+  const rows = [['day', 'channel', 'pillar', 'text', 'hashtags', 'cta', 'char_count', 'graphic_template', 'graphic_headline']];
+  for (const p of result.social.posts) {
+    const tags = (p.hashtags || []).map((t) => '#' + String(t).replace(/^#/, '')).join(' ');
+    const len = (p.channel === 'x' ? [p.text, tags].filter(Boolean).join(' ') : p.text || '').length;
+    rows.push([p.day, p.channel, p.pillar, p.text, tags, p.cta || '', len, p.graphic?.template || '', p.graphic?.headline || '']);
+  }
+  download(`${clientSlug()}-social.csv`, 'text/csv;charset=utf-8', '\ufeff' + rows.map((r) => r.map(csvCell).join(',')).join('\n'));
 });

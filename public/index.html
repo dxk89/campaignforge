@@ -22,8 +22,10 @@
   <!-- The chain, made visible. Segments fill as each pass completes. -->
   <ol class="chain" id="chain" aria-label="Generation steps">
     <li data-pass="research"><span class="chain-dot"></span>Research</li>
+    <li data-pass="audience"><span class="chain-dot"></span>Audience</li>
     <li data-pass="strategy"><span class="chain-dot"></span>Strategy</li>
     <li data-pass="assets"><span class="chain-dot"></span>Assets</li>
+    <li data-pass="social"><span class="chain-dot"></span>Social</li>
     <li data-pass="activation"><span class="chain-dot"></span>Activation</li>
     <li data-pass="localise"><span class="chain-dot"></span>pt-PT</li>
   </ol>
@@ -44,6 +46,11 @@
           <span class="dropzone-types">PDF, DOCX, TXT, MD · you can edit everything after</span>
         </label>
         <p class="brief-status" id="brief-status" hidden></p>
+
+        <label class="field">
+          <span>Client <em class="opt">the company this campaign is for</em></span>
+          <input name="clientName" autocomplete="off" placeholder="Ledgerline Ltd">
+        </label>
 
         <label class="field">
           <span>Product name</span>
@@ -97,6 +104,16 @@
         <h2 class="block-title">Company voice <span class="block-hint">what the research pass reads</span></h2>
         <p class="block-lead">Load the builder with how your company actually talks: brand guidelines, product pages, past campaigns, customer quotes, sales decks. The research pass distils them, and every asset is written in that voice with those proof points.</p>
 
+        <div class="site-scan">
+          <span class="line-label">Scan the client's website</span>
+          <div class="inline-add">
+            <input type="url" id="site-input" placeholder="https://client.com" inputmode="url">
+            <button type="button" class="btn-secondary" id="site-scan">Scan site</button>
+          </div>
+          <p class="site-hint">Reads the important pages for voice and pulls the palette, fonts and logo for graphics.</p>
+          <div class="brand-kit" id="brand-kit" hidden></div>
+        </div>
+
         <div class="source-add">
           <label class="dropzone" id="dropzone">
             <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm">
@@ -123,7 +140,7 @@
 
         <label class="check web-research">
           <input type="checkbox" name="webResearch" id="web-research">
-          <span>Also research the company online <em>(up to 5 searches, shown in cost)</em></span>
+          <span>Research online: the company and its customers <em>(up to 13 searches, shown in cost)</em></span>
         </label>
         <label class="field" id="company-url-field" hidden>
           <span>Company website</span>
@@ -143,7 +160,7 @@
 
     <div class="results-empty" id="results-empty">
       <p class="empty-title">Nothing generated yet.</p>
-      <p>Fill in the brief (or upload one), load the builder with your company's material, and generate. Five passes run in sequence: research the material into a company context, choose an angle, write every channel, build the lifecycle workflow, sales handoff and measurement plan, then adapt for Portugal if you asked for it.</p>
+      <p>Fill in the brief (or upload one), load the builder with your company's material, and generate. Scan the client's site for voice and style, then generate. Up to seven passes run in sequence: research the material, understand the customer, choose an angle, write every channel, plan a month of social with graphics, build the lifecycle, handoff and measurement plan, then adapt for Portugal if asked.</p>
       <p>No key handy? The server runs with <code>MOCK_CLAUDE=1</code> and returns a fixture campaign so you can see the interface work.</p>
     </div>
 
@@ -156,11 +173,13 @@
       <div class="results-bar">
         <div class="tabs" role="tablist" id="tabs">
           <button role="tab" data-tab="research" aria-selected="false">Research</button>
+          <button role="tab" data-tab="audience" aria-selected="false">Audience</button>
           <button role="tab" data-tab="strategy" aria-selected="true">Strategy</button>
           <button role="tab" data-tab="meta" aria-selected="false">Meta</button>
           <button role="tab" data-tab="linkedin" aria-selected="false">LinkedIn</button>
           <button role="tab" data-tab="google" aria-selected="false">Google</button>
           <button role="tab" data-tab="email" aria-selected="false">Email</button>
+          <button role="tab" data-tab="social" aria-selected="false">Social</button>
           <button role="tab" data-tab="lifecycle" aria-selected="false">Lifecycle</button>
           <button role="tab" data-tab="handoff" aria-selected="false">Handoff</button>
           <button role="tab" data-tab="measurement" aria-selected="false">Measurement</button>
@@ -193,6 +212,7 @@
   <div class="econ-actions">
     <button type="button" class="btn-secondary" id="export-json">Export JSON</button>
     <button type="button" class="btn-secondary" id="export-csv">Export CSV</button>
+    <button type="button" class="btn-secondary" id="export-social">Social CSV</button>
   </div>
 </footer>
 

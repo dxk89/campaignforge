@@ -12,6 +12,18 @@ Each channel tab would gain a "Push to platform" action, behind OAuth. Meta's Ma
 
 Nothing would publish automatically. The chain produces a draft; a person approves a version; only then is it pushed, and pushed as paused so the platform's own review runs before spend starts.
 
+## Social publishing and scheduling
+
+The month of posts exports as CSV with day, channel and text, which every scheduler imports. The direct route is the schedulers' APIs (Buffer, Hootsuite) or the platforms' own (LinkedIn Community Management API, X API, Meta Graph API for Instagram), each of which takes text plus a media upload. The PNG the browser produces today would be produced server-side (a headless renderer of the same SVG) and uploaded with the post. As with ads, nothing would publish without a person approving the month; the approval unit is the calendar, not the post.
+
+## Site scanning
+
+The scanner fetches HTML and CSS directly, which covers server-rendered marketing sites. Client-rendered sites return an empty shell; production would render them in a headless browser (Playwright) and read the computed styles rather than the stylesheets, which also gives a more honest palette: what is actually on screen, weighted by area, rather than what is declared in CSS. A client library would keep the scan and the brand kit between sessions so a returning client is a lookup, not a re-crawl.
+
+## Graphics
+
+The templates are typographic on purpose: text on brand colour is the format that survives any palette and never looks wrong. Photography and illustration would come from an image generation API behind a brand-safe prompt built from the same brand kit, reviewed before use. That is a separate pass with its own cost line, not a change to the existing one.
+
 ## Email sequences
 
 The three-email nurture with its branch condition maps onto a HubSpot workflow: a sequence of emails with an if/then branch on an engagement event. HubSpot's API can create the email templates and the workflow definition, with the branch note becoming the actual condition (clicked versus did not click). Alternatives such as Customer.io or Braze have the same primitives. The demo's branch note is prose; in production it would be a structured condition so the workflow could be created without a human translating it.

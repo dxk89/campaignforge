@@ -444,3 +444,36 @@ fieldset.langs legend { margin-bottom: 6px; padding: 0; }
 .utm-url { font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--muted); }
 .talk { padding: 10px 12px; border-left: 3px solid var(--teal); background: var(--teal-soft); border-radius: 0 4px 4px 0; }
 .talk .obj { font-weight: 600; margin-top: 8px; }
+
+/* ---------- Site scan + brand kit ---------- */
+.site-scan { margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--panel-2); }
+.site-scan .line-label { margin-bottom: 6px; }
+.site-hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+.brand-kit { margin-top: 10px; display: grid; gap: 6px; font-size: 12.5px; }
+.brand-kit .swatches { display: flex; gap: 4px; }
+.brand-kit .swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.08); }
+.brand-kit .kit-line { color: var(--muted); }
+.brand-kit .kit-line b { color: var(--ink); font-weight: 500; }
+.brand-kit .kit-logo { max-height: 28px; max-width: 140px; }
+
+/* ---------- Social calendar ---------- */
+.week { margin-bottom: 8px; }
+.week h3 { font-size: 13px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 8px 0 8px; }
+.post { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--radius); background: var(--panel); margin-bottom: 8px; }
+.post.no-graphic { grid-template-columns: 1fr; }
+.post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.post-day { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.chan { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 7px; border-radius: 3px; background: var(--teal-soft); color: var(--teal-ink); }
+.chan.x { background: var(--panel-2); color: var(--ink); }
+.chan.instagram { background: var(--ember-soft); color: var(--ember); }
+.pill { font-size: 11px; color: var(--muted); }
+.post-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13.5px; line-height: 1.5; }
+.post-tags { margin-top: 4px; font-family: var(--mono); font-size: 11.5px; color: var(--teal-ink); }
+.post-foot { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.post-foot .count { margin-top: 0; }
+.gfx { display: flex; flex-direction: column; gap: 4px; }
+.gfx svg { width: 150px; height: 150px; border-radius: 4px; border: 1px solid var(--line-soft); }
+.gfx .mini-copy { align-self: flex-start; padding: 2px 0; }
+.pillars { display: grid; gap: 4px; margin-bottom: 12px; font-size: 13px; }
+.pillars b { font-family: var(--mono); font-size: 11px; text-transform: uppercase; color: var(--teal-ink); margin-right: 6px; }
+@media (max-width: 560px) { .post { grid-template-columns: 1fr; } .gfx svg { width: 120px; height: 120px; } }
