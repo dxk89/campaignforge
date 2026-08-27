@@ -54,8 +54,12 @@ vercel --prod
 ```
 server.js               Long-running entry point (local, Render)
 api/index.js            Serverless entry point (Vercel); both serve lib/app.js
-lib/app.js              Express: static front end, sources, one route per pass, /api/generate
-lib/chain.js            The four passes as plain functions, plus runChain and the economics sum
+lib/app.js              Express: static front end, sources, agent routes, /api/generate
+lib/agents/runtime.js   The loop every agent runs on: tools, submit schema, validators as gates, budgets, trace
+lib/agents/orchestrator.js  Runs one agent with its packet and memory, or the default campaign plan
+lib/agents/roster/      One file per agent: role, model, tools, schema, packet, validate
+lib/agents/tools/       What agents can call: validators, compliance scanner, fetch, scan, render, images
+lib/memory/             Client memory interface (exemplars, learnings, corrections, claims); empty until Phase 1
 lib/claude.js           One helper: JSON-only call, fence stripping, usage capture
 lib/limits.js           Character limits, used by the prompts and the validator
 lib/pricing.js          Dated per-token rates
@@ -65,6 +69,14 @@ lib/prompts/            One file per pass: brief, research, strategy, assets, lo
 public/                 index.html, styles.css, app.js. No framework, no build step
 ARCHITECTURE.md         How this would be wired into real ad platforms and a CRM
 ```
+
+## How it runs: agents, not prompts
+
+Each section is its own agent on a shared runtime (`lib/agents/runtime.js`): a role, a set of tools, a submit schema, a validator and a budget. An agent works in a loop: it can call its tools (the limit checker, the compliance scanner, the activation validator, a page fetcher, the card renderer), and it finishes by calling `submit`, whose input is checked against the schema and the validator. If the check fails, the errors go back to the agent as a tool result and it revises; the runtime never accepts an over-limit headline, a competitor name or a Brazilian form. Every run keeps a trace of what it called and what it was told.
+
+Roster today: brief-reader (Haiku), brand-analyst, customer-researcher (web search), strategist, copywriter, social-planner, ops-architect, localiser. Each picks its own model and is priced at that model's rate in the ledger. Packets (what an agent is shown) are assembled in code from the brief, the artifacts it depends on, the compliance rules, and client memory: approved claims, learnings and exemplars, which return empty until the client library exists and then fill in without changing the agents.
+
+`POST /api/agents/:name/run` runs any agent with raw inputs; the `/api/pass/*` routes the browser uses are those agents with the brief-shaped inputs. `AGENTS.md` describes the full roster plan, including the Critic and Art Director that come next.
 
 ## Built for third-party work
 
