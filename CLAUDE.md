@@ -5,11 +5,19 @@ Campaign Forge: an agentic campaign builder for one marketer running several cli
 ## Commands
 
 ```
-npm install
-npm start                 # real API; needs ANTHROPIC_API_KEY (GEMINI_API_KEY optional)
-MOCK_CLAUDE=1 npm start   # fixtures, no key, no spend
-npm test                  # runtime test (scripted model) + front-end test (jsdom vs mock server)
+npm install                          # root: the shared lib/ and the legacy Express app
+cd web && npm install && cd ..       # the Next.js app (Phase 1 onward)
+
+npm start                            # legacy Express app on lib/ (being retired in Phase 1 task 10)
+MOCK_CLAUDE=1 npm start              # same, on fixtures
+
+npm run web                          # Next dev server (web/)
+npm run web:build                    # Next production build; this typechecks
+
+npm test                             # runtime + db + api + front-end suites
 ```
+
+Phase 1 note: `web/` is the product. `lib/` is shared by both and stays plain CommonJS. `public/` and `server.js` are the legacy front end and are retired in task 10.
 
 Run `npm test` before and after every change. Both suites must pass. Add a test when you add a behaviour.
 
@@ -25,7 +33,9 @@ Run `npm test` before and after every change. Both suites must pass. Add a test 
 8. **Nothing about a client is assumed.** The tool reads the site, the sources and the web. If it does not know, it says so (gaps), it does not invent.
 9. **API keys never reach the browser.** Server-side only.
 10. **British English** in prompts, UI copy and docs. Brand name spelling exactly as registered. No em-dashes in generated copy.
-11. **Third-party tools degrade, never block.** Every external tool (Jina, LanguageTool, Pexels, autocomplete, HN) returns `{ error }` on failure and the agent continues; a gate may only depend on a tool when a fallback exists. Licences: MIT/Apache/ISC/MPL embed freely; AGPL only behind an API boundary and noted in README; respect the terms listed in `docs/build/07-tooling.md`.
+11. **The store is optional.** Without `FIREBASE_SERVICE_ACCOUNT` the app runs against an in-memory store and `MOCK_AUTH=1` bypasses sign-in. Every test suite runs this way, and a reviewer must be able to run the product with no Firebase project. Never make a code path require the store.
+12. **Agent inputs are assembled server-side** (`web/server/inputs.ts`), never sent by the browser. A resumed campaign must make the same decisions as a fresh one.
+13. **Third-party tools degrade, never block.** Every external tool (Jina, LanguageTool, Pexels, autocomplete, HN) returns `{ error }` on failure and the agent continues; a gate may only depend on a tool when a fallback exists. Licences: MIT/Apache/ISC/MPL embed freely; AGPL only behind an API boundary and noted in README; respect the terms listed in `docs/build/07-tooling.md`.
 
 ## Layout
 

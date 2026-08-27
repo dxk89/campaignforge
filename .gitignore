@@ -3,3 +3,7 @@ node_modules/
 npm-debug.log*
 .DS_Store
 .vercel/
+.rules-build/
+web/.next/
+web/node_modules/
+web/.test-build/

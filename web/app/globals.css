@@ -1,0 +1,77 @@
+/* ---------------------------------------------------------------------------
+   Campaign Forge
+   Palette: cool workbench greys, petrol teal for actions, ember for the two
+   things that should pull the eye (cost, limit violations). Nothing else
+   gets colour.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --bg: #e9ecf0;
+  --panel: #ffffff;
+  --panel-2: #f4f6f8;
+  --ink: #14181f;
+  --muted: #5b6470;
+  --line: #ced4dc;
+  --line-soft: #e2e6eb;
+
+  --teal: #0e5c6b;
+  --teal-ink: #0a4652;
+  --teal-soft: #e3eff1;
+
+  --ember: #e4570f;
+  --ember-soft: #fdece2;
+  --amber: #8a5a00;
+  --amber-soft: #fff3d1;
+  --ok: #1f7a4d;
+  --ok-soft: #e4f3ea;
+
+  --display: 'Archivo', system-ui, sans-serif;
+  --body: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  --radius: 6px;
+  --shadow: 0 1px 0 rgba(20, 24, 31, 0.04), 0 1px 3px rgba(20, 24, 31, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 14.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { margin: 0; font-family: var(--display); font-stretch: 87.5%; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; }
+
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+/* ---------- Header ---------- */
+
+
+/* Phase 1: the workbench styles are ported tab by tab in task 6.
+   Everything above is the design system, unchanged. */
+.shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.shell h1 { font-size: 24px; margin-bottom: 8px; }
+.muted { color: var(--muted); }
+
+.library { display: grid; gap: 0; margin-top: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.client-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 4px; }
+.client-list li { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 12px; align-items: center; padding: 8px 10px; background: var(--panel-2); border-radius: 4px; }
+.client-list a { color: var(--teal-ink); font-weight: 500; text-decoration: none; }
+.client-list a:hover { text-decoration: underline; }
+.swatches { display: flex; gap: 4px; margin-bottom: 8px; }
+.swatch { width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.08); }
+.kit-line { margin: 2px 0; font-size: 13px; color: var(--muted); }
+.kit-line b { color: var(--ink); font-weight: 500; }
+.mono { font-family: var(--mono); font-size: 12px; }

@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Single operator. Everything lives under users/{uid} so a second user is a
+// rules change, not a migration. The allowed address is injected at deploy
+// time by scripts/deploy-rules.js from ALLOWED_EMAIL.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() == '__ALLOWED_EMAIL__';
+    }
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner();
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
