@@ -1,6 +1,6 @@
 # CLAUDE.md — working in this repository
 
-Campaign Forge: an agentic campaign builder for one marketer running several clients. Read this before changing anything. The design documents are `docs/Campaign-Forge-Product-and-Build-Plan.docx` (the plan), `AGENTS.md` (agent architecture), `INFRASTRUCTURE.md` (target infrastructure), `ARCHITECTURE.md` (production integration). Build specs per phase are in `docs/build/`. Work from the spec for the current phase; do not skip ahead.
+Campaign Forge: an agentic campaign builder for one marketer running several clients. Read this before changing anything. The design documents are `docs/Campaign-Forge-Product-and-Build-Plan.docx` (the plan), `AGENTS.md` (agent architecture), `INFRASTRUCTURE.md` (target infrastructure), `ARCHITECTURE.md` (production integration). Build specs per phase are in `docs/build/`. Work from the spec for the current phase; do not skip ahead. `docs/build/06-agent-training.md` runs alongside every phase: when a phase's schedule in its §4 names an agent, build that agent's knowledge pack in the same phase.
 
 ## Commands
 
