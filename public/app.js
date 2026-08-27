@@ -518,6 +518,7 @@ function renderResearch(c) {
   const tags = (arr, cls = '') => arr?.length ? `<div class="tag-list">${arr.map((t) => `<span class="tag ${cls}">${esc(t)}</span>`).join('')}</div>` : '<p>—</p>';
   const list = (arr) => arr?.length ? `<ul>${arr.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p>—</p>';
   return `<div class="prose">
+    ${c._truncated ? '<div class="note">This research output hit its length limit and was repaired; the last section may be incomplete. Fewer or shorter sources will fix it.</div>' : ''}
     <section><h3>Company</h3><p>${esc(c.company_summary)}</p>${c.positioning ? `<p><strong>Positioning:</strong> ${esc(c.positioning)}</p>` : ''}</section>
     <section><h3>Voice</h3>${list(c.voice?.observations)}
       <p style="margin-top:8px"><strong>Use:</strong></p>${tags(c.voice?.preferred_terms)}
