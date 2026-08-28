@@ -37,6 +37,11 @@ const env = {
   PORT: String(PORT),
 };
 delete env.MOCK_AUTH;
+// This suite must run entirely in memory. A developer with a store configured
+// would otherwise have alice/bob written to it, and the throttle record left
+// behind locks the next run out for fifteen minutes.
+delete env.FIREBASE_SERVICE_ACCOUNT;
+delete env.FIRESTORE_EMULATOR_HOST;
 
 const server = startNext(PORT, env);
 const stop = () => server.kill();
@@ -74,6 +79,18 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
     try { const r = await fetch(base + '/api/health'); if (r.ok) break; } catch {}
     await wait(500);
   }
+
+  // 0. Baseline: an unauthenticated caller is turned away, not silently let in.
+  // proxy.ts gates on cookie PRESENCE before any route runs, and redirects
+  // (307) to /login rather than returning a bare 401 JSON body - that is the
+  // "cheap gate" the proxy's own header comment describes, distinct from the
+  // route-level 401 a stale-but-present cookie gets (assertion 6). Followed
+  // with redirect: 'manual' so the real status is visible rather than the 200
+  // of the login page fetch() would otherwise follow through to.
+  const noCookieRes = await fetch(base + '/api/clients', { redirect: 'manual' });
+  assert.ok(noCookieRes.status >= 300 && noCookieRes.status < 400, `no cookie should be redirected, got ${noCookieRes.status}`);
+  assert.ok((noCookieRes.headers.get('location') || '').includes('/login'), 'redirected to /login');
+  console.log('  no cookie: redirected to /login (' + noCookieRes.status + ')');
 
   // 1. Owner logs in with real credentials and gets a session cookie.
   const ownerLogin = await login('owner-admin', 'owner-super-secret-password');
@@ -122,6 +139,13 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
   assert.ok(!bobIds.includes(aliceClientId), 'bob must not see alice\'s client: ' + bobIds.join(','));
   console.log('  workspace isolation: bob sees only', bobIds.join(','));
 
+  // 4b. The by-id route is the classic insecure-direct-object-reference shape:
+  // a list route can filter correctly while a by-id route trusts the URL.
+  // Bob must not be able to fetch alice's client just by knowing its id.
+  const direct = await api(`/api/clients/${aliceClientId}`, { cookie: bobCookie });
+  assert.ok(direct.status === 404 || direct.status === 403, `bob cannot fetch alice's client by id, got ${direct.status}`);
+  console.log('  by-id IDOR check: bob fetching alice\'s client id gets', direct.status);
+
   // 5. Admin routes refuse a non-owner account on every verb.
   const bobListAccounts = await api('/api/admin/accounts', { cookie: bobCookie });
   assert.equal(bobListAccounts.status, 403, JSON.stringify(bobListAccounts.data));
@@ -144,13 +168,20 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
   // bucket is already shared with every login above. Running it earlier would
   // lock out the admin and demo-account logins the rest of the suite depends
   // on (see header comment).
-  let lastStatus = null;
+  // The first ten are asserted individually so a regressed threshold (say
+  // MAX_FAILURES accidentally set to 1) cannot pass by only checking the
+  // eventual lock: each of these must genuinely be a rejected-credentials
+  // 401, not a lock that arrived early.
+  const statuses = [];
   for (let i = 0; i < 11; i++) {
     const attempt = await login('owner-admin', 'definitely-wrong-password');
-    lastStatus = attempt.status;
+    statuses.push(attempt.status);
   }
-  assert.equal(lastStatus, 429, 'the eleventh failed login is throttled');
-  console.log('  eleventh failed login: 429');
+  for (let i = 0; i < 10; i++) {
+    assert.equal(statuses[i], 401, `attempt ${i + 1} should be a rejected-credentials 401, got ${statuses[i]}`);
+  }
+  assert.equal(statuses[10], 429, 'the eleventh failed login is throttled');
+  console.log('  attempts 1-10: 401 each, attempt 11: 429');
 
   console.log('isolation tests: ok');
   stop();
