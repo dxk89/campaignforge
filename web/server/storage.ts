@@ -33,7 +33,14 @@ export const storageEnabled = Boolean(ACCOUNT_ID && ACCESS_KEY_ID && SECRET_ACCE
 // lose them on the next cold start, with nothing in the logs to say so. Fail
 // at load instead. Mock mode and the suites set neither, so they are
 // unaffected; this only fires on a half-configured deployment.
-if (storeEnabled && !storageEnabled) {
+//
+// The emulator suite is the one place storeEnabled is deliberately forced
+// true without R2 configured, so it also needs excluding here, the same
+// carve-out firebase.ts already makes for FIRESTORE_EMULATOR_HOST: the
+// emulator authenticates nothing and writes nothing durable, so there is no
+// real deployment risk to catch. This is not a loophole for a real
+// deployment, since production never sets that variable.
+if (storeEnabled && !storageEnabled && !process.env.FIRESTORE_EMULATOR_HOST) {
   throw new Error(
     'Firestore is configured but R2 is not, so uploads would be written to memory and lost. ' +
       'Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET, or unset ' +
