@@ -2,7 +2,7 @@
 
 You are taking over Campaign Forge. This document tells you what it is, what is built, what is not, how to work on it, and what to do first. Read it once in full before touching anything. Then work from `docs/build/` and never from memory of this file.
 
-Written 27 August 2026, at commit `fa7f447`.
+Written 27 August 2026. Updated 28 August after Phases 1 to 4.
 
 ---
 
@@ -61,9 +61,24 @@ test/                   Five suites. See §5
 scripts/deploy-rules.js Injects ALLOWED_EMAIL into the rules templates
 ```
 
+### Position
+
+Phases 1 to 4 are built and tested; eleven test suites pass. What remains is
+listed in §6 and is mostly polish, the human setup steps in
+`docs/HUMAN-ACTIONS.md`, and the training work in `docs/build/06-agent-training.md`
+that only a marketer can do.
+
 ### What works today
 
-Sign in with one allowlisted Google account. Create a client from a URL: the scanner reads up to eight pages, mines the CSS for a palette, and stores the pages as sources. Edit voice rules. Create a campaign, fill a brief, and run seven agents in dependency order; each is a separate request, each result is written as an immutable version before the response returns, and the cost goes to a ledger. Eleven result tabs render from stored data. Close the tab and come back: nothing is lost, and a Resume button finishes a part-run campaign. Edit the brief and downstream agents are marked stale. Export everything for a client as a zip. A ledger page breaks spend down by client, agent and call.
+Sign in with one allowlisted Google account. Create a client from a URL: the scanner reads up to eight pages, mines the CSS for a palette, and stores the pages as sources. Edit voice rules. Create a campaign, fill a brief or upload a briefing document, and run eight agents in dependency order; each is a separate request, each result is written as an immutable version before the response returns, and the cost goes to a ledger. Close the tab and come back: nothing is lost, and a Resume button finishes a part-run campaign.
+
+Every field of every channel asset is editable, with its counter, its compliance flags and its approval state. An edit survives a re-run and is marked rather than overwritten; Portuguese is adapted from the edited English. Approving is refused while a violation stands, and the package export is gated on approval. Any field can be rewritten to a constraint by a small agent; any channel or agent can be regenerated with the rest held identical.
+
+Research proposes claims; a person approves them, and once one is approved every unsupported number in the copy becomes a violation. The Critic reviews every writer's output and the whole approved set on demand.
+
+Upload results and the verdicts are computed in code with a two-proportion test; the Analyst writes what they mean and refuses where the sample cannot decide. Approved assets become exemplars, approved learnings enter every future packet.
+
+The evals harness runs five golden briefs, three of them adversarial, and a merge gate fails a change that regresses any agent. Prompts are versioned data with a required change note. A monthly ceiling refuses a run before it spends.
 
 **Run it with no keys and no accounts:**
 
@@ -126,7 +141,14 @@ npm test    # runtime → db → api → pages → frontend
 | `test/db.test.js` | Every data-layer helper, the `current` pointer, version history, ledger totals | Compiles `server/db.ts` on the fly |
 | `test/api.test.js` | The Phase 1 route contract end to end: scan to client, dependency refusal, seven agents persisted, resume, stale detection, ledger, export zip | Runs a built Next server in mock mode |
 | `test/pages.test.js` | Pages render populated data server-side; image round trip; ledger and settings | Catches the port bugs that typechecking misses |
-| `test/frontend.test.js` | The legacy front end, driving `lib/` through a different client | Delete with `legacy/` when task 20 says so |
+| `test/phase2.test.js` | Editing, approval refusal, the export gate, regeneration, an edit surviving a re-run, claim expiry | |
+| `test/phase3.test.js` | Landing page, results mapping and matching, verdicts, learnings, exemplars | |
+| `test/phase4.test.js` | Cost ceiling, telemetry, audit mode, prompts API | |
+| `test/export.test.js` | The CSV builders, as pure functions | |
+| `test/frontend.test.js` | The legacy front end, driving the runtime through a different client | Delete with `legacy/` when task 20 says so |
+
+Plus `npm run evals:mock` to exercise the eval harness and `npm run gate` to
+compare runs. The real eval run costs money and is manual.
 
 **Add a test with every behaviour.** A new agent needs a scripted-model case; a new route needs an api-test case; a new page needs a render assertion.
 
@@ -140,15 +162,18 @@ Everything below is specified. Do not invent work.
 
 | Order | Spec | Scope | Effort |
 |---|---|---|---|
-| **1** | `02b-phase1-remaining.md` | Finish Phase 1: nav, source and asset wiring, brief upload, image UI, exports, tracking table, memory on Firestore, emulator run, deploy runbook | 4–6 days |
-| **2** | `01-week2-reviewers.md` | Critic, Art Director with image review, Scout, citation checks, orchestrator fast path, the orient and self-check tools, Jina, sitemap, HN search, contrast, ajv | 5–6 days |
-| **3** | `03-phase2-workspace.md` | Editing, per-asset regeneration, versions with diff, claims registry, compliance gate, approvals, retext and LanguageTool | 8–10 days |
-| **4** | `04-phase3-authority.md` | Provenance, rescan, landing page writer, results ingestion, verdicts in code, analyst and learnings, exemplars, image review grid, calendar, Pexels, Satori | 7–9 days |
-| **5** | `05-phase4-rigour.md` | Evals with promptfoo, merge gate, prompts as versioned data, Critic audit mode, export pack, cost ceiling, telemetry | 5–6 days |
-| ongoing | `06-agent-training.md` | Knowledge packs per agent, on the schedule in its Part 4 | ~1 day per agent |
-| reference | `07-tooling.md` | Free tools per agent. Already folded into each phase as "Tooling tasks" | — |
+| **1** | `06-agent-training.md` | Knowledge packs and calibration sets per agent. The largest remaining quality lever, and the part only a marketer can do | ~1 day per agent |
+| **2** | `01-week2-reviewers.md` | What is left of Week 2: Art Director with image review, Scout as an agent, citation verification, the orchestrator fast path, the orient and self-check tools | 3–4 days |
+| **3** | `07-tooling.md` | The tooling tasks in each phase spec that were not built: Jina reader, sitemap, HN search, autocomplete, retext, LanguageTool, Pexels, Satori, Mermaid, axe-core | 4–5 days |
+| **4** | `04-phase3-authority.md` §11–15 | Provenance chips, rescan with drift, image review grid, calendar-aware social | 3–4 days |
+| **5** | `05-phase4-rigour.md` §6 | The client-facing PDF export pack | 1–2 days |
 
-**Phase 2 is the gate for showing this to anyone outside.** Until editing, approvals and the claims registry exist, it is a demonstration rather than a tool a person uses daily.
+Built and tested: `02-phase1-foundation.md`, `02b-phase1-remaining.md`,
+`03-phase2-workspace.md`, the core of `04-phase3-authority.md`, and
+`05-phase4-rigour.md` except the PDF pack. `01-week2-reviewers.md` has its
+Critic and ask_critic done.
+
+**The Phase 2 gate is met**: editing, approvals and the claims registry exist, so this is now a tool a person can use daily rather than a demonstration. Before showing it to anyone outside, run twenty real briefs through it and read the output yourself.
 
 ---
 

@@ -117,11 +117,20 @@ It runs the same assertions against a real Firestore. If it passes, the storage 
 
 ## 7. Before you show it to anyone outside
 
-The plan is explicit about this and I would not soften it: **reach the Phase 2 exit first.** Until editing, approvals and the approved-claims registry exist, this is a demonstration of a system rather than a tool someone uses daily, and a working marketer will find that out in the first five minutes.
+The Phase 2 gate is now met: editing, approvals and the claims registry exist, and the Critic reviews every writer. It is a tool someone can use daily.
 
-Phase 2 is `docs/build/03-phase2-workspace.md`, 8–10 days of work. Before it, Week 2 (`01-week2-reviewers.md`) adds the Critic, which is the single largest quality improvement available: a second model reviewing every writer's output.
+One thing still stands between it and a client: **run twenty real briefs through it and read the output yourself.** The fixtures are polished; real output on real clients is what a marketing company will judge, and you should know its failure modes before they find them.
 
-Then run twenty real briefs through it and read the output yourself. You should know its failure modes before a client finds them.
+While you do that, run the evals once for real (`npm run evals`, about EUR 10–15) so you have a baseline. After that, `npm run gate` before keeping any prompt change.
+
+## 8. The largest remaining quality lever, and it is yours
+
+`docs/build/06-agent-training.md` asks for two things I cannot produce:
+
+1. **Calibration sets.** Twenty outputs per agent, rated by hand against that agent's rubric. This is what checks whether the Critic and the evals agree with an actual marketer. Start with the Copywriter and the Critic.
+2. **Worked examples from your own work.** Every example in `knowledge/` is original work I wrote for fictional companies. Two or three of yours, annotated with why they worked, would measurably improve the output.
+
+Everything else in the backlog is in `HANDOVER.md` §6 and can be delegated.
 
 ---
 
