@@ -4,29 +4,41 @@
  * The ledger shows spend after the fact; this refuses before it. A ceiling
  * reached mid-campaign is annoying, so the message says what was spent, what
  * the ceiling is, and where to change it, rather than just refusing.
+ *
+ * Unlike the rest of server/, the settings document here is deliberately
+ * GLOBAL rather than namespaced by workspace. Every other in-memory store in
+ * this codebase is keyed by ws on purpose, so a workspace-shaped signature
+ * here would look like the obviously-correct choice. It is not: demo
+ * accounts each get their own workspace, and a per-workspace ceiling would
+ * hand every new account a fresh allowance, bounding nothing. One ceiling,
+ * evaluated against spend summed across every workspace, is what actually
+ * caps the damage of a leaked credential.
  */
-import { listLedger, ledgerTotals } from './db';
+import { listLedger, ledgerTotals, listLedgerAllWorkspaces } from './db';
 import { db as fsdb, storeEnabled } from './firebase';
 
-// Keyed by ws: a flat object here would let one workspace's ceiling and
-// settings leak into (or be overwritten by) another's.
-declare global { var __cfSettings: Map<string, any> | undefined; }
-const settingsMem = globalThis.__cfSettings ?? (globalThis.__cfSettings = new Map());
+// A single global value, not a Map keyed by ws: this document is shared by
+// every workspace on purpose (see header comment).
+declare global { var __cfSpendSettings: any; }
 
 export type UserSettings = { monthlyCeilingEur: number | null; ceilingAction: 'refuse' | 'warn' };
 
 const DEFAULTS: UserSettings = { monthlyCeilingEur: null, ceilingAction: 'refuse' };
 
-export async function getSettings(ws: string): Promise<UserSettings> {
-  if (!storeEnabled) return { ...DEFAULTS, ...(settingsMem.get(ws) || {}) };
-  const doc = await fsdb().doc(`users/${ws}/settings/user`).get();
+// A per-workspace ceiling would hand every new demo account a fresh
+// allowance and bound nothing. One ceiling, across every workspace.
+const settingsDoc = () => fsdb().doc('system/spend/global');
+
+export async function getSettings(): Promise<UserSettings> {
+  if (!storeEnabled) return { ...DEFAULTS, ...(globalThis.__cfSpendSettings || {}) };
+  const doc = await settingsDoc().get();
   return { ...DEFAULTS, ...(doc.exists ? doc.data() : {}) } as UserSettings;
 }
 
-export async function saveSettings(ws: string, patch: Partial<UserSettings>): Promise<UserSettings> {
-  const merged = { ...(await getSettings(ws)), ...patch };
-  if (storeEnabled) await fsdb().doc(`users/${ws}/settings/user`).set(merged);
-  else settingsMem.set(ws, merged);
+export async function saveSettings(patch: Partial<UserSettings>): Promise<UserSettings> {
+  const merged = { ...(await getSettings()), ...patch };
+  if (storeEnabled) await settingsDoc().set(merged);
+  else globalThis.__cfSpendSettings = merged;
   return merged;
 }
 
@@ -43,10 +55,10 @@ async function estimate(ws: string, agent: string): Promise<number> {
  * warning when the setting says to proceed.
  */
 export async function checkCeiling(ws: string, agent: string): Promise<{ warning?: string }> {
-  const settings = await getSettings(ws);
+  const settings = await getSettings();
   if (!settings.monthlyCeilingEur) return {};
   const month = new Date().toISOString().slice(0, 7);
-  const spent = ledgerTotals(await listLedger(ws, month)).costEur;
+  const spent = ledgerTotals(await listLedgerAllWorkspaces(month)).costEur;
   const next = await estimate(ws, agent);
   if (spent + next <= settings.monthlyCeilingEur) return {};
 

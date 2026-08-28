@@ -255,6 +255,29 @@ export async function listLedger(ws: string, month?: string): Promise<LedgerEntr
   return filtered.sort((a, b) => b.at.localeCompare(a.at));
 }
 
+/**
+ * Ledger entries across every workspace, not just one. The spend ceiling is
+ * global (see server/spend.ts), so the total it checks against must be too:
+ * a per-workspace sum here would hand every new demo account its own fresh
+ * allowance. Firestore has no single "ledger" collection to read, since each
+ * workspace's entries live under users/{ws}/ledger, so this is a
+ * collectionGroup query; the in-memory fallback sums every workspace's
+ * bucket instead of one.
+ */
+export async function listLedgerAllWorkspaces(month?: string): Promise<LedgerEntry[]> {
+  let docs: LedgerEntry[];
+  if (!storeEnabled) {
+    docs = [];
+    for (const [key, col] of mem.sub) {
+      if (key.endsWith('/ledger')) docs.push(...col.values());
+    }
+  } else {
+    docs = (await fsdb().collectionGroup('ledger').get()).docs.map((d) => d.data() as LedgerEntry);
+  }
+  const filtered = month ? docs.filter((e) => e.at.startsWith(month)) : docs;
+  return filtered.sort((a, b) => b.at.localeCompare(a.at));
+}
+
 export function ledgerTotals(entries: LedgerEntry[]) {
   const byAgent: Record<string, number> = {};
   const byClient: Record<string, number> = {};

@@ -4,7 +4,7 @@ import { getSettings, saveSettings } from '@/server/spend';
 export const runtime = 'nodejs';
 
 export async function GET() {
-  return guarded(async (session) => getSettings(session.workspaceId));
+  return guarded(async () => getSettings());
 }
 
 export async function PATCH(req: Request) {
@@ -13,6 +13,6 @@ export async function PATCH(req: Request) {
     const patch: any = {};
     if ('monthlyCeilingEur' in body) patch.monthlyCeilingEur = body.monthlyCeilingEur === null ? null : Number(body.monthlyCeilingEur);
     if ('ceilingAction' in body) patch.ceilingAction = body.ceilingAction === 'warn' ? 'warn' : 'refuse';
-    return saveSettings(session.workspaceId, patch);
+    return saveSettings(patch);
   });
 }

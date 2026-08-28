@@ -19,7 +19,7 @@ export default async function Settings() {
   if (!session) redirect('/login');
   const [clients, settings, telemetry] = await Promise.all([
     listClients(session.workspaceId),
-    getSettings(session.workspaceId),
+    getSettings(),
     readTelemetry(session.workspaceId),
   ]);
   const counters = Object.entries(telemetry.counters as Record<string, number>).sort((a, b) => b[1] - a[1]);

@@ -51,6 +51,40 @@ const patch = (p, b) => api(p, { method: 'PATCH', headers: { 'content-type': 'ap
   await patch('/api/settings', { monthlyCeilingEur: null });
   console.log('  warn mode proceeds with a warning');
 
+  // the ceiling is global: spend recorded under one workspace must count
+  // against a run requested by a DIFFERENT workspace. MOCK_AUTH pins every
+  // HTTP request in this suite to the single 'owner' workspace, so that
+  // cannot be exercised over HTTP; call the server modules directly instead,
+  // the same way test/db.test.js reaches server/db.ts's in-memory store.
+  {
+    const path = require('path');
+    require('child_process').execSync(
+      'npx tsc server/db.ts server/firebase.ts server/types.ts server/spend.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
+      { cwd: path.join(__dirname, '..', 'web'), stdio: 'pipe' }
+    );
+    delete require.cache[require.resolve('../web/.test-build/db.js')];
+    delete require.cache[require.resolve('../web/.test-build/spend.js')];
+    const dbDirect = require('../web/.test-build/db.js');
+    const spendDirect = require('../web/.test-build/spend.js');
+
+    // demo-b has never spent, so its own estimate for the next run falls
+    // back to EUR 0.5 (see estimate() above). The ceiling below (1) sits
+    // above that fallback alone but below fallback-plus-demo-a's-spend (1.5),
+    // so this only refuses if demo-a's EUR 1 is counted against demo-b: a
+    // per-workspace sum would let this run straight through.
+    await spendDirect.saveSettings({ monthlyCeilingEur: 1, ceilingAction: 'refuse' });
+    await dbDirect.addLedger('demo-a', { agent: 'brand-analyst', clientId: 'c1', campaignId: 'camp1', model: 'mock', input: 0, output: 0, webSearches: 0, images: 0, costEur: 1 });
+    let refusedGlobally = false;
+    try {
+      await spendDirect.checkCeiling('demo-b', 'copywriter');
+    } catch (e) {
+      refusedGlobally = e.status === 402;
+    }
+    assert.ok(refusedGlobally, 'spend recorded under one workspace (demo-a) refuses a run requested by a different workspace (demo-b)');
+    await spendDirect.saveSettings({ monthlyCeilingEur: null });
+    console.log('  ceiling is global: spend in one workspace refuses a run in another');
+  }
+
   // audit refuses with nothing approved, then runs
   const tooEarly = await post(`/api/clients/${clientId}/campaigns/${cid}/audit`, {});
   assert.equal(tooEarly.status, 409, 'no audit before anything is approved');
