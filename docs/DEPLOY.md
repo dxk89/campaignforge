@@ -54,7 +54,7 @@ The script writes your address into the rule templates in `.rules-build/`, which
 | Variable | Value | If missing |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | your key | Every agent run fails at startup |
-| `FIREBASE_SERVICE_ACCOUNT` | the base64 string from step 1.6 | Runs in memory; nothing survives a restart |
+| `FIREBASE_SERVICE_ACCOUNT` | the JSON file contents, pasted whole (base64 of it also works) | Runs in memory; nothing survives a restart |
 | `R2_ACCOUNT_ID` | Cloudflare dashboard → R2 → Account ID | Uploads and images are lost on restart |
 | `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens | Same |
 | `R2_SECRET_ACCESS_KEY` | shown once when the token is created | Same |

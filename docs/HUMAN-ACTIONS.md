@@ -70,7 +70,7 @@ Settings → Environment Variables, all environments, then redeploy.
 | Variable | Value |
 |---|---|
 | `ANTHROPIC_API_KEY` | your key |
-| `FIREBASE_SERVICE_ACCOUNT` | the base64 string from §2.6 |
+| `FIREBASE_SERVICE_ACCOUNT` | the JSON file contents, pasted whole (base64 of it also works) |
 | `R2_ACCOUNT_ID` | Cloudflare → R2 → Account ID |
 | `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens |
 | `R2_SECRET_ACCESS_KEY` | shown once at token creation |
