@@ -90,7 +90,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const kind = ({ copywriter: 'assets', 'social-planner': 'social', localiser: 'localised', strategist: 'strategy', 'landing-writer': 'landing' } as Record<string, string>)[agent];
     if (kind && result.output && body.review !== false) {
       try {
-        review = await orchestrator.review(kind, result.output, { brief: (inputs as any).brief, context: (inputs as any).context, audience: (inputs as any).audience, rules: await rulesFor(ws, id, cid) });
+        review = await orchestrator.review(kind, result.output, { ws, brief: (inputs as any).brief, context: (inputs as any).context, audience: (inputs as any).audience, rules: await rulesFor(ws, id, cid) });
         if (review?.usage) {
           await addLedger(ws, {
             clientId: id, campaignId: cid, agent: 'critic', model: review.usage.model || 'unknown',

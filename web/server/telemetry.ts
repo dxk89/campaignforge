@@ -14,9 +14,10 @@ const monthKey = () => new Date().toISOString().slice(0, 7);
 export async function count(ws: string, key: string, by = 1) {
   const month = monthKey();
   if (!storeEnabled) {
-    const m = mem.get(month) || {};
+    const memKey = `${ws}/${month}`;
+    const m = mem.get(memKey) || {};
     m[key] = (m[key] || 0) + by;
-    mem.set(month, m);
+    mem.set(memKey, m);
     return;
   }
   try {
@@ -25,7 +26,7 @@ export async function count(ws: string, key: string, by = 1) {
 }
 
 export async function read(ws: string, month = monthKey()) {
-  if (!storeEnabled) return { month, counters: mem.get(month) || {} };
+  if (!storeEnabled) return { month, counters: mem.get(`${ws}/${month}`) || {} };
   const doc = await fsdb().doc(`users/${ws}/telemetry/${month}`).get();
   return { month, counters: doc.exists ? doc.data()!.counters || {} : {} };
 }

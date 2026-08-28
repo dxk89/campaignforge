@@ -26,15 +26,28 @@ function db() {
   return cached;
 }
 
-const uid = () => process.env.ALLOWED_UID || 'owner';
-const clientPath = (clientId) => `users/${uid()}/clients/${clientId}`;
+/**
+ * Every path here is scoped to a workspace, passed in explicitly by the
+ * caller (ultimately session.workspaceId). There is no environment-variable
+ * default any more: web/server/db.ts's root() went through the same change
+ * for the same reason, and this module is the one place in web/core/ that
+ * used to read ALLOWED_UID on its own, which would have quietly kept every
+ * workspace's agent memory pointed at "owner".
+ */
+const clientPath = (ws, clientId) => {
+  if (!ws) throw new Error('A workspace id is required for client memory paths. This is a bug: the caller did not pass the workspace.');
+  return `users/${ws}/clients/${clientId}`;
+};
 
 /** Read a subcollection, ordered, with a cap. Returns [] on any failure. */
-async function read(clientId, collection, { order, dir = 'desc', limit = 20, where } = {}) {
+async function read(ws, clientId, collection, { order, dir = 'desc', limit = 20, where } = {}) {
   const f = db();
   if (!f || !clientId) return [];
+  // Only reachable once a store is configured and a client is named, i.e.
+  // exactly when a real users/<ws>/... path is about to be built.
+  if (!ws) throw new Error('A workspace id is required for client memory reads. This is a bug: the caller did not pass the workspace.');
   try {
-    let q = f.collection(`${clientPath(clientId)}/${collection}`);
+    let q = f.collection(`${clientPath(ws, clientId)}/${collection}`);
     if (where) for (const [field, op, value] of where) q = q.where(field, op, value);
     if (order) q = q.orderBy(order, dir);
     const snap = await q.limit(limit).get();
@@ -48,15 +61,20 @@ async function read(clientId, collection, { order, dir = 'desc', limit = 20, whe
 /**
  * The in-memory fallback the web app uses when no store is configured. The
  * routes write to globalThis; memory reads from it, so learnings and exemplars
- * work in mock mode exactly as they will with Firestore.
+ * work in mock mode exactly as they will with Firestore. Keys match what
+ * web/server/{exemplars,resultsStore,db}.ts write under the same globals:
+ * "ws/clientId" (or "ws/clientId/claims" for the claims sub-map), so two
+ * workspaces' mock-mode memory cannot be read into each other's packets.
  */
-function memory(kind, clientId) {
+function memory(kind, ws, clientId) {
+  if (!ws) throw new Error('A workspace id is required for in-memory client data. This is a bug: the caller did not pass the workspace.');
   const g = globalThis;
-  if (kind === 'learnings') return (g.__cfLearnings?.get(clientId)) || [];
-  if (kind === 'exemplars') return (g.__cfExemplars?.get(clientId)) || [];
-  if (kind === 'corrections') return (g.__cfCorrections?.get(clientId)) || [];
+  const key = `${ws}/${clientId}`;
+  if (kind === 'learnings') return (g.__cfLearnings?.get(key)) || [];
+  if (kind === 'exemplars') return (g.__cfExemplars?.get(key)) || [];
+  if (kind === 'corrections') return (g.__cfCorrections?.get(key)) || [];
   if (kind === 'claims') {
-    const all = g.__cfMem?.sub?.get(`${clientId}/claims`);
+    const all = g.__cfMem?.sub?.get(`${key}/claims`);
     return all ? [...all.values()] : [];
   }
   return [];

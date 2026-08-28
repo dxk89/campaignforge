@@ -17,7 +17,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const latest = results.results[results.results.length - 1];
 
     const r = await orchestrator.runAgent('analyst', {
-      verdicts: latest.verdicts, rows: latest.rows, campaign: campaign?.brief,
+      ws, verdicts: latest.verdicts, rows: latest.rows, campaign: campaign?.brief,
     });
     await addLedger(ws, {
       clientId: id, campaignId: cid, agent: 'analyst', model: r.usage.model || 'unknown',

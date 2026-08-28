@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       name: extracted.name, kind: 'brief', storageRef, text: extracted.text, chars: extracted.chars,
     });
 
-    const result = await orchestrator.runAgent('brief-reader', { text: extracted.text });
+    const result = await orchestrator.runAgent('brief-reader', { ws, text: extracted.text });
     const fields = (result.output || {}) as Record<string, any>;
 
     const brief: any = { ...campaign.brief };

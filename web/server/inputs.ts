@@ -40,7 +40,7 @@ export async function rulesFor(ws: string, clientId: string, campaignId: string)
   // Client voice rules, edited by a person, take precedence over what research proposed.
   const merged = context ? { ...context } : { voice: {}, competitors: [] };
   if (client?.voice?.avoidTerms?.length) merged.voice = { ...(merged.voice || {}), avoid_terms: client.voice.avoidTerms };
-  const claims = await memory.approvedClaims({ clientId });
+  const claims = await memory.approvedClaims({ ws, clientId });
   return buildRules({ ...(campaign?.brief || {}), clientName: client?.name }, merged, claims);
 }
 
@@ -67,7 +67,7 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
     case 'brand-analyst': {
       const sources = await listSources(ws, clientId, true);
       inputs = {
-        brief, clientId,
+        brief, clientId, ws,
         sources: sources.map((s) => ({ name: s.name, kind: s.kind, text: s.text })),
         webResearch: Boolean(campaign.brief.webResearch),
         companyUrl: client.domain ? `https://${client.domain}` : undefined,
@@ -75,27 +75,27 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
       break;
     }
     case 'customer-researcher':
-      inputs = { brief, clientId, context: context ?? research.emptyContext(), webResearch: true };
+      inputs = { brief, clientId, ws, context: context ?? research.emptyContext(), webResearch: true };
       break;
     case 'strategist':
-      inputs = { brief, clientId, context, audience };
+      inputs = { brief, clientId, ws, context, audience };
       break;
     case 'copywriter':
-      inputs = { brief, clientId, context, audience, strategy: need('strategist', 'The strategy') };
+      inputs = { brief, clientId, ws, context, audience, strategy: need('strategist', 'The strategy') };
       break;
     case 'social-planner':
-      inputs = { brief, clientId, context, audience, brandKit, strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets') };
+      inputs = { brief, clientId, ws, context, audience, brandKit, strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets') };
       break;
     case 'ops-architect':
       inputs = {
-        brief, clientId, context, audience,
+        brief, clientId, ws, context, audience,
         strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets'),
         landingUrl: campaign.brief.landingUrl ?? client.settings.landingUrl ?? undefined,
       };
       break;
     case 'landing-writer':
       inputs = {
-        brief, clientId, context, audience,
+        brief, clientId, ws, context, audience,
         strategy: need('strategist', 'The strategy'),
         assets: need('copywriter', 'The assets'),
         activation: need('ops-architect', 'The activation plan'),
@@ -106,7 +106,7 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
       // model first wrote. That is the whole point of the editable layer.
       const { composeAssets } = await import('./assets');
       const english = await composeAssets(ws, clientId, campaignId, 'en', need('copywriter', 'The assets'));
-      inputs = { brief, clientId, context, assets: english, glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
+      inputs = { brief, clientId, ws, context, assets: english, glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
       break;
     }
     default:

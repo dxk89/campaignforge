@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         .map((a) => ({ field: a.field, text: a.text }));
 
       const r = await orchestrator.runAgent('field-editor', {
-        asset, rule, constraint, siblings,
+        ws, asset, rule, constraint, siblings,
         strategy: outputs.strategist?.output, voice: client?.voice,
       });
       await addLedger(ws, {

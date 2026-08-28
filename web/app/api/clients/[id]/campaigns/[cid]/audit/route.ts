@@ -24,7 +24,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const composed = await composeAssets(ws, id, cid, 'en', outputs.copywriter?.output);
     const rules = await rulesFor(ws, id, cid);
     const review = await orchestrator.review('audit', composed, {
-      brief: { ...campaign!.brief }, context: outputs['brand-analyst']?.output, audience: outputs['customer-researcher']?.output, rules,
+      ws, brief: { ...campaign!.brief }, context: outputs['brand-analyst']?.output, audience: outputs['customer-researcher']?.output, rules,
     });
     if (review?.usage) {
       await addLedger(ws, {

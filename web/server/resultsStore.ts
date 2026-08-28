@@ -24,7 +24,7 @@ export async function saveResults(ws: string, clientId: string, campaignId: stri
   const doc = { resultId, uploadedAt: now(), ...data, summary };
   if (storeEnabled) await fsdb().doc(`${rpath(ws, clientId, campaignId)}/${resultId}`).set(doc);
   else {
-    const key = `${clientId}/${campaignId}`;
+    const key = `${ws}/${clientId}/${campaignId}`;
     memResults.set(key, [...(memResults.get(key) || []), doc]);
   }
   return doc;
@@ -32,7 +32,7 @@ export async function saveResults(ws: string, clientId: string, campaignId: stri
 
 export async function listResults(ws: string, clientId: string, campaignId: string) {
   let docs: any[];
-  if (!storeEnabled) docs = memResults.get(`${clientId}/${campaignId}`) || [];
+  if (!storeEnabled) docs = memResults.get(`${ws}/${clientId}/${campaignId}`) || [];
   else docs = (await fsdb().collection(rpath(ws, clientId, campaignId)).get()).docs.map((d) => d.data());
   const latest = docs[docs.length - 1] || null;
   return { results: docs, verdicts: latest?.verdicts || [], summary: latest?.summary || null, rows: latest?.rows || [] };
@@ -44,12 +44,12 @@ export async function addLearnings(ws: string, clientId: string, items: any[], c
     status: 'proposed' as const, createdAt: now(), approvedAt: null, note: null,
   }));
   if (storeEnabled) for (const d of docs) await fsdb().doc(`${lpath(ws, clientId)}/${d.learningId}`).set(d);
-  else memLearnings.set(clientId, [...(memLearnings.get(clientId) || []), ...docs]);
+  else memLearnings.set(`${ws}/${clientId}`, [...(memLearnings.get(`${ws}/${clientId}`) || []), ...docs]);
   return docs;
 }
 
 export async function listLearnings(ws: string, clientId: string) {
-  if (!storeEnabled) return memLearnings.get(clientId) || [];
+  if (!storeEnabled) return memLearnings.get(`${ws}/${clientId}`) || [];
   return (await fsdb().collection(lpath(ws, clientId)).get()).docs.map((d) => d.data());
 }
 
@@ -60,7 +60,7 @@ export async function updateLearning(ws: string, clientId: string, learningId: s
   const merged = { ...existing, ...patch };
   if (patch.status === 'approved' && !merged.approvedAt) merged.approvedAt = now();
   if (storeEnabled) await fsdb().doc(`${lpath(ws, clientId)}/${learningId}`).set(merged);
-  else memLearnings.set(clientId, all.map((l: any) => (l.learningId === learningId ? merged : l)));
+  else memLearnings.set(`${ws}/${clientId}`, all.map((l: any) => (l.learningId === learningId ? merged : l)));
   return merged;
 }
 

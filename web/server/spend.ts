@@ -8,14 +8,17 @@
 import { listLedger, ledgerTotals } from './db';
 import { db as fsdb, storeEnabled } from './firebase';
 
-declare global { var __cfSettings: any | undefined; }
+// Keyed by ws: a flat object here would let one workspace's ceiling and
+// settings leak into (or be overwritten by) another's.
+declare global { var __cfSettings: Map<string, any> | undefined; }
+const settingsMem = globalThis.__cfSettings ?? (globalThis.__cfSettings = new Map());
 
 export type UserSettings = { monthlyCeilingEur: number | null; ceilingAction: 'refuse' | 'warn' };
 
 const DEFAULTS: UserSettings = { monthlyCeilingEur: null, ceilingAction: 'refuse' };
 
 export async function getSettings(ws: string): Promise<UserSettings> {
-  if (!storeEnabled) return { ...DEFAULTS, ...(globalThis.__cfSettings || {}) };
+  if (!storeEnabled) return { ...DEFAULTS, ...(settingsMem.get(ws) || {}) };
   const doc = await fsdb().doc(`users/${ws}/settings/user`).get();
   return { ...DEFAULTS, ...(doc.exists ? doc.data() : {}) } as UserSettings;
 }
@@ -23,7 +26,7 @@ export async function getSettings(ws: string): Promise<UserSettings> {
 export async function saveSettings(ws: string, patch: Partial<UserSettings>): Promise<UserSettings> {
   const merged = { ...(await getSettings(ws)), ...patch };
   if (storeEnabled) await fsdb().doc(`users/${ws}/settings/user`).set(merged);
-  else globalThis.__cfSettings = merged;
+  else settingsMem.set(ws, merged);
   return merged;
 }
 

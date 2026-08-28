@@ -27,11 +27,11 @@ async function runAgent(name, inputs = {}, opts = {}) {
   const agent = roster.get(name);
   if (!agent) { const e = new Error(`unknown agent "${name}"`); e.status = 404; throw e; }
 
-  const memory = await loadMemory({ clientId: inputs.clientId, agent: name, channel: inputs.channel, objective: inputs.brief?.objective });
+  const memory = await loadMemory({ ws: inputs.ws, clientId: inputs.clientId, agent: name, channel: inputs.channel, objective: inputs.brief?.objective });
   const packet = agent.packet({ ...inputs, memory });
   // A stored prompt version overrides the code default; which one was used is
   // recorded on the result so a campaign can be traced to its wording.
-  const { role, promptVersion } = await promptStore.roleFor(name, resolve(agent.role, inputs));
+  const { role, promptVersion } = await promptStore.roleFor(name, resolve(agent.role, inputs), inputs.ws);
   const resolved = { ...agent, role, budget: resolve(agent.budget, inputs) };
   const result = await run(resolved, packet, { budget: opts.budget, ledger: opts.ledger });
   result.promptVersion = promptVersion;

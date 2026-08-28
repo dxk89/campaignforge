@@ -19,13 +19,20 @@ export const hashOf = (v: unknown) => createHash('sha256').update(JSON.stringify
 // Pinned to globalThis: Next bundles route handlers and server components into
 // separate module graphs, so a module-level Map would exist twice and a client
 // created by a POST would be invisible to the page that renders it.
-type Mem = { clients: Map<string, any>; sub: Map<string, Map<string, any>> };
+// clients is nested ws -> clientId, so two workspaces never share a bucket to
+// iterate or collide keys in; sub is a flat map keyed by a ws-prefixed string,
+// which is enough because every caller already builds the whole key at once.
+type Mem = { clients: Map<string, Map<string, any>>; sub: Map<string, Map<string, any>> };
 declare global { var __cfMem: Mem | undefined; }
 const mem: Mem = globalThis.__cfMem ?? (globalThis.__cfMem = { clients: new Map(), sub: new Map() });
 const memKey = (...parts: string[]) => parts.join('/');
 function memCol(key: string) {
   if (!mem.sub.has(key)) mem.sub.set(key, new Map());
   return mem.sub.get(key)!;
+}
+function clientsOf(ws: string) {
+  if (!mem.clients.has(ws)) mem.clients.set(ws, new Map());
+  return mem.clients.get(ws)!;
 }
 
 const root = (ws: string) => {
@@ -48,18 +55,18 @@ export async function createClient(ws: string, input: { name: string; domain?: s
     settings: input.settings ?? { landingUrl: null, defaultTone: 'direct', defaultLanguages: ['en'], calendar: { events: [] } },
   };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).set(doc);
-  else mem.clients.set(clientId, doc);
+  else clientsOf(ws).set(clientId, doc);
   return doc;
 }
 
 export async function listClients(ws: string): Promise<Client[]> {
-  if (!storeEnabled) return [...mem.clients.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (!storeEnabled) return [...clientsOf(ws).values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const snap = await fsdb().collection(`${root(ws)}/clients`).orderBy('updatedAt', 'desc').get();
   return snap.docs.map((d) => d.data() as Client);
 }
 
 export async function getClient(ws: string, clientId: string): Promise<Client | null> {
-  if (!storeEnabled) return mem.clients.get(clientId) ?? null;
+  if (!storeEnabled) return clientsOf(ws).get(clientId) ?? null;
   const d = await fsdb().doc(`${root(ws)}/clients/${clientId}`).get();
   return d.exists ? (d.data() as Client) : null;
 }
@@ -69,7 +76,7 @@ export async function updateClient(ws: string, clientId: string, patch: Partial<
   if (!existing) return null;
   const merged = { ...existing, ...patch, clientId, updatedAt: now() } as Client;
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).set(merged);
-  else mem.clients.set(clientId, merged);
+  else clientsOf(ws).set(clientId, merged);
   return merged;
 }
 
@@ -79,21 +86,21 @@ export async function addSource(ws: string, clientId: string, src: Omit<SourceDo
   const sourceId = newId();
   const doc: SourceDoc = { ...src, sourceId, fetchedAt: now(), hash: src.hash ?? hashOf(src.text) };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/sources/${sourceId}`).set(doc);
-  else memCol(memKey(clientId, 'sources')).set(sourceId, doc);
+  else memCol(memKey(ws, clientId, 'sources')).set(sourceId, doc);
   await touch(ws, clientId);
   return doc;
 }
 
 export async function listSources(ws: string, clientId: string, withText = false): Promise<SourceDoc[]> {
   let docs: SourceDoc[];
-  if (!storeEnabled) docs = [...memCol(memKey(clientId, 'sources')).values()];
+  if (!storeEnabled) docs = [...memCol(memKey(ws, clientId, 'sources')).values()];
   else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/sources`).get()).docs.map((d) => d.data() as SourceDoc);
   return withText ? docs : docs.map(({ text, ...rest }) => ({ ...rest, text: '' } as SourceDoc));
 }
 
 export async function deleteSource(ws: string, clientId: string, sourceId: string): Promise<void> {
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/sources/${sourceId}`).delete();
-  else memCol(memKey(clientId, 'sources')).delete(sourceId);
+  else memCol(memKey(ws, clientId, 'sources')).delete(sourceId);
   await touch(ws, clientId);
 }
 
@@ -103,19 +110,19 @@ export async function createCampaign(ws: string, clientId: string, brief: Brief)
   const campaignId = newId();
   const doc: Campaign = { campaignId, brief, status: 'draft', createdAt: now(), updatedAt: now(), current: {} };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).set(doc);
-  else memCol(memKey(clientId, 'campaigns')).set(campaignId, doc);
+  else memCol(memKey(ws, clientId, 'campaigns')).set(campaignId, doc);
   await touch(ws, clientId);
   return doc;
 }
 
 export async function listCampaigns(ws: string, clientId: string): Promise<Campaign[]> {
-  if (!storeEnabled) return [...memCol(memKey(clientId, 'campaigns')).values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (!storeEnabled) return [...memCol(memKey(ws, clientId, 'campaigns')).values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const snap = await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns`).orderBy('updatedAt', 'desc').get();
   return snap.docs.map((d) => d.data() as Campaign);
 }
 
 export async function getCampaign(ws: string, clientId: string, campaignId: string): Promise<Campaign | null> {
-  if (!storeEnabled) return memCol(memKey(clientId, 'campaigns')).get(campaignId) ?? null;
+  if (!storeEnabled) return memCol(memKey(ws, clientId, 'campaigns')).get(campaignId) ?? null;
   const d = await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).get();
   return d.exists ? (d.data() as Campaign) : null;
 }
@@ -125,7 +132,7 @@ export async function updateCampaign(ws: string, clientId: string, campaignId: s
   if (!existing) return null;
   const merged = { ...existing, ...patch, campaignId, updatedAt: now() } as Campaign;
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).set(merged);
-  else memCol(memKey(clientId, 'campaigns')).set(campaignId, merged);
+  else memCol(memKey(ws, clientId, 'campaigns')).set(campaignId, merged);
   await touch(ws, clientId);
   return merged;
 }
@@ -136,7 +143,7 @@ export async function addVersion(ws: string, clientId: string, campaignId: strin
   const versionId = newId();
   const doc: Version = { ...v, versionId, createdAt: now() };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).set(doc);
-  else memCol(memKey(clientId, campaignId, 'versions')).set(versionId, doc);
+  else memCol(memKey(ws, clientId, campaignId, 'versions')).set(versionId, doc);
 
   const campaign = await getCampaign(ws, clientId, campaignId);
   if (campaign) await updateCampaign(ws, clientId, campaignId, { current: { ...campaign.current, [v.agent]: versionId } });
@@ -144,14 +151,14 @@ export async function addVersion(ws: string, clientId: string, campaignId: strin
 }
 
 export async function getVersion(ws: string, clientId: string, campaignId: string, versionId: string): Promise<Version | null> {
-  if (!storeEnabled) return memCol(memKey(clientId, campaignId, 'versions')).get(versionId) ?? null;
+  if (!storeEnabled) return memCol(memKey(ws, clientId, campaignId, 'versions')).get(versionId) ?? null;
   const d = await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).get();
   return d.exists ? (d.data() as Version) : null;
 }
 
 export async function listVersions(ws: string, clientId: string, campaignId: string, agent?: string): Promise<Version[]> {
   let docs: Version[];
-  if (!storeEnabled) docs = [...memCol(memKey(clientId, campaignId, 'versions')).values()];
+  if (!storeEnabled) docs = [...memCol(memKey(ws, clientId, campaignId, 'versions')).values()];
   else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions`).get()).docs.map((d) => d.data() as Version);
   const filtered = agent ? docs.filter((v) => v.agent === agent) : docs;
   return filtered.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -175,12 +182,12 @@ export async function addImage(ws: string, clientId: string, campaignId: string,
   const imageId = newId();
   const doc: ImageDoc = { ...img, imageId, createdAt: now() };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images/${imageId}`).set(doc);
-  else memCol(memKey(clientId, campaignId, 'images')).set(imageId, doc);
+  else memCol(memKey(ws, clientId, campaignId, 'images')).set(imageId, doc);
   return doc;
 }
 
 export async function listImages(ws: string, clientId: string, campaignId: string): Promise<ImageDoc[]> {
-  if (!storeEnabled) return [...memCol(memKey(clientId, campaignId, 'images')).values()];
+  if (!storeEnabled) return [...memCol(memKey(ws, clientId, campaignId, 'images')).values()];
   return (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images`).get()).docs.map((d) => d.data() as ImageDoc);
 }
 
@@ -205,13 +212,13 @@ export async function proposeClaim(ws: string, clientId: string, input: { text: 
     campaignId: input.campaignId ?? null, createdAt: now(),
   };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/claims/${claimId}`).set(doc);
-  else memCol(memKey(clientId, 'claims')).set(claimId, doc);
+  else memCol(memKey(ws, clientId, 'claims')).set(claimId, doc);
   return doc;
 }
 
 export async function listClaims(ws: string, clientId: string): Promise<Claim[]> {
   let docs: Claim[];
-  if (!storeEnabled) docs = [...memCol(memKey(clientId, 'claims')).values()];
+  if (!storeEnabled) docs = [...memCol(memKey(ws, clientId, 'claims')).values()];
   else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/claims`).get()).docs.map((d) => d.data() as Claim);
   const nowIso = now();
   return docs
@@ -227,7 +234,7 @@ export async function updateClaim(ws: string, clientId: string, claimId: string,
   if (patch.status === 'approved' && !merged.approvedAt) merged.approvedAt = now();
   if (patch.status && patch.status !== 'approved') merged.approvedAt = null;
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/claims/${claimId}`).set(merged);
-  else memCol(memKey(clientId, 'claims')).set(claimId, merged);
+  else memCol(memKey(ws, clientId, 'claims')).set(claimId, merged);
   return merged;
 }
 
@@ -237,12 +244,12 @@ export async function addLedger(ws: string, entry: Omit<LedgerEntry, 'entryId' |
   const entryId = newId();
   const doc: LedgerEntry = { ...entry, entryId, at: now() };
   if (storeEnabled) await fsdb().doc(`${root(ws)}/ledger/${entryId}`).set(doc);
-  else memCol('ledger').set(entryId, doc);
+  else memCol(memKey(ws, 'ledger')).set(entryId, doc);
 }
 
 export async function listLedger(ws: string, month?: string): Promise<LedgerEntry[]> {
   let docs: LedgerEntry[];
-  if (!storeEnabled) docs = [...memCol('ledger').values()];
+  if (!storeEnabled) docs = [...memCol(memKey(ws, 'ledger')).values()];
   else docs = (await fsdb().collection(`${root(ws)}/ledger`).get()).docs.map((d) => d.data() as LedgerEntry);
   const filtered = month ? docs.filter((e) => e.at.startsWith(month)) : docs;
   return filtered.sort((a, b) => b.at.localeCompare(a.at));
@@ -266,7 +273,7 @@ async function touch(ws: string, clientId: string) {
   const c = await getClient(ws, clientId);
   if (!c) return;
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).update({ updatedAt: now() });
-  else mem.clients.set(clientId, { ...c, updatedAt: now() });
+  else clientsOf(ws).set(clientId, { ...c, updatedAt: now() });
 }
 
 /** Test-only: clear the in-memory store between cases. */

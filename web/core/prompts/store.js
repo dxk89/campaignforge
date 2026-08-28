@@ -12,36 +12,43 @@
 const { db } = require('../memory/firestore');
 
 const CACHE_MS = 60_000;
-let cache = { at: 0, byAgent: {} };
+// Cached per workspace: a single shared cache would leak workspace A's prompt
+// overrides into workspace B's runs (and vice versa on invalidation). Keyed
+// by ws, the same way web/server/db.ts's root(ws) scopes everything else.
+const cache = new Map(); // ws -> { at, byAgent }
 
-const uid = () => process.env.ALLOWED_UID || 'owner';
-
-/** All current prompt overrides, cached briefly so a chain does not refetch per agent. */
-async function current() {
-  if (Date.now() - cache.at < CACHE_MS) return cache.byAgent;
+/** All current prompt overrides for one workspace, cached briefly so a chain does not refetch per agent. */
+async function current(ws) {
+  const entry = cache.get(ws);
+  if (entry && Date.now() - entry.at < CACHE_MS) return entry.byAgent;
   const f = db();
-  if (!f) { cache = { at: Date.now(), byAgent: {} }; return cache.byAgent; }
+  if (!f) { const empty = { at: Date.now(), byAgent: {} }; cache.set(ws, empty); return empty.byAgent; }
+  // Only reachable once a store is configured, i.e. exactly when a real
+  // users/<ws>/prompts path is about to be built.
+  if (!ws) throw new Error('A workspace id is required for prompt overrides. This is a bug: the caller did not pass the workspace.');
   try {
-    const snap = await f.collection(`users/${uid()}/prompts`).get();
+    const snap = await f.collection(`users/${ws}/prompts`).get();
     const byAgent = {};
     for (const doc of snap.docs) {
       const data = doc.data();
       if (data.current && data.role) byAgent[doc.id] = { role: data.role, versionId: data.current };
     }
-    cache = { at: Date.now(), byAgent };
+    cache.set(ws, { at: Date.now(), byAgent });
+    return byAgent;
   } catch {
-    cache = { at: Date.now(), byAgent: {} };
+    const empty = { at: Date.now(), byAgent: {} };
+    cache.set(ws, empty);
+    return empty.byAgent;
   }
-  return cache.byAgent;
 }
 
 /** The role for an agent: the stored override if there is one, else the code default. */
-async function roleFor(agent, fallback) {
-  const overrides = await current();
+async function roleFor(agent, fallback, ws) {
+  const overrides = await current(ws);
   const found = overrides[agent];
   return found ? { role: found.role, promptVersion: found.versionId } : { role: fallback, promptVersion: null };
 }
 
-function invalidate() { cache = { at: 0, byAgent: {} }; }
+function invalidate() { cache.clear(); }
 
 module.exports = { roleFor, current, invalidate };

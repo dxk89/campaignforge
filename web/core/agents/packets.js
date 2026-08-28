@@ -44,12 +44,12 @@ function buildRules(brief, context, approvedClaims) {
   };
 }
 
-async function loadMemory({ clientId, agent, channel, objective }) {
+async function loadMemory({ ws, clientId, agent, channel, objective }) {
   const [exemplars, learnings, corrections, approvedClaims] = await Promise.all([
-    memory.exemplars({ clientId, agent, channel, objective }),
-    memory.learnings({ clientId }),
-    memory.corrections({ clientId, agent }),
-    memory.approvedClaims({ clientId }),
+    memory.exemplars({ ws, clientId, agent, channel, objective }),
+    memory.learnings({ ws, clientId }),
+    memory.corrections({ ws, clientId, agent }),
+    memory.approvedClaims({ ws, clientId }),
   ]);
   return { exemplars, learnings, corrections, approvedClaims };
 }

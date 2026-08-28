@@ -36,9 +36,9 @@ export type AssetDoc = {
 
 declare global { var __cfAssets: Map<string, Map<string, AssetDoc>> | undefined; }
 const mem = globalThis.__cfAssets ?? (globalThis.__cfAssets = new Map());
-const memKey = (c: string, k: string) => `${c}/${k}`;
-const col = (clientId: string, campaignId: string) => {
-  const key = memKey(clientId, campaignId);
+const memKey = (ws: string, c: string, k: string) => `${ws}/${c}/${k}`;
+const col = (ws: string, clientId: string, campaignId: string) => {
+  const key = memKey(ws, clientId, campaignId);
   if (!mem.has(key)) mem.set(key, new Map());
   return mem.get(key)!;
 };
@@ -190,20 +190,20 @@ export async function composeSocial(ws: string, clientId: string, campaignId: st
 
 export async function putAsset(ws: string, clientId: string, campaignId: string, doc: AssetDoc) {
   if (storeEnabled) await fsdb().doc(`${path(ws, clientId, campaignId)}/${doc.assetId}`).set(doc);
-  else col(clientId, campaignId).set(doc.assetId, doc);
+  else col(ws, clientId, campaignId).set(doc.assetId, doc);
   return doc;
 }
 
 export async function listAssets(ws: string, clientId: string, campaignId: string, language?: string): Promise<AssetDoc[]> {
   let docs: AssetDoc[];
-  if (!storeEnabled) docs = [...col(clientId, campaignId).values()];
+  if (!storeEnabled) docs = [...col(ws, clientId, campaignId).values()];
   else docs = (await fsdb().collection(path(ws, clientId, campaignId)).get()).docs.map((d) => d.data() as AssetDoc);
   return (language ? docs.filter((a) => a.language === language) : docs)
     .sort((a, b) => a.assetId.localeCompare(b.assetId));
 }
 
 export async function getAsset(ws: string, clientId: string, campaignId: string, assetId: string): Promise<AssetDoc | null> {
-  if (!storeEnabled) return col(clientId, campaignId).get(assetId) ?? null;
+  if (!storeEnabled) return col(ws, clientId, campaignId).get(assetId) ?? null;
   const d = await fsdb().doc(`${path(ws, clientId, campaignId)}/${assetId}`).get();
   return d.exists ? (d.data() as AssetDoc) : null;
 }

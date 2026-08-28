@@ -90,6 +90,37 @@ const db = require('../web/.test-build/db.js');
   await db.deleteSource(ws, client.clientId, full[0].sourceId);
   assert.equal((await db.listSources(ws, client.clientId)).length, 0);
 
+  // ---- cross-workspace isolation: two workspaces must never see each other's
+  // data. This is the property the whole "thread ws through db.ts" change
+  // exists for; without it a store-less deployment holding several accounts
+  // (see server/accounts.ts) would let any one of them read every other's
+  // clients, campaigns and spend.
+  const ws_a = 'ws_a';
+  const ws_b = 'ws_b';
+  const clientA = await db.createClient(ws_a, { name: 'Alice Co' });
+  const clientB = await db.createClient(ws_b, { name: 'Bob Co' });
+
+  const listA = await db.listClients(ws_a);
+  assert.equal(listA.length, 1, 'ws_a sees only its own client');
+  assert.ok(!listA.some((c) => c.clientId === clientB.clientId), 'ws_a does not see ws_b\'s client');
+  assert.equal(await db.getClient(ws_a, clientB.clientId), null, 'ws_a cannot fetch ws_b\'s client by id');
+
+  const listB = await db.listClients(ws_b);
+  assert.equal(listB.length, 1, 'ws_b sees only its own client');
+  assert.ok(!listB.some((c) => c.clientId === clientA.clientId), 'ws_b does not see ws_a\'s client');
+
+  // Ledger: the one an account could use to see another's spend.
+  await db.addLedger(ws_a, { clientId: clientA.clientId, campaignId: 'camp-a', agent: 'strategist', model: 'claude-sonnet-4-6', input: 10, output: 5, webSearches: 0, images: 0, costEur: 1.23 });
+  await db.addLedger(ws_b, { clientId: clientB.clientId, campaignId: 'camp-b', agent: 'strategist', model: 'claude-sonnet-4-6', input: 10, output: 5, webSearches: 0, images: 0, costEur: 9.99 });
+
+  const ledgerA = await db.listLedger(ws_a);
+  assert.equal(ledgerA.length, 1, 'ws_a sees only its own ledger entries');
+  assert.equal(db.ledgerTotals(ledgerA).costEur, 1.23, 'ws_a spend excludes ws_b spend');
+
+  const ledgerB = await db.listLedger(ws_b);
+  assert.equal(ledgerB.length, 1, 'ws_b sees only its own ledger entries');
+  assert.equal(db.ledgerTotals(ledgerB).costEur, 9.99, 'ws_b spend excludes ws_a spend');
+
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });
 
@@ -100,11 +131,11 @@ const db = require('../web/.test-build/db.js');
   process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test';
   const memory = require('../lib/memory');
   const [ex, le, co, cl, none] = await Promise.all([
-    memory.exemplars({ clientId: 'c1', channel: 'meta' }),
-    memory.learnings({ clientId: 'c1' }),
-    memory.corrections({ clientId: 'c1', agent: 'copywriter' }),
-    memory.approvedClaims({ clientId: 'c1' }),
-    memory.approvedClaims({}),
+    memory.exemplars({ ws: 'owner', clientId: 'c1', channel: 'meta' }),
+    memory.learnings({ ws: 'owner', clientId: 'c1' }),
+    memory.corrections({ ws: 'owner', clientId: 'c1', agent: 'copywriter' }),
+    memory.approvedClaims({ ws: 'owner', clientId: 'c1' }),
+    memory.approvedClaims({ ws: 'owner' }),
   ]);
   assert2.deepEqual([ex, le, co], [[], [], []], 'lists are empty without a store');
   assert2.equal(cl, null, 'approvedClaims returns null, not [], so buildRules falls back to proof points');

@@ -10,9 +10,13 @@ import { db as fsdb, storeEnabled } from './firebase';
 import { newId } from './db';
 import type { AssetDoc } from './assets';
 
+// Keyed by "ws/clientId" so two workspaces never share a bucket. web/core's
+// plain-JS memory fallback (web/core/memory/firestore.js) reads this same
+// global and must build the identical key.
 declare global { var __cfExemplars: Map<string, any[]> | undefined; }
 const mem = globalThis.__cfExemplars ?? (globalThis.__cfExemplars = new Map());
 const path = (ws: string, clientId: string) => `users/${ws}/clients/${clientId}/exemplars`;
+const memKey = (ws: string, clientId: string) => `${ws}/${clientId}`;
 
 const AGENT_FOR: Record<string, string> = {
   meta: 'copywriter', linkedin: 'copywriter', google: 'copywriter', email: 'copywriter',
@@ -30,12 +34,12 @@ export async function recordExemplar(ws: string, clientId: string, asset: AssetD
     kind, note: asset.note ?? null,
   };
   if (storeEnabled) await fsdb().doc(`${path(ws, clientId)}/${doc.exemplarId}`).set(doc);
-  else mem.set(clientId, [...(mem.get(clientId) || []), doc]);
+  else mem.set(memKey(ws, clientId), [...(mem.get(memKey(ws, clientId)) || []), doc]);
   return doc;
 }
 
 export async function listExemplars(ws: string, clientId: string) {
-  if (!storeEnabled) return mem.get(clientId) || [];
+  if (!storeEnabled) return mem.get(memKey(ws, clientId)) || [];
   return (await fsdb().collection(path(ws, clientId)).get()).docs.map((d) => d.data());
 }
 
@@ -53,7 +57,7 @@ export async function attachPerformance(ws: string, clientId: string, rows: any[
     if (!byAsset.has(key)) continue;
     const updated = { ...e, performance: { metric, value: byAsset.get(key) } };
     if (storeEnabled) await fsdb().doc(`${path(ws, clientId)}/${e.exemplarId}`).set(updated);
-    else mem.set(clientId, (mem.get(clientId) || []).map((x: any) => (x.exemplarId === e.exemplarId ? updated : x)));
+    else mem.set(memKey(ws, clientId), (mem.get(memKey(ws, clientId)) || []).map((x: any) => (x.exemplarId === e.exemplarId ? updated : x)));
   }
 }
 
