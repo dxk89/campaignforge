@@ -11,6 +11,7 @@ import { fmtEur, fmtInt, fmtMs } from '@/components/format';
 import { useAssets, ApprovalBar, EditorVerdict, EditableChannel } from '@/components/EditablePanels';
 import { LandingPanel } from '@/components/LandingPanel';
 import { flattenAssets, socialRows, toCsv, download, clientSlug } from '@/components/exports';
+import DataNotice from '@/components/DataNotice';
 
 /** The agents this campaign runs, in dependency order. Skips are decided server-side. */
 const CHAIN = [
@@ -268,6 +269,7 @@ function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: a
     <aside className="panel brief-panel">
       <section className="block">
         <h2 className="block-title">Brief <span className="block-hint">{client.name}</span></h2>
+        <DataNotice variant="inline" />
         <label className="dropzone dropzone-brief">
           <input type="file" accept=".pdf,.docx,.txt,.md,.html,.htm" onChange={(e) => readBrief(e.target.files)} />
           <span><strong>Upload a briefing document</strong> and the fields fill in</span>

@@ -38,7 +38,7 @@ export default function NewClient() {
           placeholder="https://client.com  (or just a name)"
           disabled={busy}
         />
-        <button className="btn-secondary" onClick={create} disabled={busy}>
+        <button className="btn-primary" onClick={create} disabled={busy}>
           {busy ? 'Scanning…' : 'Add client'}
         </button>
       </div>

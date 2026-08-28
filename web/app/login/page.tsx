@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import DataNotice from '@/components/DataNotice';
 
 /**
  * Only same-origin paths. Resolving against the real origin and comparing
@@ -51,19 +52,20 @@ export default function Login() {
   }
 
   return (
-    <main className="shell" style={{ maxWidth: 420, paddingTop: 120 }}>
+    <main className="shell" style={{ maxWidth: 460, paddingTop: 72 }}>
       <h1>Campaign Forge</h1>
       <p className="muted" style={{ marginBottom: 24 }}>Sign in to continue.</p>
       <form onSubmit={submit}>
-        <label htmlFor="username">Username</label>
-        <input id="username" name="username" autoComplete="username" required autoFocus />
-        <label htmlFor="password" style={{ marginTop: 12 }}>Password</label>
-        <input id="password" name="password" type="password" autoComplete="current-password" required />
+        <label className="field" htmlFor="username"><span>Username</span>
+          <input id="username" name="username" autoComplete="username" required autoFocus /></label>
+        <label className="field" htmlFor="password"><span>Password</span>
+          <input id="password" name="password" type="password" autoComplete="current-password" required /></label>
         <button className="btn-primary" type="submit" disabled={busy} style={{ marginTop: 20 }}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       {error && <p className="form-error" style={{ marginTop: 16 }}>{error}</p>}
+      <DataNotice />
     </main>
   );
 }

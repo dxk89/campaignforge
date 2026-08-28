@@ -9,3 +9,6 @@ web/node_modules/
 web/.test-build/
 firestore-debug.log
 web/tsconfig.tsbuildinfo
+.vercel
+.env*
+.next/

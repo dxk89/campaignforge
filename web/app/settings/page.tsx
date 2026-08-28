@@ -92,7 +92,7 @@ export default async function Settings() {
 
       <section className="block">
         <h2 className="block-title">Data handling</h2>
-        <pre className="data-handling">{dataHandling}</pre>
+        <pre id="data-handling" className="data-handling">{dataHandling}</pre>
       </section>
     </main>
   );

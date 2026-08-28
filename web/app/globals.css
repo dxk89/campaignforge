@@ -187,3 +187,322 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .learning .boundary { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
 .learning .hyp { font-size: 12.5px; color: var(--amber); margin-top: 4px; }
 .refusal { padding: 10px 12px; border-radius: 4px; background: var(--amber-soft); color: var(--amber); font-size: 13px; margin-bottom: 8px; }
+
+/* ---------------------------------------------------------------------------
+   Component layer.
+
+   The tokens and the page-specific rules above were written first; the shared
+   primitives underneath them never were, so 102 classes had no rules at all.
+   Forms collapsed (a label and its input are siblings inside .field, and with
+   no display rule they ran together on one line), panels bled off the right
+   edge, and title/hint pairs read as one run-on sentence.
+
+   Same restraint as above: teal for actions, ember for cost and violations,
+   nothing else gets colour.
+   --------------------------------------------------------------------------- */
+
+/* ---------- Panels ---------- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--panel-2);
+}
+.card-title { font-size: 16px; font-weight: 700; }
+.card-body { padding: 18px; }
+
+/* A block is a titled section inside a panel. The title and its hint are
+   separate elements, so they need to be blocks or they read as one sentence. */
+.block { padding: 18px; border-top: 1px solid var(--line-soft); }
+.block:first-child { border-top: 0; }
+.block-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.block-hint {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 12px;
+  font-weight: 400;
+  font-family: var(--body);
+}
+
+/* ---------- Forms ---------- */
+/* .field is a label wrapping its own caption and control. Without this it
+   renders inline and the caption sits on top of the input. */
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+.field > input,
+.field > select,
+.field > textarea { color: var(--ink); }
+.field-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.field-row > .field { flex: 1 1 200px; margin-bottom: 0; }
+
+input:not([type]), input[type="text"], input[type="url"], input[type="password"],
+input[type="search"], input[type="email"], input[type="number"], select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
+  outline: none;
+}
+textarea { resize: vertical; min-height: 76px; line-height: 1.45; }
+input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
+
+/* ---------- Buttons ---------- */
+.btn-primary, .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 13.5px;
+  border: 1px solid transparent;
+  transition: background .15s ease, border-color .15s ease, opacity .15s ease;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--teal); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--teal-ink); }
+.btn-secondary { background: var(--panel); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover:not(:disabled) { background: var(--panel-2); border-color: var(--muted); }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+.copy-btn, .asset-btn {
+  padding: 4px 9px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--muted);
+}
+.copy-btn:hover, .asset-btn:hover { border-color: var(--teal); color: var(--teal); }
+.source-remove {
+  border: 0; background: none; color: var(--muted);
+  font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 4px;
+}
+.source-remove:hover { color: var(--ember); }
+
+/* ---------- Header brand ---------- */
+.brand { display: flex; flex-direction: column; gap: 1px; }
+.brand-mark { font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
+.brand-sub { font-size: 12px; color: var(--muted); }
+.logo { max-height: 36px; max-width: 130px; object-fit: contain; }
+
+/* ---------- Agent chain ---------- */
+.chain { display: flex; flex-direction: column; gap: 2px; margin: 0 0 16px; padding: 0; list-style: none; }
+.chain li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius); font-size: 13.5px; }
+.chain li:hover { background: var(--panel-2); }
+.chain-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
+.chain li.done .chain-dot { background: var(--ok); }
+.chain li.active .chain-dot { background: var(--teal); animation: pulse 1.4s ease-in-out infinite; }
+.chain li.stale .chain-dot { background: var(--amber); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.idx { font-family: var(--mono); font-size: 11.5px; color: var(--muted); min-width: 15px; }
+.stage-tag { font-size: 11px; color: var(--muted); margin-left: auto; text-transform: uppercase; letter-spacing: .04em; }
+
+/* ---------- Tabs ---------- */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.tabs button {
+  padding: 8px 14px; border: 0; background: none; color: var(--muted);
+  font-size: 13.5px; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"], .tabs button.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: 600; }
+.tab-flag { margin-left: 6px; font-size: 11px; color: var(--ember); }
+.tab-panel { min-height: 180px; }
+
+/* ---------- Tables and key/value ---------- */
+.grid-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.grid-table td, .grid-table th { padding: 7px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: top; }
+.grid-table th { font-weight: 600; color: var(--muted); font-size: 12.5px; }
+.grid-table tr:last-child td { border-bottom: 0; }
+.kv { display: grid; grid-template-columns: minmax(120px, auto) 1fr; gap: 5px 14px; font-size: 13.5px; }
+.kv dt, .line-label { color: var(--muted); font-size: 12.5px; }
+.kv dd { margin: 0; }
+.line-text { font-size: 13.5px; }
+
+/* ---------- Sources ---------- */
+/* These were bare spans with no gap, so the kind, the URL and the character
+   count ran together as one unreadable string. */
+.source-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.source-list li {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; background: var(--panel-2);
+  border: 1px solid var(--line-soft); border-radius: var(--radius); font-size: 13px;
+}
+.source-kind {
+  font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--teal); background: var(--teal-soft); padding: 2px 6px; border-radius: 3px; flex: 0 0 auto;
+}
+.source-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-chars { color: var(--muted); font-size: 12px; font-family: var(--mono); flex: 0 0 auto; }
+.source-error { color: var(--ember); font-size: 12.5px; margin-top: 6px; }
+.site-hint, .site-scan { font-size: 12.5px; color: var(--muted); }
+
+/* ---------- States ---------- */
+.violation, .warning, .form-error, .results-error {
+  font-size: 12.5px; padding: 8px 11px; border-radius: var(--radius); border: 1px solid; margin: 8px 0;
+}
+.violation, .form-error, .results-error { background: var(--ember-soft); border-color: #f4c7ab; color: #8a3208; }
+.warning { background: var(--amber-soft); border-color: #e8d08a; color: var(--amber); }
+.approved { color: var(--ok); background: var(--ok-soft); border: 1px solid #b8ddc8; padding: 2px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+.stale { color: var(--amber); font-size: 12px; }
+.edited { color: var(--teal); font-size: 11.5px; font-weight: 600; }
+.problems, .issues { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.problems li, .issues li { font-size: 12.5px; color: var(--ember); padding-left: 14px; position: relative; }
+.problems li::before, .issues li::before { content: "!"; position: absolute; left: 0; font-weight: 700; }
+.check { color: var(--ok); }
+.note, .snote, .mini-copy { font-size: 12.5px; color: var(--muted); }
+.empty-title { font-size: 14px; color: var(--muted); }
+.loading-line { font-size: 13px; color: var(--muted); }
+
+/* ---------- Pills, tags, counts ---------- */
+.pill, .lead-tag, .lang-toggle, .stype, .angle-name {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; background: var(--panel-2); border: 1px solid var(--line-soft); color: var(--muted);
+}
+.lead-tag { background: var(--teal-soft); border-color: #bcd9de; color: var(--teal-ink); font-weight: 600; }
+.tag-list, .post-tags, .langs, .gap-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.tag-list span, .post-tags span {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; background: var(--panel-2); border: 1px solid var(--line-soft); color: var(--muted);
+}
+.count, .num { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.bar { height: 5px; background: var(--line-soft); border-radius: 3px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--teal); }
+
+/* ---------- Economics ---------- */
+.economics { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 13px; padding: 12px 18px; border-top: 1px solid var(--line-soft); background: var(--panel-2); }
+.econ-cost { font-family: var(--mono); font-weight: 600; color: var(--ember); font-size: 15px; }
+.econ-passes, .econ-totals { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
+
+/* ---------- Social posts ---------- */
+.post-day { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 12px 14px; margin-bottom: 10px; }
+.post-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 7px; }
+.post-text { font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+.post-foot { display: flex; align-items: center; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
+.week { font-family: var(--display); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; }
+.social-bar, .results-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* ---------- Results and misc panels ---------- */
+.results-panel, .brief-panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+.results-empty { color: var(--muted); font-size: 13.5px; padding: 22px 0; }
+.prose { font-size: 14px; line-height: 1.6; max-width: 68ch; }
+.prose p { margin: 0 0 10px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.pillars, .flow, .talk, .why, .hyp, .obj, .opt, .proof, .boundary, .sbranch, .smain, .sid, .src, .angle {
+  font-size: 13.5px;
+}
+.pillars ul, .flow ul { margin: 6px 0 0; padding-left: 18px; }
+.utm-url { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
+.img-prompt { font-size: 12.5px; color: var(--muted); font-style: italic; }
+.thumb { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--line); display: block; }
+.gfx, .gfx-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.asset-strip { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.brand-assets { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+.web-research { font-size: 12.5px; color: var(--muted); }
+.warnings-only { font-size: 12.5px; color: var(--amber); }
+
+@media (max-width: 760px) {
+  .field-row { flex-direction: column; gap: 0; }
+  .field-row > .field { margin-bottom: 12px; }
+  .card-body, .block { padding: 14px; }
+}
+
+/* ---------- Header, properly ---------------------------------------------
+   .top had only a descendant rule, never a rule of its own, so the header
+   element was unstyled: brand and nav stacked in the top-left corner with no
+   padding and no separation from the page. It is the first thing anyone sees.
+   -------------------------------------------------------------------------- */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+/* brand-mark, the h1 and brand-sub are siblings, so the mark is placed
+   across both text rows rather than restructuring the markup. */
+.brand {
+  display: grid;
+  grid-template-columns: auto auto;
+  column-gap: 11px;
+  align-items: center;
+}
+.brand-mark {
+  grid-row: 1 / 3;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  background: var(--teal);
+  /* A forge mark: an ember notch cut out of the teal block. */
+  box-shadow: inset 0 -9px 0 -4px var(--ember);
+}
+.brand h1 { grid-column: 2; font-size: 19px; line-height: 1.15; }
+.brand-sub { grid-column: 2; font-size: 12px; color: var(--muted); }
+
+/* The header supplies its own padding, so pages start below it. */
+.shell { padding-top: 20px; }
+.workbench-page { padding-top: 12px; }
+
+/* ---------- Data protection notice ---------------------------------------
+   Shown before sign-in and again where real client material is entered. It
+   has to be readable rather than dismissible boilerplate, so it gets the
+   amber treatment used for things that want attention without alarming.
+   -------------------------------------------------------------------------- */
+.data-notice {
+  margin-top: 28px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.data-notice h2 { font-size: 14px; margin-bottom: 8px; }
+.data-notice p { margin: 0 0 9px; color: var(--muted); }
+.data-notice ul { margin: 0 0 9px; padding-left: 17px; display: flex; flex-direction: column; gap: 6px; }
+.data-notice li { color: var(--muted); }
+.data-notice b { color: var(--ink); font-weight: 600; }
+.data-notice a { color: var(--teal); }
+.data-notice p:last-child { margin-bottom: 0; font-size: 12.5px; }
+
+.data-notice-inline {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  background: var(--amber-soft);
+  border: 1px solid #e8d08a;
+  border-radius: var(--radius);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--amber);
+}
+.data-notice-inline a { color: var(--amber); font-weight: 600; }
