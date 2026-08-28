@@ -233,7 +233,7 @@ anything above it is not reliably included. The runtime now lives at
 
 In the Vercel project settings, **Root Directory must be `web`**. Framework
 preset Next.js (detected automatically). No build or install command overrides;
-`vercel.json` only raises the function timeout to 300 seconds.
+`web/vercel.json` only raises the function timeout to 300 seconds.
 
 To check a change will deploy, simulate it locally:
 

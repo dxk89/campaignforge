@@ -1,7 +1,0 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "$comment": "Set the Vercel project's Root Directory to `web`. Everything the deployment needs lives inside it, including core/ (the agent runtime). This file only raises the function timeout; Next is detected automatically.",
-  "functions": {
-    "app/api/**/*.ts": { "maxDuration": 300 }
-  }
-}

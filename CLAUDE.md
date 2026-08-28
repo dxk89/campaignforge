@@ -237,6 +237,13 @@ Each of these cost someone time to discover.
   `FIRESTORE_EMULATOR_HOST`, which the emulator sets and production never
   does. Remove that branch and `npm run test:emulator` cannot get past its
   first line, which is how the Firestore path went unproven for four phases.
+- **`vercel.json` lives in `web/`, not the repo root, and takes no comments.**
+  Vercel reads it from the Root Directory, so a copy at the repo root is
+  never seen and the 300-second function timeout is silently lost, which
+  matters because an agent run takes two to four minutes. The schema also
+  rejects unknown keys outright: a `$comment` field there fails the build
+  with "should NOT have additional property". Explanations go in this file
+  or `docs/DEPLOY.md`, never in the JSON.
 - **Next 16 renamed `middleware` to `proxy`.** The file is `web/proxy.ts` and
   exports a default function.
 - **`archiver`'s published types are not callable under ESM.** There is a local
@@ -295,7 +302,7 @@ Each of these cost someone time to discover.
 ## Deploying
 
 Vercel, with **Root Directory set to `web`**. Framework preset Next.js, no
-build or install command overrides; `vercel.json` only raises the function
+build or install command overrides; `web/vercel.json` only raises the function
 timeout to 300 seconds. The runtime lives at `web/core/` and `web/package.json`
 carries every dependency it needs, because Vercel traces files from the root
 directory and anything above it is not reliably included.
