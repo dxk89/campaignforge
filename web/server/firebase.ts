@@ -9,7 +9,6 @@
  */
 import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
 
 let app: App | null = null;
 
@@ -22,27 +21,22 @@ function init(): App {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT is not set');
   const json = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
-  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${json.project_id}.appspot.com`;
   // The emulator authenticates nothing, so there is no real private key to
   // present and cert() would throw parsing the placeholder one. Project id
   // alone is what it wants. Gated on FIRESTORE_EMULATOR_HOST, which the
   // emulator sets and production never does, so the credentialled path below
   // is untouched.
   if (process.env.FIRESTORE_EMULATOR_HOST) {
-    app = initializeApp({ projectId: json.project_id, storageBucket });
+    app = initializeApp({ projectId: json.project_id });
     return app;
   }
-  app = initializeApp({ credential: cert(json), storageBucket });
+  app = initializeApp({ credential: cert(json) });
   return app;
 }
 
 export function db(): Firestore {
   const f = getFirestore(init());
   return f;
-}
-
-export function bucket() {
-  return getStorage(init()).bucket();
 }
 
 /** The single allowed user's uid namespace. One operator, many clients. */

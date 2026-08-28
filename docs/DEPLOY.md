@@ -12,7 +12,15 @@ You need: a Google account, a GitHub account with the repo, a Vercel account, an
 2. **Build → Authentication → Get started → Google** → enable → set a support email → Save.
    *Skip this and sign-in fails with "operation not allowed".*
 3. **Build → Firestore Database → Create database** → production mode → choose a region near you (`europe-west3` for Portugal). The rules you deploy in step 4 replace the defaults.
-4. **Build → Storage → Get started** → same region.
+4. **Object storage is Cloudflare R2, not Firebase Storage.** At
+   dash.cloudflare.com → R2, create a bucket, then **Manage API Tokens** →
+   create a token with Object Read & Write scoped to it. Note the Account ID,
+   Access Key ID, Secret Access Key and bucket name for the variables below.
+   *R2 gives 10 GB at no cost and charges nothing for egress, which matters
+   because every image the workbench renders is a download through
+   /api/files. Leave these unset and uploads go to memory and vanish on the
+   next cold start; the app refuses to start rather than let that happen
+   silently once Firestore is configured.*
 5. **Project settings (gear) → General**, scroll to "Your apps" → **Add app → Web** (`</>`). Register it, then copy the config values. You need `apiKey`, `authDomain`, `projectId`, `storageBucket`, `appId`.
 6. **Project settings → Service accounts → Generate new private key**. A JSON file downloads. Convert it to one line:
    ```bash
@@ -29,7 +37,7 @@ From the repo root, with the Firebase CLI installed (`npm i -g firebase-tools`, 
 export ALLOWED_EMAIL=you@yourdomain.com
 node scripts/deploy-rules.js
 firebase use <your-project-id>
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules
 ```
 
 The script writes your address into the rule templates in `.rules-build/`, which is gitignored, so the address is never committed.
@@ -47,7 +55,10 @@ The script writes your address into the rule templates in `.rules-build/`, which
 |---|---|---|
 | `ANTHROPIC_API_KEY` | your key | Every agent run fails at startup |
 | `FIREBASE_SERVICE_ACCOUNT` | the base64 string from step 1.6 | Runs in memory; nothing survives a restart |
-| `FIREBASE_STORAGE_BUCKET` | `<project-id>.appspot.com` | Uploads and images fail |
+| `R2_ACCOUNT_ID` | Cloudflare dashboard → R2 → Account ID | Uploads and images are lost on restart |
+| `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens | Same |
+| `R2_SECRET_ACCESS_KEY` | shown once when the token is created | Same |
+| `R2_BUCKET` | the bucket name you created | Same |
 | `ALLOWED_EMAIL` | the only address that may sign in | Sign-in is refused |
 | `ALLOWED_UID` | `owner` | Defaults to `owner`; only change it if you know why |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | from step 1.5 | The sign-in button fails |

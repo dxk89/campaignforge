@@ -15,7 +15,6 @@ if (EMULATED) {
     client_email: 'test@demo-cf.iam.gserviceaccount.com',
     private_key: '-----BEGIN PRIVATE KEY-----\nemulator\n-----END PRIVATE KEY-----\n',
   })).toString('base64');
-  process.env.FIREBASE_STORAGE_BUCKET = 'demo-cf.appspot.com';
 } else {
   delete process.env.FIREBASE_SERVICE_ACCOUNT;
 }

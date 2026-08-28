@@ -14,9 +14,9 @@ const root = path.join(__dirname, '..');
 const out = path.join(root, '.rules-build');
 fs.mkdirSync(out, { recursive: true });
 
-for (const f of ['firestore.rules', 'storage.rules']) {
+for (const f of ['firestore.rules']) {
   const src = fs.readFileSync(path.join(root, f), 'utf8');
   fs.writeFileSync(path.join(out, f), src.replace(/__ALLOWED_EMAIL__/g, email.toLowerCase()));
 }
 console.log(`Rules built for ${email} in .rules-build/`);
-console.log('Deploy with: firebase deploy --only firestore:rules,storage --config firebase.json');
+console.log('Deploy with: firebase deploy --only firestore:rules --config firebase.json');

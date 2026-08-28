@@ -255,7 +255,17 @@ Each of these cost someone time to discover.
   commented in `web/core/mock.js`. Do not "fix" it.
 - **Storage refs are not URLs.** They are paths like
   `users/owner/clients/<id>/...`; rendering one goes through
-  `/api/files/[...ref]`.
+  `/api/files/[...ref]`. They are object keys in R2 now rather than Firebase
+  Storage, and the shape did not change, so the file route and the export zip
+  were untouched by the move.
+- **Object storage is Cloudflare R2, not Firebase Storage.** R2 is
+  S3-compatible, gives 10 GB free and charges nothing for egress, which is
+  what matters when every rendered image is a download through the file route.
+  `web/server/storage.ts` is the only module that talks to it. It throws at
+  load if Firestore is configured and R2 is not: that combination would accept
+  uploads into memory and lose them on the next cold start, with nothing in
+  the logs. Firebase Storage rules are gone from `firebase.json`, so the
+  deploy command is `--only firestore:rules` and no bucket needs to exist.
 - **`web/` and `legacy/` share the runtime.** A change to `web/core/` must keep
   both green, which is why the legacy suite still runs.
 - **Two lockfiles.** Root and `web/`. Next warns about inferring the workspace

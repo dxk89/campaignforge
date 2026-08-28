@@ -32,7 +32,15 @@ Without this the app runs but forgets everything on restart.
 1. **console.firebase.google.com → Add project.** Analytics not needed.
 2. **Authentication → Get started → Google** → enable → set a support email → Save.
 3. **Firestore Database → Create database** → *production mode* → region `europe-west3`.
-4. **Storage → Get started** → same region.
+4. **Object storage is Cloudflare R2, not Firebase Storage.** At
+   dash.cloudflare.com → R2, create a bucket, then **Manage API Tokens** →
+   create a token with Object Read & Write scoped to it. Note the Account ID,
+   Access Key ID, Secret Access Key and bucket name for the variables below.
+   *R2 gives 10 GB at no cost and charges nothing for egress, which matters
+   because every image the workbench renders is a download through
+   /api/files. Leave these unset and uploads go to memory and vanish on the
+   next cold start; the app refuses to start rather than let that happen
+   silently once Firestore is configured.*
 5. **Project settings → General → Your apps → Add app → Web.** Copy `apiKey`, `authDomain`, `projectId`, `storageBucket`, `appId`.
 6. **Project settings → Service accounts → Generate new private key.** Then, in a terminal:
    ```bash
@@ -46,7 +54,7 @@ Without this the app runs but forgets everything on restart.
    export ALLOWED_EMAIL=you@yourdomain.com
    node scripts/deploy-rules.js
    firebase use <your-project-id>
-   firebase deploy --only firestore:rules,storage
+   firebase deploy --only firestore:rules
    ```
    Skipping this leaves Firestore on its defaults: in production mode every read is denied and the app looks broken.
 8. **Authentication → Settings → Authorised domains** → add your Vercel domain. Without it the sign-in popup closes with "unauthorised domain".
@@ -63,7 +71,10 @@ Settings → Environment Variables, all environments, then redeploy.
 |---|---|
 | `ANTHROPIC_API_KEY` | your key |
 | `FIREBASE_SERVICE_ACCOUNT` | the base64 string from §2.6 |
-| `FIREBASE_STORAGE_BUCKET` | `<project-id>.appspot.com` |
+| `R2_ACCOUNT_ID` | Cloudflare → R2 → Account ID |
+| `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens |
+| `R2_SECRET_ACCESS_KEY` | shown once at token creation |
+| `R2_BUCKET` | your bucket name |
 | `ALLOWED_EMAIL` | the only address that may sign in |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | from §2.5 |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | from §2.5 |
