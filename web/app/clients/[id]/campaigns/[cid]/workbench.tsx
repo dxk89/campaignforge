@@ -9,6 +9,7 @@ import {
 } from '@/components/panels';
 import { fmtEur, fmtInt, fmtMs } from '@/components/format';
 import { useAssets, ApprovalBar, EditorVerdict, EditableChannel } from '@/components/EditablePanels';
+import { LandingPanel } from '@/components/LandingPanel';
 import { flattenAssets, socialRows, toCsv, download, clientSlug } from '@/components/exports';
 
 /** The agents this campaign runs, in dependency order. Skips are decided server-side. */
@@ -19,6 +20,7 @@ const CHAIN = [
   { agent: 'copywriter', label: 'Assets', running: 'Writing every channel' },
   { agent: 'social-planner', label: 'Social', running: 'Planning a month of social' },
   { agent: 'ops-architect', label: 'Activation', running: 'Building lifecycle, handoff and measurement' },
+  { agent: 'landing-writer', label: 'Landing', running: 'Writing the page every ad points at' },
   { agent: 'localiser', label: 'pt-PT', running: 'Adapting for Portugal' },
 ];
 
@@ -109,6 +111,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
       { id: 'google', label: 'Google' }, { id: 'email', label: 'Email' },
     );
     if (outputs['social-planner']) t.push({ id: 'social', label: 'Social' });
+    if (outputs['landing-writer']) t.push({ id: 'landing', label: 'Landing' });
     if (outputs['ops-architect']) t.push(
       { id: 'lifecycle', label: 'Lifecycle' }, { id: 'handoff', label: 'Handoff' }, { id: 'measurement', label: 'Measurement' },
     );
@@ -174,6 +177,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               {tab === 'google' && <EditableChannel assets={editing.assets} channel="google" title="Google RSA" ctx={editing} />}
               {tab === 'email' && <EditableChannel assets={editing.assets} channel="email" title="Email" ctx={editing} />}
               {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} />}
+              {tab === 'landing' && <LandingPanel landing={outputs['landing-writer']} />}
               {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}
               {tab === 'measurement' && <MeasurementPanel activation={outputs['ops-architect']} tracking={tracking} />}
@@ -226,6 +230,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               }
               download(`${clientSlug(client.name)}-package.json`, 'application/json', JSON.stringify(data, null, 2));
             }}>Package</button>
+            <a className="btn-secondary" href={`/clients/${clientId}/campaigns/${campaign.campaignId}/results`}>Results</a>
             <a className="btn-secondary" href={`/api/export/${clientId}`}>Export all</a>
           </div>
         </footer>
