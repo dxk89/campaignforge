@@ -6,11 +6,11 @@ export const runtime = 'nodejs';
 /** Approve, reject, set an expiry, or note why. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; claimId: string }> }) {
   const { id, claimId } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
     const patch = await req.json();
     const clean: any = {};
     for (const k of ['status', 'expiresAt', 'note', 'text'] as const) if (k in patch) clean[k] = patch[k];
-    const claim = await updateClaim(id, claimId, clean);
+    const claim = await updateClaim(session.workspaceId, id, claimId, clean);
     if (!claim) throw bad('Claim not found', 404);
     return { claim };
   });

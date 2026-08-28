@@ -8,11 +8,16 @@ import ResultsClient from './results-client';
 export const dynamic = 'force-dynamic';
 
 export default async function ResultsPage({ params }: { params: Promise<{ id: string; cid: string }> }) {
-  if (!(await currentSession())) redirect('/login');
+  const session = await currentSession();
+  if (!session) redirect('/login');
   const { id, cid } = await params;
-  const [client, campaign] = await Promise.all([getClient(id), getCampaign(id, cid)]);
+  const [client, campaign] = await Promise.all([getClient(session.workspaceId, id), getCampaign(session.workspaceId, id, cid)]);
   if (!client || !campaign) notFound();
-  const [results, learnings, outputs] = await Promise.all([listResults(id, cid), listLearnings(id), currentOutputs(id, cid)]);
+  const [results, learnings, outputs] = await Promise.all([
+    listResults(session.workspaceId, id, cid),
+    listLearnings(session.workspaceId, id),
+    currentOutputs(session.workspaceId, id, cid),
+  ]);
   const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
 
   return (

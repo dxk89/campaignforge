@@ -32,9 +32,9 @@ export type BuiltInputs = { inputs: Record<string, unknown>; inputsHash: string 
  * competitors, the brand spelling, and the approved claims when a registry
  * exists. Used by the asset flags and by the Critic.
  */
-export async function rulesFor(clientId: string, campaignId: string) {
+export async function rulesFor(ws: string, clientId: string, campaignId: string) {
   const [client, campaign, outputs] = await Promise.all([
-    getClient(clientId), getCampaign(clientId, campaignId), currentOutputs(clientId, campaignId),
+    getClient(ws, clientId), getCampaign(ws, clientId, campaignId), currentOutputs(ws, clientId, campaignId),
   ]);
   const context: any = outputs['brand-analyst']?.output ?? null;
   // Client voice rules, edited by a person, take precedence over what research proposed.
@@ -44,9 +44,9 @@ export async function rulesFor(clientId: string, campaignId: string) {
   return buildRules({ ...(campaign?.brief || {}), clientName: client?.name }, merged, claims);
 }
 
-export async function buildInputs(clientId: string, campaignId: string, agent: string): Promise<BuiltInputs> {
+export async function buildInputs(ws: string, clientId: string, campaignId: string, agent: string): Promise<BuiltInputs> {
   const [client, campaign, outputs] = await Promise.all([
-    getClient(clientId), getCampaign(clientId, campaignId), currentOutputs(clientId, campaignId),
+    getClient(ws, clientId), getCampaign(ws, clientId, campaignId), currentOutputs(ws, clientId, campaignId),
   ]);
   if (!client) throw Object.assign(new Error('Client not found'), { status: 404 });
   if (!campaign) throw Object.assign(new Error('Campaign not found'), { status: 404 });
@@ -65,7 +65,7 @@ export async function buildInputs(clientId: string, campaignId: string, agent: s
   let inputs: Record<string, unknown>;
   switch (agent) {
     case 'brand-analyst': {
-      const sources = await listSources(clientId, true);
+      const sources = await listSources(ws, clientId, true);
       inputs = {
         brief, clientId,
         sources: sources.map((s) => ({ name: s.name, kind: s.kind, text: s.text })),
@@ -105,7 +105,7 @@ export async function buildInputs(clientId: string, campaignId: string, agent: s
       // Portuguese is adapted from the *edited* English, not from what the
       // model first wrote. That is the whole point of the editable layer.
       const { composeAssets } = await import('./assets');
-      const english = await composeAssets(clientId, campaignId, 'en', need('copywriter', 'The assets'));
+      const english = await composeAssets(ws, clientId, campaignId, 'en', need('copywriter', 'The assets'));
       inputs = { brief, clientId, context, assets: english, glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
       break;
     }
@@ -120,8 +120,8 @@ export async function buildInputs(clientId: string, campaignId: string, agent: s
 }
 
 /** Agents whose stored version was produced from inputs that have since changed. */
-export async function staleAgents(clientId: string, campaignId: string): Promise<string[]> {
-  const [campaign, outputs] = await Promise.all([getCampaign(clientId, campaignId), currentOutputs(clientId, campaignId)]);
+export async function staleAgents(ws: string, clientId: string, campaignId: string): Promise<string[]> {
+  const [campaign, outputs] = await Promise.all([getCampaign(ws, clientId, campaignId), currentOutputs(ws, clientId, campaignId)]);
   if (!campaign) return [];
   const stale: string[] = [];
   for (const [agent, version] of Object.entries(outputs as Record<string, Version>)) {

@@ -11,7 +11,7 @@
  *   meta.v2.headline.en, google.rsa.headline.5.en, email.3.body.en,
  *   social.d12.text.en, landing.hero.headline.en
  */
-import { db as fsdb, storeEnabled, uid } from './firebase';
+import { db as fsdb, storeEnabled } from './firebase';
 import { newId } from './db';
 
 const { LIMITS, SOCIAL_LIMITS } = require('@core/limits');
@@ -42,8 +42,8 @@ const col = (clientId: string, campaignId: string) => {
   if (!mem.has(key)) mem.set(key, new Map());
   return mem.get(key)!;
 };
-const path = (clientId: string, campaignId: string) =>
-  `users/${uid()}/clients/${clientId}/campaigns/${campaignId}/assets`;
+const path = (ws: string, clientId: string, campaignId: string) =>
+  `users/${ws}/clients/${clientId}/campaigns/${campaignId}/assets`;
 
 const now = () => new Date().toISOString();
 
@@ -125,10 +125,10 @@ export function flagsFor(f: Field, language: string, rules: any) {
  * a person's words.
  */
 export async function explode(
-  clientId: string, campaignId: string, versionId: string,
+  ws: string, clientId: string, campaignId: string, versionId: string,
   fields: Field[], language: string, rules: any,
 ): Promise<AssetDoc[]> {
-  const existing = await listAssets(clientId, campaignId);
+  const existing = await listAssets(ws, clientId, campaignId);
   const byId = new Map(existing.map((a) => [a.assetId, a]));
   const written: AssetDoc[] = [];
 
@@ -144,15 +144,15 @@ export async function explode(
           status: 'draft', approvedAt: null, note: null, flags: [],
         };
     doc.flags = flagsFor({ ...f, text: doc.text }, language, rules);
-    await putAsset(clientId, campaignId, doc);
+    await putAsset(ws, clientId, campaignId, doc);
     written.push(doc);
   }
   return written;
 }
 
 /** Rebuild the asset-set shape from asset documents, using edited text. */
-export async function composeAssets(clientId: string, campaignId: string, language: string, fallback: any) {
-  const docs = (await listAssets(clientId, campaignId)).filter((a) => a.language === language);
+export async function composeAssets(ws: string, clientId: string, campaignId: string, language: string, fallback: any) {
+  const docs = (await listAssets(ws, clientId, campaignId)).filter((a) => a.language === language);
   if (!docs.length) return fallback;
   const byId = new Map(docs.map((a) => [a.assetId, a.text]));
   const pick = (channel: string, unit: string, field: string, orElse: any) =>
@@ -173,8 +173,8 @@ export async function composeAssets(clientId: string, campaignId: string, langua
   return out;
 }
 
-export async function composeSocial(clientId: string, campaignId: string, fallback: any) {
-  const docs = (await listAssets(clientId, campaignId)).filter((a) => a.channel === 'social');
+export async function composeSocial(ws: string, clientId: string, campaignId: string, fallback: any) {
+  const docs = (await listAssets(ws, clientId, campaignId)).filter((a) => a.channel === 'social');
   if (!docs.length) return fallback;
   const byId = new Map(docs.map((a) => [a.assetId, a.text]));
   const out = JSON.parse(JSON.stringify(fallback || {}));
@@ -188,23 +188,23 @@ export async function composeSocial(clientId: string, campaignId: string, fallba
 
 // ---- storage -----------------------------------------------------------------
 
-export async function putAsset(clientId: string, campaignId: string, doc: AssetDoc) {
-  if (storeEnabled) await fsdb().doc(`${path(clientId, campaignId)}/${doc.assetId}`).set(doc);
+export async function putAsset(ws: string, clientId: string, campaignId: string, doc: AssetDoc) {
+  if (storeEnabled) await fsdb().doc(`${path(ws, clientId, campaignId)}/${doc.assetId}`).set(doc);
   else col(clientId, campaignId).set(doc.assetId, doc);
   return doc;
 }
 
-export async function listAssets(clientId: string, campaignId: string, language?: string): Promise<AssetDoc[]> {
+export async function listAssets(ws: string, clientId: string, campaignId: string, language?: string): Promise<AssetDoc[]> {
   let docs: AssetDoc[];
   if (!storeEnabled) docs = [...col(clientId, campaignId).values()];
-  else docs = (await fsdb().collection(path(clientId, campaignId)).get()).docs.map((d) => d.data() as AssetDoc);
+  else docs = (await fsdb().collection(path(ws, clientId, campaignId)).get()).docs.map((d) => d.data() as AssetDoc);
   return (language ? docs.filter((a) => a.language === language) : docs)
     .sort((a, b) => a.assetId.localeCompare(b.assetId));
 }
 
-export async function getAsset(clientId: string, campaignId: string, assetId: string): Promise<AssetDoc | null> {
+export async function getAsset(ws: string, clientId: string, campaignId: string, assetId: string): Promise<AssetDoc | null> {
   if (!storeEnabled) return col(clientId, campaignId).get(assetId) ?? null;
-  const d = await fsdb().doc(`${path(clientId, campaignId)}/${assetId}`).get();
+  const d = await fsdb().doc(`${path(ws, clientId, campaignId)}/${assetId}`).get();
   return d.exists ? (d.data() as AssetDoc) : null;
 }
 
@@ -215,10 +215,10 @@ export async function getAsset(clientId: string, campaignId: string, assetId: st
  * words withdraws the approval. Approving is refused while a violation stands.
  */
 export async function updateAsset(
-  clientId: string, campaignId: string, assetId: string,
+  ws: string, clientId: string, campaignId: string, assetId: string,
   patch: { text?: string; status?: AssetDoc['status']; note?: string }, rules: any,
 ): Promise<AssetDoc> {
-  const doc = await getAsset(clientId, campaignId, assetId);
+  const doc = await getAsset(ws, clientId, campaignId, assetId);
   if (!doc) throw Object.assign(new Error('Asset not found'), { status: 404 });
 
   const next: AssetDoc = { ...doc };
@@ -243,7 +243,7 @@ export async function updateAsset(
     }
     next.status = patch.status;
   }
-  return putAsset(clientId, campaignId, next);
+  return putAsset(ws, clientId, campaignId, next);
 }
 
 /** Approval summary for the export gate. */

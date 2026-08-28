@@ -5,5 +5,5 @@ export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return guarded(async () => ({ learnings: await listLearnings(id) }));
+  return guarded(async (session) => ({ learnings: await listLearnings(session.workspaceId, id) }));
 }

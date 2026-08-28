@@ -10,14 +10,15 @@ const { trackingPlan } = require('@core/utm');
 export const dynamic = 'force-dynamic';
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string; cid: string }> }) {
-  if (!(await currentSession())) redirect('/login');
+  const session = await currentSession();
+  if (!session) redirect('/login');
   const { id, cid } = await params;
-  const [client, campaign] = await Promise.all([getClient(id), getCampaign(id, cid)]);
+  const [client, campaign] = await Promise.all([getClient(session.workspaceId, id), getCampaign(session.workspaceId, id, cid)]);
   if (!client || !campaign) notFound();
 
-  const outputs = await currentOutputs(id, cid);
-  const stale = await staleAgents(id, cid);
-  const entries = (await listLedger()).filter((e) => e.campaignId === cid);
+  const outputs = await currentOutputs(session.workspaceId, id, cid);
+  const stale = await staleAgents(session.workspaceId, id, cid);
+  const entries = (await listLedger(session.workspaceId)).filter((e) => e.campaignId === cid);
 
   // Resolve versions into the plain shapes the panels expect.
   const results: Record<string, unknown> = {};

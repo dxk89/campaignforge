@@ -12,7 +12,7 @@ export const maxDuration = 300;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => listResults(id, cid));
+  return guarded(async (session) => listResults(session.workspaceId, id, cid));
 }
 
 /**
@@ -22,7 +22,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
     const form = await req.formData();
     const file = form.get('file');
     const source = String(form.get('source') || 'manual');
@@ -33,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { columns, rows } = parseCsv(text);
     if (!rows.length) throw bad('That file has no data rows');
 
-    const client = await getClient(id);
+    const client = await getClient(ws, id);
     const remembered = (client?.settings as any)?.resultMappings?.[source];
     const mapping = mappingRaw ? JSON.parse(String(mappingRaw)) : remembered;
 
@@ -41,21 +42,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return { needsMapping: true, columns, sample: rows.slice(0, 3), suggested: suggestMapping(columns) };
     }
 
-    const [campaign, outputs] = await Promise.all([getCampaign(id, cid), currentOutputs(id, cid)]);
+    const [campaign, outputs] = await Promise.all([getCampaign(ws, id, cid), currentOutputs(ws, id, cid)]);
     const assets = outputs.copywriter?.output;
     const tracking = assets ? trackingPlan({ ...campaign!.brief, clientName: client!.name }, assets, outputs.localiser?.output ?? null, campaign!.brief.landingUrl) : null;
 
     const { rows: matched, unmatched } = matchRows(rows, mapping, tracking, assets);
     const verdicts = computeVerdicts((outputs['ops-architect']?.output as any)?.experiments || [], matched);
 
-    const fileRef = await putFile(`clients/${id}/campaigns/${cid}/results/${Date.now()}-${file.name}`, Buffer.from(text), 'text/csv');
-    const doc = await saveResults(id, cid, { source, fileRef, mapping, rows: matched, unmatched, verdicts });
+    const fileRef = await putFile(ws, `clients/${id}/campaigns/${cid}/results/${Date.now()}-${file.name}`, Buffer.from(text), 'text/csv');
+    const doc = await saveResults(ws, id, cid, { source, fileRef, mapping, rows: matched, unmatched, verdicts });
 
     // Results tell the exemplar bank which approved copy actually worked.
-    await attachPerformance(id, matched);
+    await attachPerformance(ws, id, matched);
 
     // Remember the mapping for this source.
-    await updateClient(id, { settings: { ...(client!.settings as any), resultMappings: { ...((client!.settings as any).resultMappings || {}), [source]: mapping } } });
+    await updateClient(ws, id, { settings: { ...(client!.settings as any), resultMappings: { ...((client!.settings as any).resultMappings || {}), [source]: mapping } } });
 
     return { resultId: doc.resultId, matched: matched.length, unmatched, verdicts, summary: doc.summary };
   });

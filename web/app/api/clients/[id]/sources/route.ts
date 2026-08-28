@@ -9,13 +9,13 @@ export const maxDuration = 300;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return guarded(async () => ({ sources: await listSources(id) }));
+  return guarded(async (session) => ({ sources: await listSources(session.workspaceId, id) }));
 }
 
 /** Files (multipart), a URL, or pasted text. All three end as source docs. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
     const type = req.headers.get('content-type') || '';
 
     if (type.includes('multipart/form-data')) {
@@ -28,8 +28,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         try {
           const buffer = Buffer.from(await file.arrayBuffer());
           const extracted = await extractFile({ originalname: file.name, buffer });
-          const storageRef = await putFile(`clients/${id}/sources/${file.name}`, buffer, file.type);
-          sources.push(await addSource(id, { name: extracted.name, kind: 'file', storageRef, text: extracted.text, chars: extracted.chars }));
+          const storageRef = await putFile(session.workspaceId, `clients/${id}/sources/${file.name}`, buffer, file.type);
+          sources.push(await addSource(session.workspaceId, id, { name: extracted.name, kind: 'file', storageRef, text: extracted.text, chars: extracted.chars }));
         } catch (err: any) {
           errors.push({ name: file.name, error: err.message });
         }
@@ -40,11 +40,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const body = await req.json();
     if (body.url) {
       const s = await extractUrl(body.url);
-      return { sources: [strip(await addSource(id, { name: s.name, kind: 'url', storageRef: null, text: s.text, chars: s.chars }))] };
+      return { sources: [strip(await addSource(session.workspaceId, id, { name: s.name, kind: 'url', storageRef: null, text: s.text, chars: s.chars }))] };
     }
     if (body.text) {
       const s = fromPaste(body.label, body.text);
-      return { sources: [strip(await addSource(id, { name: s.name, kind: 'paste', storageRef: null, text: s.text, chars: s.chars }))] };
+      return { sources: [strip(await addSource(session.workspaceId, id, { name: s.name, kind: 'paste', storageRef: null, text: s.text, chars: s.chars }))] };
     }
     throw bad('Send files, a url or text');
   });

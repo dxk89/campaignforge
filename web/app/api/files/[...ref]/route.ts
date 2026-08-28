@@ -1,6 +1,5 @@
 import { requireSession } from '@/server/auth';
 import { getFile } from '@/server/storage';
-import { uid } from '@/server/firebase';
 
 export const runtime = 'nodejs';
 
@@ -10,14 +9,15 @@ export const runtime = 'nodejs';
  * are refused regardless of what the caller sends.
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ ref: string[] }> }) {
+  let session;
   try {
-    await requireSession();
+    session = await requireSession();
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: err.status || 401, headers: { 'content-type': 'application/json' } });
   }
   const { ref } = await params;
   const full = ref.join('/');
-  if (!full.startsWith(`users/${uid()}/`)) {
+  if (!full.startsWith(`users/${session.workspaceId}/`)) {
     return new Response(JSON.stringify({ error: 'Not permitted' }), { status: 403, headers: { 'content-type': 'application/json' } });
   }
   const file = await getFile(full);

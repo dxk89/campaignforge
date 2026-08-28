@@ -44,8 +44,3 @@ export function db(): Firestore {
   const f = getFirestore(init());
   return f;
 }
-
-/** The single allowed user's uid namespace. One operator, many clients. */
-export function uid(): string {
-  return process.env.ALLOWED_UID || 'owner';
-}

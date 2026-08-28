@@ -15,18 +15,19 @@ export const maxDuration = 300;
  */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
-    const [campaign, outputs, assets] = await Promise.all([getCampaign(id, cid), currentOutputs(id, cid), listAssets(id, cid)]);
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
+    const [campaign, outputs, assets] = await Promise.all([getCampaign(ws, id, cid), currentOutputs(ws, id, cid), listAssets(ws, id, cid)]);
     const approved = assets.filter((a) => a.status === 'approved');
     if (!approved.length) throw bad('Nothing is approved yet, so there is nothing to audit', 409);
 
-    const composed = await composeAssets(id, cid, 'en', outputs.copywriter?.output);
-    const rules = await rulesFor(id, cid);
+    const composed = await composeAssets(ws, id, cid, 'en', outputs.copywriter?.output);
+    const rules = await rulesFor(ws, id, cid);
     const review = await orchestrator.review('audit', composed, {
       brief: { ...campaign!.brief }, context: outputs['brand-analyst']?.output, audience: outputs['customer-researcher']?.output, rules,
     });
     if (review?.usage) {
-      await addLedger({
+      await addLedger(ws, {
         clientId: id, campaignId: cid, agent: 'critic', model: review.usage.model || 'unknown',
         input: review.usage.input || 0, output: review.usage.output || 0, webSearches: 0, images: 0, costEur: review.usage.costEur || 0,
       });

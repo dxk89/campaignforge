@@ -6,11 +6,11 @@ export const runtime = 'nodejs';
 /** Approve, reject or edit a proposed learning. Approved ones enter every future packet. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; lid: string }> }) {
   const { id, lid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
     const patch = await req.json();
     const clean: any = {};
     for (const k of ['status', 'statement', 'boundary', 'note'] as const) if (k in patch) clean[k] = patch[k];
-    const learning = await updateLearning(id, lid, clean);
+    const learning = await updateLearning(session.workspaceId, id, lid, clean);
     if (!learning) throw bad('Learning not found', 404);
     return { learning };
   });

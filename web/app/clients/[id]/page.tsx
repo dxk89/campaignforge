@@ -7,11 +7,12 @@ import Library from './library';
 export const dynamic = 'force-dynamic';
 
 export default async function ClientPage({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await currentSession())) redirect('/login');
+  const session = await currentSession();
+  if (!session) redirect('/login');
   const { id } = await params;
-  const client = await getClient(id);
+  const client = await getClient(session.workspaceId, id);
   if (!client) notFound();
-  const [sources, campaigns] = await Promise.all([listSources(id), listCampaigns(id)]);
+  const [sources, campaigns] = await Promise.all([listSources(session.workspaceId, id), listCampaigns(session.workspaceId, id)]);
 
   return (
     <main className="shell">

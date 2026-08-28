@@ -13,17 +13,19 @@ export const runtime = 'nodejs';
  */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
+  let session;
   try {
-    await requireSession();
+    session = await requireSession();
   } catch (err: any) {
     return json({ error: err.message }, err.status || 401);
   }
+  const ws = session.workspaceId;
   const url = new URL(req.url);
   const language = url.searchParams.get('language') || 'en';
   const force = url.searchParams.has('force');
 
   const [client, campaign, outputs, assets] = await Promise.all([
-    getClient(id), getCampaign(id, cid), currentOutputs(id, cid), listAssets(id, cid),
+    getClient(ws, id), getCampaign(ws, id, cid), currentOutputs(ws, id, cid), listAssets(ws, id, cid),
   ]);
   if (!client || !campaign) return json({ error: 'Not found' }, 404);
 
@@ -41,8 +43,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     context: outputs['brand-analyst']?.output ?? null,
     audience: outputs['customer-researcher']?.output ?? null,
     strategy: outputs.strategist?.output ?? null,
-    assets: await composeAssets(id, cid, language, outputs.copywriter?.output),
-    social: await composeSocial(id, cid, outputs['social-planner']?.output),
+    assets: await composeAssets(ws, id, cid, language, outputs.copywriter?.output),
+    social: await composeSocial(ws, id, cid, outputs['social-planner']?.output),
     activation: outputs['ops-architect']?.output ?? null,
     approval,
     forced: force && !approval.ready,

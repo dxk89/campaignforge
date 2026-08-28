@@ -20,7 +20,7 @@ import {
   ListObjectsV2Command,
   type ListObjectsV2CommandOutput,
 } from '@aws-sdk/client-s3';
-import { storeEnabled, uid } from './firebase';
+import { storeEnabled } from './firebase';
 
 const ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
@@ -58,10 +58,10 @@ function client(): S3Client {
   return globalThis.__cfR2;
 }
 
-const key = (p: string) => `users/${uid()}/${p}`;
+const key = (ws: string, p: string) => `users/${ws}/${p}`;
 
-export async function putFile(path: string, buffer: Buffer, mime = 'application/octet-stream'): Promise<string> {
-  const ref = key(path);
+export async function putFile(ws: string, path: string, buffer: Buffer, mime = 'application/octet-stream'): Promise<string> {
+  const ref = key(ws, path);
   if (!storageEnabled) { memFiles.set(ref, { buffer, mime }); return ref; }
   await client().send(new PutObjectCommand({
     Bucket: BUCKET, Key: ref, Body: buffer, ContentType: mime,
@@ -85,14 +85,14 @@ export async function getFile(ref: string): Promise<{ buffer: Buffer; mime: stri
   }
 }
 
-export async function putDataUrl(path: string, dataUrl: string): Promise<string | null> {
+export async function putDataUrl(ws: string, path: string, dataUrl: string): Promise<string | null> {
   const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   if (!m) return null;
-  return putFile(path, Buffer.from(m[2], 'base64'), m[1]);
+  return putFile(ws, path, Buffer.from(m[2], 'base64'), m[1]);
 }
 
-export async function listFiles(prefix: string): Promise<string[]> {
-  const full = key(prefix);
+export async function listFiles(ws: string, prefix: string): Promise<string[]> {
+  const full = key(ws, prefix);
   if (!storageEnabled) return [...memFiles.keys()].filter((k) => k.startsWith(full));
   // ListObjectsV2 caps a page at 1000 keys. A client with a year of daily
   // social images passes that, so follow the continuation token.

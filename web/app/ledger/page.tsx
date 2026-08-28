@@ -8,10 +8,11 @@ export const dynamic = 'force-dynamic';
 const eur = (n: number) => '€' + Number(n || 0).toFixed(4);
 
 export default async function LedgerPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  if (!(await currentSession())) redirect('/login');
+  const session = await currentSession();
+  if (!session) redirect('/login');
   const { month } = await searchParams;
   const current = month || new Date().toISOString().slice(0, 7);
-  const [entries, clients] = await Promise.all([listLedger(current), listClients()]);
+  const [entries, clients] = await Promise.all([listLedger(session.workspaceId, current), listClients(session.workspaceId)]);
   const totals = ledgerTotals(entries);
   const names = Object.fromEntries(clients.map((c) => [c.clientId, c.name]));
 

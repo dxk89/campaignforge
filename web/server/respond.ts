@@ -1,11 +1,12 @@
 /** Shared route-handler helpers: auth, JSON errors, and a wrapper. */
 import { NextResponse } from 'next/server';
 import { requireSession } from './auth';
+import type { Session } from './auth';
 
-export async function guarded<T>(fn: () => Promise<T>): Promise<NextResponse> {
+export async function guarded<T>(fn: (session: Session) => Promise<T>): Promise<NextResponse> {
   try {
-    await requireSession();
-    const data = await fn();
+    const session = await requireSession();
+    const data = await fn(session);
     return NextResponse.json(data as any);
   } catch (err: any) {
     const status = err.status || 500;

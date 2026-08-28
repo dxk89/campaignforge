@@ -9,15 +9,16 @@ export const runtime = 'nodejs';
 /** Edit the text, or set the status. Editing returns an asset to draft. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; cid: string; aid: string }> }) {
   const { id, cid, aid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
     const patch = await req.json();
-    const asset = await updateAsset(id, cid, decodeURIComponent(aid), patch, await rulesFor(id, cid));
+    const asset = await updateAsset(ws, id, cid, decodeURIComponent(aid), patch, await rulesFor(ws, id, cid));
 
     // An approval is the signal the exemplar bank is built from; a rejection
     // with a note is kept as "not this".
     if (patch.status === 'approved' || (patch.status === 'rejected' && patch.note)) {
-      const campaign = await getCampaign(id, cid);
-      await recordExemplar(id, asset, cid, campaign?.brief, patch.status);
+      const campaign = await getCampaign(ws, id, cid);
+      await recordExemplar(ws, id, asset, cid, campaign?.brief, patch.status);
     }
     return { asset };
   });

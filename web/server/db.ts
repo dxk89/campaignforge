@@ -8,7 +8,7 @@
  * in memory exercises the same helpers.
  */
 import { randomUUID, createHash } from 'crypto';
-import { db as fsdb, storeEnabled, uid } from './firebase';
+import { db as fsdb, storeEnabled } from './firebase';
 import type { Client, SourceDoc, Campaign, Version, ImageDoc, LedgerEntry, Brief } from './types';
 
 const now = () => new Date().toISOString();
@@ -28,11 +28,14 @@ function memCol(key: string) {
   return mem.sub.get(key)!;
 }
 
-const root = () => `users/${uid()}`;
+const root = (ws: string) => {
+  if (!ws) throw new Error('A workspace id is required. This is a bug: the caller did not pass session.workspaceId.');
+  return `users/${ws}`;
+};
 
 // ---- clients -----------------------------------------------------------------
 
-export async function createClient(input: { name: string; domain?: string | null; brandKit?: any; voice?: any; settings?: any }): Promise<Client> {
+export async function createClient(ws: string, input: { name: string; domain?: string | null; brandKit?: any; voice?: any; settings?: any }): Promise<Client> {
   const clientId = newId();
   const doc: Client = {
     clientId,
@@ -44,123 +47,123 @@ export async function createClient(input: { name: string; domain?: string | null
     voice: input.voice ?? { observations: [], preferredTerms: [], avoidTerms: [], glossary: [] },
     settings: input.settings ?? { landingUrl: null, defaultTone: 'direct', defaultLanguages: ['en'], calendar: { events: [] } },
   };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).set(doc);
   else mem.clients.set(clientId, doc);
   return doc;
 }
 
-export async function listClients(): Promise<Client[]> {
+export async function listClients(ws: string): Promise<Client[]> {
   if (!storeEnabled) return [...mem.clients.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const snap = await fsdb().collection(`${root()}/clients`).orderBy('updatedAt', 'desc').get();
+  const snap = await fsdb().collection(`${root(ws)}/clients`).orderBy('updatedAt', 'desc').get();
   return snap.docs.map((d) => d.data() as Client);
 }
 
-export async function getClient(clientId: string): Promise<Client | null> {
+export async function getClient(ws: string, clientId: string): Promise<Client | null> {
   if (!storeEnabled) return mem.clients.get(clientId) ?? null;
-  const d = await fsdb().doc(`${root()}/clients/${clientId}`).get();
+  const d = await fsdb().doc(`${root(ws)}/clients/${clientId}`).get();
   return d.exists ? (d.data() as Client) : null;
 }
 
-export async function updateClient(clientId: string, patch: Partial<Client>): Promise<Client | null> {
-  const existing = await getClient(clientId);
+export async function updateClient(ws: string, clientId: string, patch: Partial<Client>): Promise<Client | null> {
+  const existing = await getClient(ws, clientId);
   if (!existing) return null;
   const merged = { ...existing, ...patch, clientId, updatedAt: now() } as Client;
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}`).set(merged);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).set(merged);
   else mem.clients.set(clientId, merged);
   return merged;
 }
 
 // ---- sources -----------------------------------------------------------------
 
-export async function addSource(clientId: string, src: Omit<SourceDoc, 'sourceId' | 'fetchedAt' | 'hash'> & { hash?: string }): Promise<SourceDoc> {
+export async function addSource(ws: string, clientId: string, src: Omit<SourceDoc, 'sourceId' | 'fetchedAt' | 'hash'> & { hash?: string }): Promise<SourceDoc> {
   const sourceId = newId();
   const doc: SourceDoc = { ...src, sourceId, fetchedAt: now(), hash: src.hash ?? hashOf(src.text) };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/sources/${sourceId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/sources/${sourceId}`).set(doc);
   else memCol(memKey(clientId, 'sources')).set(sourceId, doc);
-  await touch(clientId);
+  await touch(ws, clientId);
   return doc;
 }
 
-export async function listSources(clientId: string, withText = false): Promise<SourceDoc[]> {
+export async function listSources(ws: string, clientId: string, withText = false): Promise<SourceDoc[]> {
   let docs: SourceDoc[];
   if (!storeEnabled) docs = [...memCol(memKey(clientId, 'sources')).values()];
-  else docs = (await fsdb().collection(`${root()}/clients/${clientId}/sources`).get()).docs.map((d) => d.data() as SourceDoc);
+  else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/sources`).get()).docs.map((d) => d.data() as SourceDoc);
   return withText ? docs : docs.map(({ text, ...rest }) => ({ ...rest, text: '' } as SourceDoc));
 }
 
-export async function deleteSource(clientId: string, sourceId: string): Promise<void> {
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/sources/${sourceId}`).delete();
+export async function deleteSource(ws: string, clientId: string, sourceId: string): Promise<void> {
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/sources/${sourceId}`).delete();
   else memCol(memKey(clientId, 'sources')).delete(sourceId);
-  await touch(clientId);
+  await touch(ws, clientId);
 }
 
 // ---- campaigns ---------------------------------------------------------------
 
-export async function createCampaign(clientId: string, brief: Brief): Promise<Campaign> {
+export async function createCampaign(ws: string, clientId: string, brief: Brief): Promise<Campaign> {
   const campaignId = newId();
   const doc: Campaign = { campaignId, brief, status: 'draft', createdAt: now(), updatedAt: now(), current: {} };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).set(doc);
   else memCol(memKey(clientId, 'campaigns')).set(campaignId, doc);
-  await touch(clientId);
+  await touch(ws, clientId);
   return doc;
 }
 
-export async function listCampaigns(clientId: string): Promise<Campaign[]> {
+export async function listCampaigns(ws: string, clientId: string): Promise<Campaign[]> {
   if (!storeEnabled) return [...memCol(memKey(clientId, 'campaigns')).values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  const snap = await fsdb().collection(`${root()}/clients/${clientId}/campaigns`).orderBy('updatedAt', 'desc').get();
+  const snap = await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns`).orderBy('updatedAt', 'desc').get();
   return snap.docs.map((d) => d.data() as Campaign);
 }
 
-export async function getCampaign(clientId: string, campaignId: string): Promise<Campaign | null> {
+export async function getCampaign(ws: string, clientId: string, campaignId: string): Promise<Campaign | null> {
   if (!storeEnabled) return memCol(memKey(clientId, 'campaigns')).get(campaignId) ?? null;
-  const d = await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}`).get();
+  const d = await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).get();
   return d.exists ? (d.data() as Campaign) : null;
 }
 
-export async function updateCampaign(clientId: string, campaignId: string, patch: Partial<Campaign>): Promise<Campaign | null> {
-  const existing = await getCampaign(clientId, campaignId);
+export async function updateCampaign(ws: string, clientId: string, campaignId: string, patch: Partial<Campaign>): Promise<Campaign | null> {
+  const existing = await getCampaign(ws, clientId, campaignId);
   if (!existing) return null;
   const merged = { ...existing, ...patch, campaignId, updatedAt: now() } as Campaign;
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}`).set(merged);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`).set(merged);
   else memCol(memKey(clientId, 'campaigns')).set(campaignId, merged);
-  await touch(clientId);
+  await touch(ws, clientId);
   return merged;
 }
 
 // ---- versions ----------------------------------------------------------------
 
-export async function addVersion(clientId: string, campaignId: string, v: Omit<Version, 'versionId' | 'createdAt'>): Promise<Version> {
+export async function addVersion(ws: string, clientId: string, campaignId: string, v: Omit<Version, 'versionId' | 'createdAt'>): Promise<Version> {
   const versionId = newId();
   const doc: Version = { ...v, versionId, createdAt: now() };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).set(doc);
   else memCol(memKey(clientId, campaignId, 'versions')).set(versionId, doc);
 
-  const campaign = await getCampaign(clientId, campaignId);
-  if (campaign) await updateCampaign(clientId, campaignId, { current: { ...campaign.current, [v.agent]: versionId } });
+  const campaign = await getCampaign(ws, clientId, campaignId);
+  if (campaign) await updateCampaign(ws, clientId, campaignId, { current: { ...campaign.current, [v.agent]: versionId } });
   return doc;
 }
 
-export async function getVersion(clientId: string, campaignId: string, versionId: string): Promise<Version | null> {
+export async function getVersion(ws: string, clientId: string, campaignId: string, versionId: string): Promise<Version | null> {
   if (!storeEnabled) return memCol(memKey(clientId, campaignId, 'versions')).get(versionId) ?? null;
-  const d = await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).get();
+  const d = await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).get();
   return d.exists ? (d.data() as Version) : null;
 }
 
-export async function listVersions(clientId: string, campaignId: string, agent?: string): Promise<Version[]> {
+export async function listVersions(ws: string, clientId: string, campaignId: string, agent?: string): Promise<Version[]> {
   let docs: Version[];
   if (!storeEnabled) docs = [...memCol(memKey(clientId, campaignId, 'versions')).values()];
-  else docs = (await fsdb().collection(`${root()}/clients/${clientId}/campaigns/${campaignId}/versions`).get()).docs.map((d) => d.data() as Version);
+  else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions`).get()).docs.map((d) => d.data() as Version);
   const filtered = agent ? docs.filter((v) => v.agent === agent) : docs;
   return filtered.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /** Resolve every `current` pointer to its output. */
-export async function currentOutputs(clientId: string, campaignId: string): Promise<Record<string, Version>> {
-  const campaign = await getCampaign(clientId, campaignId);
+export async function currentOutputs(ws: string, clientId: string, campaignId: string): Promise<Record<string, Version>> {
+  const campaign = await getCampaign(ws, clientId, campaignId);
   if (!campaign) return {};
   const out: Record<string, Version> = {};
   for (const [agent, versionId] of Object.entries(campaign.current)) {
-    const v = await getVersion(clientId, campaignId, versionId);
+    const v = await getVersion(ws, clientId, campaignId, versionId);
     if (v) out[agent] = v;
   }
   return out;
@@ -168,17 +171,17 @@ export async function currentOutputs(clientId: string, campaignId: string): Prom
 
 // ---- images ------------------------------------------------------------------
 
-export async function addImage(clientId: string, campaignId: string, img: Omit<ImageDoc, 'imageId' | 'createdAt'>): Promise<ImageDoc> {
+export async function addImage(ws: string, clientId: string, campaignId: string, img: Omit<ImageDoc, 'imageId' | 'createdAt'>): Promise<ImageDoc> {
   const imageId = newId();
   const doc: ImageDoc = { ...img, imageId, createdAt: now() };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/campaigns/${campaignId}/images/${imageId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images/${imageId}`).set(doc);
   else memCol(memKey(clientId, campaignId, 'images')).set(imageId, doc);
   return doc;
 }
 
-export async function listImages(clientId: string, campaignId: string): Promise<ImageDoc[]> {
+export async function listImages(ws: string, clientId: string, campaignId: string): Promise<ImageDoc[]> {
   if (!storeEnabled) return [...memCol(memKey(clientId, campaignId, 'images')).values()];
-  return (await fsdb().collection(`${root()}/clients/${clientId}/campaigns/${campaignId}/images`).get()).docs.map((d) => d.data() as ImageDoc);
+  return (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images`).get()).docs.map((d) => d.data() as ImageDoc);
 }
 
 // ---- claims ------------------------------------------------------------------
@@ -192,8 +195,8 @@ export type Claim = {
 const norm = (t: string) => String(t || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 /** Propose a claim. Deduplicated on normalised text so re-running research does not pile up copies. */
-export async function proposeClaim(clientId: string, input: { text: string; source: string; span?: string | null; campaignId?: string | null }): Promise<Claim | null> {
-  const existing = await listClaims(clientId);
+export async function proposeClaim(ws: string, clientId: string, input: { text: string; source: string; span?: string | null; campaignId?: string | null }): Promise<Claim | null> {
+  const existing = await listClaims(ws, clientId);
   if (existing.some((c) => norm(c.text) === norm(input.text))) return null;
   const claimId = newId();
   const doc: Claim = {
@@ -201,46 +204,46 @@ export async function proposeClaim(clientId: string, input: { text: string; sour
     status: 'proposed', approvedAt: null, expiresAt: null, note: null,
     campaignId: input.campaignId ?? null, createdAt: now(),
   };
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/claims/${claimId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/claims/${claimId}`).set(doc);
   else memCol(memKey(clientId, 'claims')).set(claimId, doc);
   return doc;
 }
 
-export async function listClaims(clientId: string): Promise<Claim[]> {
+export async function listClaims(ws: string, clientId: string): Promise<Claim[]> {
   let docs: Claim[];
   if (!storeEnabled) docs = [...memCol(memKey(clientId, 'claims')).values()];
-  else docs = (await fsdb().collection(`${root()}/clients/${clientId}/claims`).get()).docs.map((d) => d.data() as Claim);
+  else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/claims`).get()).docs.map((d) => d.data() as Claim);
   const nowIso = now();
   return docs
     .map((c) => (c.status === 'approved' && c.expiresAt && c.expiresAt < nowIso ? { ...c, status: 'expired' as const } : c))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export async function updateClaim(clientId: string, claimId: string, patch: Partial<Claim>): Promise<Claim | null> {
-  const all = await listClaims(clientId);
+export async function updateClaim(ws: string, clientId: string, claimId: string, patch: Partial<Claim>): Promise<Claim | null> {
+  const all = await listClaims(ws, clientId);
   const existing = all.find((c) => c.claimId === claimId);
   if (!existing) return null;
   const merged: Claim = { ...existing, ...patch, claimId };
   if (patch.status === 'approved' && !merged.approvedAt) merged.approvedAt = now();
   if (patch.status && patch.status !== 'approved') merged.approvedAt = null;
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/claims/${claimId}`).set(merged);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/claims/${claimId}`).set(merged);
   else memCol(memKey(clientId, 'claims')).set(claimId, merged);
   return merged;
 }
 
 // ---- ledger ------------------------------------------------------------------
 
-export async function addLedger(entry: Omit<LedgerEntry, 'entryId' | 'at'>): Promise<void> {
+export async function addLedger(ws: string, entry: Omit<LedgerEntry, 'entryId' | 'at'>): Promise<void> {
   const entryId = newId();
   const doc: LedgerEntry = { ...entry, entryId, at: now() };
-  if (storeEnabled) await fsdb().doc(`${root()}/ledger/${entryId}`).set(doc);
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/ledger/${entryId}`).set(doc);
   else memCol('ledger').set(entryId, doc);
 }
 
-export async function listLedger(month?: string): Promise<LedgerEntry[]> {
+export async function listLedger(ws: string, month?: string): Promise<LedgerEntry[]> {
   let docs: LedgerEntry[];
   if (!storeEnabled) docs = [...memCol('ledger').values()];
-  else docs = (await fsdb().collection(`${root()}/ledger`).get()).docs.map((d) => d.data() as LedgerEntry);
+  else docs = (await fsdb().collection(`${root(ws)}/ledger`).get()).docs.map((d) => d.data() as LedgerEntry);
   const filtered = month ? docs.filter((e) => e.at.startsWith(month)) : docs;
   return filtered.sort((a, b) => b.at.localeCompare(a.at));
 }
@@ -259,10 +262,10 @@ export function ledgerTotals(entries: LedgerEntry[]) {
 
 // ---- helpers -----------------------------------------------------------------
 
-async function touch(clientId: string) {
-  const c = await getClient(clientId);
+async function touch(ws: string, clientId: string) {
+  const c = await getClient(ws, clientId);
   if (!c) return;
-  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}`).update({ updatedAt: now() });
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}`).update({ updatedAt: now() });
   else mem.clients.set(clientId, { ...c, updatedAt: now() });
 }
 

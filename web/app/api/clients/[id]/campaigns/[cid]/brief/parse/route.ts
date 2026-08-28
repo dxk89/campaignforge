@@ -17,8 +17,9 @@ export const maxDuration = 300;
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
-    const campaign = await getCampaign(id, cid);
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
+    const campaign = await getCampaign(ws, id, cid);
     if (!campaign) throw bad('Campaign not found', 404);
 
     const form = await req.formData();
@@ -28,8 +29,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const buffer = Buffer.from(await file.arrayBuffer());
     const extracted = await extractFile({ originalname: file.name, buffer });
 
-    const storageRef = await putFile(`clients/${id}/sources/brief-${file.name}`, buffer, file.type);
-    const source = await addSource(id, {
+    const storageRef = await putFile(ws, `clients/${id}/sources/brief-${file.name}`, buffer, file.type);
+    const source = await addSource(ws, id, {
       name: extracted.name, kind: 'brief', storageRef, text: extracted.text, chars: extracted.chars,
     });
 
@@ -45,9 +46,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       brief.languages = ['en', 'pt'];
       filled.push('languages');
     }
-    await updateCampaign(id, cid, { brief });
+    await updateCampaign(ws, id, cid, { brief });
 
-    await addLedger({
+    await addLedger(ws, {
       clientId: id, campaignId: cid, agent: 'brief-reader', model: result.usage.model || 'unknown',
       input: result.usage.input || 0, output: result.usage.output || 0,
       webSearches: 0, images: 0, costEur: result.usage.costEur || 0,

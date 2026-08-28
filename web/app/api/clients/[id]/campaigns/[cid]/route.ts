@@ -6,11 +6,11 @@ export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
-    const campaign = await getCampaign(id, cid);
+  return guarded(async (session) => {
+    const campaign = await getCampaign(session.workspaceId, id, cid);
     if (!campaign) throw bad('Campaign not found', 404);
-    const outputs = await currentOutputs(id, cid);
-    const entries = (await listLedger()).filter((e) => e.campaignId === cid);
+    const outputs = await currentOutputs(session.workspaceId, id, cid);
+    const entries = (await listLedger(session.workspaceId)).filter((e) => e.campaignId === cid);
 
     const passes: Record<string, unknown> = {};
     const results: Record<string, unknown> = {};
@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     }
     return {
       campaign, outputs: results, passes,
-      stale: await staleAgents(id, cid),
+      stale: await staleAgents(session.workspaceId, id, cid),
       economics: { ...ledgerTotals(entries), passes },
     };
   });
@@ -28,12 +28,12 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
     const patch = await req.json();
     const clean: any = {};
     if (patch.brief) clean.brief = patch.brief;
     if (patch.status) clean.status = patch.status;
-    const campaign = await updateCampaign(id, cid, clean);
+    const campaign = await updateCampaign(session.workspaceId, id, cid, clean);
     if (!campaign) throw bad('Campaign not found', 404);
     return { campaign };
   });

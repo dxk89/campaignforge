@@ -10,20 +10,21 @@ export const maxDuration = 300;
 /** Turn the latest results and their verdicts into proposed learnings. */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
-    const [campaign, results] = await Promise.all([getCampaign(id, cid), listResults(id, cid)]);
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
+    const [campaign, results] = await Promise.all([getCampaign(ws, id, cid), listResults(ws, id, cid)]);
     if (!results.results.length) throw bad('Upload results before asking for learnings', 409);
     const latest = results.results[results.results.length - 1];
 
     const r = await orchestrator.runAgent('analyst', {
       verdicts: latest.verdicts, rows: latest.rows, campaign: campaign?.brief,
     });
-    await addLedger({
+    await addLedger(ws, {
       clientId: id, campaignId: cid, agent: 'analyst', model: r.usage.model || 'unknown',
       input: r.usage.input || 0, output: r.usage.output || 0, webSearches: 0, images: 0, costEur: r.usage.costEur || 0,
     });
 
-    const proposed = await addLearnings(id, (r.output as any)?.learnings || [], cid, latest.resultId);
+    const proposed = await addLearnings(ws, id, (r.output as any)?.learnings || [], cid, latest.resultId);
     return {
       learnings: proposed,
       refusals: (r.output as any)?.refusals || [],

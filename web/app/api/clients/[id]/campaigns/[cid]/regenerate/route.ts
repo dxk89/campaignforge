@@ -20,19 +20,20 @@ export const maxDuration = 300;
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
     const { scope, target, constraint } = await req.json();
     if (!scope || !target) throw bad('scope and target are required');
     const { checkCeiling } = await import('@/server/spend');
-    await checkCeiling(scope === 'asset' ? 'field-editor' : target);
+    await checkCeiling(ws, scope === 'asset' ? 'field-editor' : target);
     const { count } = await import('@/server/telemetry');
-    await count(`regenerate.${scope}`);
-    const rules = await rulesFor(id, cid);
+    await count(ws, `regenerate.${scope}`);
+    const rules = await rulesFor(ws, id, cid);
 
     if (scope === 'asset') {
-      const asset = await getAsset(id, cid, target);
+      const asset = await getAsset(ws, id, cid, target);
       if (!asset) throw bad('Asset not found', 404);
-      const [client, outputs, all] = await Promise.all([getClient(id), currentOutputs(id, cid), listAssets(id, cid)]);
+      const [client, outputs, all] = await Promise.all([getClient(ws, id), currentOutputs(ws, id, cid), listAssets(ws, id, cid)]);
       const rule = ruleFor(asset.channel, asset.unit, asset.field);
       const siblings = all.filter((a) => a.channel === asset.channel && a.unit === asset.unit && a.assetId !== asset.assetId)
         .map((a) => ({ field: a.field, text: a.text }));
@@ -41,7 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         asset, rule, constraint, siblings,
         strategy: outputs.strategist?.output, voice: client?.voice,
       });
-      await addLedger({
+      await addLedger(ws, {
         clientId: id, campaignId: cid, agent: 'field-editor', model: r.usage.model || 'unknown',
         input: r.usage.input || 0, output: r.usage.output || 0, webSearches: 0, images: 0, costEur: r.usage.costEur || 0,
       });
@@ -52,34 +53,34 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         ...asset, text, editedAt: new Date().toISOString(), status: 'draft' as const, approvedAt: null, stale: false,
         flags: flagsFor({ channel: asset.channel, unit: asset.unit, field: asset.field, text }, asset.language, rules),
       };
-      await putAsset(id, cid, updated);
+      await putAsset(ws, id, cid, updated);
       return { scope, asset: updated, note: (r.output as any).note || '', usage: r.usage };
     }
 
     if (scope === 'channel' || scope === 'agent') {
       const agent = scope === 'agent' ? target : 'copywriter';
-      const { inputs, inputsHash } = await buildInputs(id, cid, agent);
-      const outputs = await currentOutputs(id, cid);
+      const { inputs, inputsHash } = await buildInputs(ws, id, cid, agent);
+      const outputs = await currentOutputs(ws, id, cid);
       const instruction = scope === 'channel'
         ? `Regenerate the ${target} assets only. ${constraint || ''} Every other channel must come back byte-identical to what you are given:\n${JSON.stringify(outputs.copywriter?.output ?? {}, null, 2)}`
         : constraint || '';
       if (instruction) (inputs as any).constraint = instruction;
 
       const r = await orchestrator.runAgent(agent, inputs);
-      const version = await addVersion(id, cid, {
+      const version = await addVersion(ws, id, cid, {
         agent, output: r.output, inputsHash, promptVersion: null, model: r.usage.model || 'unknown',
         usage: r.usage, trace: r.trace || [], complete: r.complete, problems: r.problems || [],
         parentVersionId: outputs[agent]?.versionId ?? null,
         changeNote: `${scope}: ${target}${constraint ? ` — ${constraint}` : ''}`,
       });
-      await addLedger({
+      await addLedger(ws, {
         clientId: id, campaignId: cid, agent, model: r.usage.model || 'unknown',
         input: r.usage.input || 0, output: r.usage.output || 0,
         webSearches: r.usage.webSearches || 0, images: 0, costEur: r.usage.costEur || 0,
       });
       if (r.output) {
         const fields = agent === 'social-planner' ? fieldsOfSocial(r.output) : fieldsOfAssets(r.output);
-        await explode(id, cid, version.versionId, fields, agent === 'localiser' ? 'pt' : 'en', rules);
+        await explode(ws, id, cid, version.versionId, fields, agent === 'localiser' ? 'pt' : 'en', rules);
       }
       return { scope, target, versionId: version.versionId, output: r.output, usage: r.usage, complete: r.complete, problems: r.problems };
     }

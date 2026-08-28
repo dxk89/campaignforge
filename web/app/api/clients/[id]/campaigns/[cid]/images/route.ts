@@ -10,7 +10,7 @@ export const maxDuration = 300;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => ({ images: await listImages(id, cid) }));
+  return guarded(async (session) => ({ images: await listImages(session.workspaceId, id, cid) }));
 }
 
 /**
@@ -21,13 +21,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
  */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
     const { day, channel } = await req.json();
     if (typeof day !== 'number' || !channel) throw bad('day and channel are required');
 
-    const client = await getClient(id);
+    const client = await getClient(ws, id);
     if (!client) throw bad('Client not found', 404);
-    const outputs = await currentOutputs(id, cid);
+    const outputs = await currentOutputs(ws, id, cid);
     const social: any = outputs['social-planner']?.output;
     const post = (social?.posts || []).find((p: any) => p.day === day && p.channel === channel);
     if (!post) throw bad('No such post in the calendar', 404);
@@ -49,14 +50,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const buffer = Buffer.from(result.data, 'base64');
     const ext = (result.mime.split('/')[1] || 'png').replace('+xml', '');
-    const storageRef = await putFile(`clients/${id}/campaigns/${cid}/images/day${day}-${channel}.${ext}`, buffer, result.mime);
+    const storageRef = await putFile(ws, `clients/${id}/campaigns/${cid}/images/day${day}-${channel}.${ext}`, buffer, result.mime);
 
-    const doc = await addImage(id, cid, {
+    const doc = await addImage(ws, id, cid, {
       postRef: { day, channel }, prompt: post.graphic.image_prompt,
       storageRef, mime: result.mime, status: 'candidate', note: null,
     });
 
-    await addLedger({
+    await addLedger(ws, {
       clientId: id, campaignId: cid, agent: 'image', model: 'gemini-image',
       input: 0, output: 0, webSearches: 0, images: 1,
       costEur: result.usage.costEur ?? Number(imageCostEur(1).toFixed(4)),

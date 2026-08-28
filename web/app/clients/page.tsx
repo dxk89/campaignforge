@@ -7,8 +7,9 @@ import NewClient from './new-client';
 export const dynamic = 'force-dynamic';
 
 export default async function ClientsPage() {
-  if (!(await currentSession())) redirect('/login');
-  const clients = await listClients();
+  const session = await currentSession();
+  if (!session) redirect('/login');
+  const clients = await listClients(session.workspaceId);
 
   return (
     <main className="shell">

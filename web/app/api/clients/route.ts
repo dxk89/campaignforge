@@ -7,8 +7,8 @@ export const runtime = 'nodejs';
 export const maxDuration = 300;
 
 export async function GET() {
-  return guarded(async () => {
-    const clients = await listClients();
+  return guarded(async (session) => {
+    const clients = await listClients(session.workspaceId);
     return { clients: clients.map((c) => ({ clientId: c.clientId, name: c.name, domain: c.domain, updatedAt: c.updatedAt })) };
   });
 }
@@ -18,16 +18,16 @@ export async function GET() {
  * useful path: one URL produces the brand kit and the first sources.
  */
 export async function POST(req: Request) {
-  return guarded(async () => {
+  return guarded(async (session) => {
     const body = await req.json().catch(() => ({}));
     const { url, name } = body as { url?: string; name?: string };
     if (!url && !name) throw bad('Give a website URL or a client name');
 
-    if (!url) return { client: await createClient({ name: name!.trim() }) };
+    if (!url) return { client: await createClient(session.workspaceId, { name: name!.trim() }) };
 
     const scan = await scanSite(url);
     const kit = scan.brandKit;
-    const client = await createClient({
+    const client = await createClient(session.workspaceId, {
       name: (name || kit.siteName || kit.domain).trim(),
       domain: kit.domain,
       brandKit: {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const { addSource } = await import('@/server/db');
     const sources = [];
     for (const s of scan.sources) {
-      sources.push(await addSource(client.clientId, { name: s.name, kind: 'site', storageRef: null, text: s.text, chars: s.chars }));
+      sources.push(await addSource(session.workspaceId, client.clientId, { name: s.name, kind: 'site', storageRef: null, text: s.text, chars: s.chars }));
     }
     return {
       clientId: client.clientId,

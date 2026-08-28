@@ -5,15 +5,15 @@ export const runtime = 'nodejs';
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return guarded(async () => ({ campaigns: await listCampaigns(id) }));
+  return guarded(async (session) => ({ campaigns: await listCampaigns(session.workspaceId, id) }));
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return guarded(async () => {
+  return guarded(async (session) => {
     const body = await req.json().catch(() => ({}));
     if (!body.brief) throw bad('brief is required');
-    const campaign = await createCampaign(id, body.brief);
+    const campaign = await createCampaign(session.workspaceId, id, body.brief);
     return { campaignId: campaign.campaignId, campaign };
   });
 }

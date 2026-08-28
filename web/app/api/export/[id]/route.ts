@@ -17,13 +17,15 @@ export const maxDuration = 300;
  */
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  let session;
   try {
-    await requireSession();
+    session = await requireSession();
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), { status: err.status || 401, headers: { 'content-type': 'application/json' } });
   }
+  const ws = session.workspaceId;
 
-  const client = await getClient(id);
+  const client = await getClient(ws, id);
   if (!client) return new Response(JSON.stringify({ error: 'Client not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
 
   const archive = archiver('zip', { zlib: { level: 9 } });
@@ -33,20 +35,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const add = (name: string, data: unknown) => archive.append(JSON.stringify(data, null, 2), { name });
 
   add('client.json', client);
-  const sources = await listSources(id, true);
+  const sources = await listSources(ws, id, true);
   add('sources.json', sources);
 
-  const campaigns = await listCampaigns(id);
+  const campaigns = await listCampaigns(ws, id);
   add('campaigns.json', campaigns);
-  add('claims.json', await (await import('@/server/db')).listClaims(id));
+  add('claims.json', await (await import('@/server/db')).listClaims(ws, id));
   for (const c of campaigns) {
-    add(`campaigns/${c.campaignId}/outputs.json`, await currentOutputs(id, c.campaignId));
-    add(`campaigns/${c.campaignId}/versions.json`, await listVersions(id, c.campaignId));
-    const assets = await listAssets(id, c.campaignId);
+    add(`campaigns/${c.campaignId}/outputs.json`, await currentOutputs(ws, id, c.campaignId));
+    add(`campaigns/${c.campaignId}/versions.json`, await listVersions(ws, id, c.campaignId));
+    const assets = await listAssets(ws, id, c.campaignId);
     add(`campaigns/${c.campaignId}/assets.json`, assets);
     add(`campaigns/${c.campaignId}/approval.json`, approvalState(assets));
   }
-  add('ledger.json', (await listLedger()).filter((e) => e.clientId === id));
+  add('ledger.json', (await listLedger(ws)).filter((e) => e.clientId === id));
 
   for (const ref of [client.brandKit.logoRef, ...(client.brandKit.artworkRefs || [])].filter(Boolean) as string[]) {
     const file = await getFile(ref);

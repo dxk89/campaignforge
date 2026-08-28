@@ -17,7 +17,11 @@ export const dynamic = 'force-dynamic';
 export default async function Settings() {
   const session = await currentSession();
   if (!session) redirect('/login');
-  const [clients, settings, telemetry] = await Promise.all([listClients(), getSettings(), readTelemetry()]);
+  const [clients, settings, telemetry] = await Promise.all([
+    listClients(session.workspaceId),
+    getSettings(session.workspaceId),
+    readTelemetry(session.workspaceId),
+  ]);
   const counters = Object.entries(telemetry.counters as Record<string, number>).sort((a, b) => b[1] - a[1]);
 
   let dataHandling = '';
