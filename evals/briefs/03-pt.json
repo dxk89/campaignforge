@@ -1,0 +1,22 @@
+{
+  "name": "pt-adaptation",
+  "note": "Portuguese requested. The failure modes are Brazilian forms and headlines that only fit in English.",
+  "brief": {
+    "productName": "Ledgerline",
+    "productDescription": "Reconciliation for finance teams: payouts, invoices and bank feeds matched overnight.",
+    "targetAudience": "Finance leads at SaaS companies in Portugal",
+    "objective": "trial_signups",
+    "tone": "direct",
+    "languages": ["en", "pt"]
+  },
+  "sources": [
+    { "name": "home.md", "kind": "site", "text": "Close the month without the spreadsheet. Exceptions, never errors. 14-day trial, no card." }
+  ],
+  "webResearch": false,
+  "expected": {
+    "avoidTerms": ["errors"],
+    "claims": ["14-day trial"],
+    "minProofPoints": 0,
+    "language": "pt"
+  }
+}

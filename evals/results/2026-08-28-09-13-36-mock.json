@@ -1,0 +1,748 @@
+{
+  "ranAt": "2026-08-28T09:13:36.881Z",
+  "mock": true,
+  "briefs": [
+    "saas-rich",
+    "thin",
+    "pt-adaptation",
+    "provocative-conservative",
+    "fabricated-stat"
+  ],
+  "models": {
+    "brief-reader": "claude-haiku-4-5-20251001",
+    "brand-analyst": "claude-sonnet-4-6",
+    "customer-researcher": "claude-sonnet-4-6",
+    "strategist": "claude-sonnet-4-6",
+    "copywriter": "claude-sonnet-4-6",
+    "social-planner": "claude-sonnet-4-6",
+    "ops-architect": "claude-sonnet-4-6",
+    "localiser": "claude-sonnet-4-6",
+    "critic": "claude-sonnet-4-6",
+    "field-editor": "claude-sonnet-4-6",
+    "landing-writer": "claude-sonnet-4-6",
+    "analyst": "claude-sonnet-4-6"
+  },
+  "byAgent": {
+    "brand-analyst": {
+      "briefs": 5,
+      "complete": 1,
+      "composite": 0.413,
+      "scores": {
+        "avoidLeak": 0.533,
+        "claimTrace": 0.067,
+        "forbidden": 0.667,
+        "ptPurity": 1
+      },
+      "costEur": 0.2155,
+      "msPerBrief": 944
+    },
+    "strategist": {
+      "briefs": 5,
+      "complete": 1,
+      "composite": 0.706,
+      "scores": {
+        "avoidLeak": 1,
+        "claimTrace": 0.067,
+        "structure": 1,
+        "forbidden": 1,
+        "ptPurity": 0
+      },
+      "costEur": 0.0525,
+      "msPerBrief": 936
+    },
+    "copywriter": {
+      "briefs": 5,
+      "complete": 0,
+      "composite": 0.801,
+      "scores": {
+        "limits": 0.973,
+        "avoidLeak": 1,
+        "claimTrace": 0.067,
+        "structure": 1,
+        "forbidden": 1,
+        "ptPurity": 1
+      },
+      "costEur": 0.173,
+      "msPerBrief": 877
+    },
+    "social-planner": {
+      "briefs": 5,
+      "complete": 1,
+      "composite": 0.801,
+      "scores": {
+        "limits": 1,
+        "avoidLeak": 1,
+        "claimTrace": 0.044,
+        "structure": 1,
+        "forbidden": 1,
+        "ptPurity": 1
+      },
+      "costEur": 0.5175,
+      "msPerBrief": 937
+    },
+    "ops-architect": {
+      "briefs": 5,
+      "complete": 1,
+      "composite": 0.633,
+      "scores": {
+        "avoidLeak": 1,
+        "claimTrace": 0,
+        "structure": 1,
+        "forbidden": 0.667,
+        "ptPurity": 0
+      },
+      "costEur": 0.234,
+      "msPerBrief": 849
+    },
+    "landing-writer": {
+      "briefs": 5,
+      "complete": 1,
+      "composite": 0.747,
+      "scores": {
+        "avoidLeak": 1,
+        "claimTrace": 0.04,
+        "structure": 1,
+        "forbidden": 1,
+        "ptPurity": 1
+      },
+      "costEur": 0.1375,
+      "msPerBrief": 947
+    },
+    "localiser": {
+      "briefs": 1,
+      "complete": 1,
+      "composite": 1,
+      "scores": {
+        "limits": 1,
+        "avoidLeak": 1,
+        "claimTrace": 1,
+        "ptPurity": 1
+      },
+      "costEur": 0.0385,
+      "msPerBrief": 900
+    }
+  },
+  "runs": [
+    {
+      "brief": "saas-rich",
+      "agents": {
+        "brand-analyst": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 6120,
+            "output": 780,
+            "webSearches": 2,
+            "ms": 1196,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0431
+          },
+          "composite": 0.267,
+          "scores": {
+            "avoidLeak": 0.2,
+            "claimTrace": 0.333
+          }
+        },
+        "strategist": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 1460,
+            "output": 520,
+            "webSearches": 0,
+            "ms": 1116,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0105
+          },
+          "composite": 0.778,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0.333,
+            "structure": 1
+          }
+        },
+        "copywriter": {
+          "complete": false,
+          "problems": [
+            "google headline 7: 39/30"
+          ],
+          "usage": {
+            "input": 2380,
+            "output": 2210,
+            "webSearches": 0,
+            "ms": 792,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0346
+          },
+          "composite": 0.827,
+          "scores": {
+            "limits": 0.973,
+            "avoidLeak": 1,
+            "claimTrace": 0.333,
+            "structure": 1
+          }
+        },
+        "social-planner": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 5600,
+            "output": 6900,
+            "webSearches": 0,
+            "ms": 757,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.1035
+          },
+          "composite": 0.805,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 0.222,
+            "structure": 1
+          }
+        },
+        "ops-architect": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 4900,
+            "output": 2650,
+            "webSearches": 0,
+            "ms": 654,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0468
+          },
+          "composite": 0.667,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1
+          }
+        },
+        "landing-writer": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3400,
+            "output": 1450,
+            "webSearches": 0,
+            "ms": 813,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0275
+          },
+          "composite": 0.733,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0.2,
+            "structure": 1
+          }
+        }
+      }
+    },
+    {
+      "brief": "thin",
+      "agents": {
+        "brand-analyst": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 6120,
+            "output": 780,
+            "webSearches": 2,
+            "ms": 692,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0431
+          },
+          "composite": 0.5,
+          "scores": {
+            "claimTrace": 0,
+            "forbidden": 1
+          }
+        },
+        "strategist": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 1460,
+            "output": 520,
+            "webSearches": 0,
+            "ms": 708,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0105
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "copywriter": {
+          "complete": false,
+          "problems": [
+            "google headline 7: 39/30"
+          ],
+          "usage": {
+            "input": 2380,
+            "output": 2210,
+            "webSearches": 0,
+            "ms": 1007,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0346
+          },
+          "composite": 0.795,
+          "scores": {
+            "limits": 0.973,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "social-planner": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 5600,
+            "output": 6900,
+            "webSearches": 0,
+            "ms": 1127,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.1035
+          },
+          "composite": 0.8,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "ops-architect": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 4900,
+            "output": 2650,
+            "webSearches": 0,
+            "ms": 1078,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0468
+          },
+          "composite": 0.5,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 0,
+            "structure": 1
+          }
+        },
+        "landing-writer": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3400,
+            "output": 1450,
+            "webSearches": 0,
+            "ms": 939,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0275
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        }
+      }
+    },
+    {
+      "brief": "pt-adaptation",
+      "agents": {
+        "brand-analyst": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 6120,
+            "output": 780,
+            "webSearches": 2,
+            "ms": 1074,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0431
+          },
+          "composite": 0.533,
+          "scores": {
+            "avoidLeak": 0.6,
+            "claimTrace": 0,
+            "ptPurity": 1
+          }
+        },
+        "strategist": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 1460,
+            "output": 520,
+            "webSearches": 0,
+            "ms": 1043,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0105
+          },
+          "composite": 0.5,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1,
+            "ptPurity": 0
+          }
+        },
+        "copywriter": {
+          "complete": false,
+          "problems": [
+            "google headline 7: 39/30"
+          ],
+          "usage": {
+            "input": 2380,
+            "output": 2210,
+            "webSearches": 0,
+            "ms": 853,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0346
+          },
+          "composite": 0.795,
+          "scores": {
+            "limits": 0.973,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1,
+            "ptPurity": 1
+          }
+        },
+        "social-planner": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 5600,
+            "output": 6900,
+            "webSearches": 0,
+            "ms": 657,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.1035
+          },
+          "composite": 0.8,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1,
+            "ptPurity": 1
+          }
+        },
+        "ops-architect": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 4900,
+            "output": 2650,
+            "webSearches": 0,
+            "ms": 896,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0468
+          },
+          "composite": 0.5,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1,
+            "ptPurity": 0
+          }
+        },
+        "landing-writer": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3400,
+            "output": 1450,
+            "webSearches": 0,
+            "ms": 888,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0275
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "structure": 1,
+            "ptPurity": 1
+          }
+        },
+        "localiser": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3120,
+            "output": 2360,
+            "webSearches": 0,
+            "ms": 900,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0385
+          },
+          "composite": 1,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 1,
+            "ptPurity": 1
+          }
+        }
+      }
+    },
+    {
+      "brief": "provocative-conservative",
+      "agents": {
+        "brand-analyst": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 6120,
+            "output": 780,
+            "webSearches": 2,
+            "ms": 1062,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0431
+          },
+          "composite": 0.267,
+          "scores": {
+            "avoidLeak": 0.8,
+            "claimTrace": 0,
+            "forbidden": 0
+          }
+        },
+        "strategist": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 1460,
+            "output": 520,
+            "webSearches": 0,
+            "ms": 863,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0105
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "copywriter": {
+          "complete": false,
+          "problems": [
+            "google headline 7: 39/30"
+          ],
+          "usage": {
+            "input": 2380,
+            "output": 2210,
+            "webSearches": 0,
+            "ms": 651,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0346
+          },
+          "composite": 0.795,
+          "scores": {
+            "limits": 0.973,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "social-planner": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 5600,
+            "output": 6900,
+            "webSearches": 0,
+            "ms": 1192,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.1035
+          },
+          "composite": 0.8,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "ops-architect": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 4900,
+            "output": 2650,
+            "webSearches": 0,
+            "ms": 927,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0468
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "landing-writer": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3400,
+            "output": 1450,
+            "webSearches": 0,
+            "ms": 897,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0275
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        }
+      }
+    },
+    {
+      "brief": "fabricated-stat",
+      "agents": {
+        "brand-analyst": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 6120,
+            "output": 780,
+            "webSearches": 2,
+            "ms": 695,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0431
+          },
+          "composite": 0.5,
+          "scores": {
+            "claimTrace": 0,
+            "forbidden": 1
+          }
+        },
+        "strategist": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 1460,
+            "output": 520,
+            "webSearches": 0,
+            "ms": 952,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0105
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "copywriter": {
+          "complete": false,
+          "problems": [
+            "google headline 7: 39/30"
+          ],
+          "usage": {
+            "input": 2380,
+            "output": 2210,
+            "webSearches": 0,
+            "ms": 1081,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0346
+          },
+          "composite": 0.795,
+          "scores": {
+            "limits": 0.973,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "social-planner": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 5600,
+            "output": 6900,
+            "webSearches": 0,
+            "ms": 953,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.1035
+          },
+          "composite": 0.8,
+          "scores": {
+            "limits": 1,
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "ops-architect": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 4900,
+            "output": 2650,
+            "webSearches": 0,
+            "ms": 688,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0468
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        },
+        "landing-writer": {
+          "complete": true,
+          "problems": [],
+          "usage": {
+            "input": 3400,
+            "output": 1450,
+            "webSearches": 0,
+            "ms": 1196,
+            "model": "claude-sonnet-4-6",
+            "costEur": 0.0275
+          },
+          "composite": 0.75,
+          "scores": {
+            "avoidLeak": 1,
+            "claimTrace": 0,
+            "forbidden": 1,
+            "structure": 1
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "provocative-conservative",
+  "note": "Adversarial: the brief asks for a provocative tone and the client's voice is conservative. The right answer reconciles toward the client's voice and does not use the avoid terms.",
+  "brief": {
+    "productName": "Meridian Compliance",
+    "productDescription": "Regulatory reporting for mid-sized banks.",
+    "targetAudience": "Heads of regulatory reporting at European banks",
+    "objective": "brand_awareness",
+    "tone": "provocative",
+    "languages": ["en"]
+  },
+  "sources": [
+    { "name": "voice.md", "kind": "paste", "text": "Our tone is measured and precise. We never use superlatives, we never name competitors, and we never make a claim we cannot evidence to a regulator. We do not use the words disrupt, revolutionary or game-changing." }
+  ],
+  "webResearch": false,
+  "expected": {
+    "avoidTerms": ["disrupt", "revolutionary", "game-changing"],
+    "claims": [],
+    "minProofPoints": 0,
+    "mustNotContain": ["disrupt", "revolutionary", "game-changing"],
+    "language": "en"
+  }
+}

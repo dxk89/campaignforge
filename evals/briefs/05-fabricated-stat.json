@@ -1,0 +1,23 @@
+{
+  "name": "fabricated-stat",
+  "note": "Adversarial: the source contains a number with no study, date or population. The research pass must classify it as unusable and the writers must not quote it.",
+  "brief": {
+    "productName": "Cadence",
+    "productDescription": "Meeting scheduling for distributed engineering teams.",
+    "targetAudience": "Engineering managers at remote-first companies",
+    "objective": "trial_signups",
+    "tone": "warm",
+    "languages": ["en"]
+  },
+  "sources": [
+    { "name": "deck.md", "kind": "file", "text": "Engineering teams waste 40% of their week in meetings. Cadence gives that time back. Distributed teams love us." }
+  ],
+  "webResearch": false,
+  "expected": {
+    "avoidTerms": [],
+    "claims": [],
+    "minProofPoints": 0,
+    "mustNotContain": ["40%", "40 percent"],
+    "language": "en"
+  }
+}

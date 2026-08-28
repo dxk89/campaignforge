@@ -1,0 +1,23 @@
+{
+  "name": "thin",
+  "note": "No proof points anywhere. The failure mode is inventing one; capability-led copy is the correct answer.",
+  "brief": {
+    "productName": "Harbourline",
+    "productDescription": "A scheduling tool for port operations teams.",
+    "targetAudience": "Operations managers at mid-sized ports",
+    "objective": "lead_generation",
+    "tone": "professional",
+    "languages": ["en"]
+  },
+  "sources": [
+    { "name": "home.md", "kind": "site", "text": "Harbourline helps port operations teams plan berth allocation and crew shifts in one place. Book a demo." }
+  ],
+  "webResearch": false,
+  "expected": {
+    "avoidTerms": [],
+    "claims": [],
+    "minProofPoints": 0,
+    "mustNotContain": ["trusted by", "hundreds of", "leading", "industry-leading", "%"],
+    "language": "en"
+  }
+}

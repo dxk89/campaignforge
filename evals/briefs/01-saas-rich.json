@@ -1,0 +1,23 @@
+{
+  "name": "saas-rich",
+  "note": "The reference case: a product with real proof points and a clear buyer. Everything should be clean.",
+  "brief": {
+    "productName": "Ledgerline",
+    "productDescription": "Matches invoices, bank feeds and payment processor payouts automatically and flags exceptions for review.",
+    "targetAudience": "Finance leads and controllers at 50-500 person SaaS companies",
+    "objective": "trial_signups",
+    "tone": "direct",
+    "languages": ["en"]
+  },
+  "sources": [
+    { "name": "home.md", "kind": "site", "text": "Close the month without the spreadsheet. Ledgerline matches payouts, invoices and bank feeds overnight. We say exceptions, never errors. From EUR 190 a month per connected entity. 14-day trial, no card. SOC 2 Type II. Connects to Stripe, Adyen, GoCardless and 2,400 banks. In our 2026 survey of 210 finance leads, customers reported closing the month four days faster on average." },
+    { "name": "careers.md", "kind": "site", "text": "We write short. We would rather ship a plain sentence than a clever one. No exclamation marks in product copy." }
+  ],
+  "webResearch": false,
+  "expected": {
+    "avoidTerms": ["errors", "AI-powered", "revolutionary"],
+    "claims": ["four days faster", "2,400 banks", "SOC 2 Type II", "EUR 190", "14-day trial"],
+    "minProofPoints": 3,
+    "language": "en"
+  }
+}
