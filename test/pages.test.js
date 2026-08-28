@@ -97,6 +97,56 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.ok(set.body.includes('In memory'), 'settings is honest about the store');
   console.log('  settings page ok');
 
+  // nav and root redirect (task 11)
+  const rootRes = await fetch(base + '/', { redirect: 'manual' });
+  assert.ok([307, 302, 303].includes(rootRes.status), 'root redirects: ' + rootRes.status);
+  assert.match(rootRes.headers.get('location') || '', /\/clients/, 'root goes to /clients when signed in');
+  const clientsPage = await html('/clients');
+  assert.ok(clientsPage.body.includes('href="/ledger"'), 'nav links to ledger');
+  assert.ok(clientsPage.body.includes('href="/settings"'), 'nav links to settings');
+  console.log('  nav and root redirect ok');
+
+  // url + paste sources through the library's routes (task 12)
+  const urlSrc = await post(`/api/clients/${clientId}/sources`, { url: 'http://localhost:8099/about/' });
+  assert.equal(urlSrc.status, 200, JSON.stringify(urlSrc.data));
+  const pasteSrc = await post(`/api/clients/${clientId}/sources`, { label: 'brand-voice.md', text: 'We write short.' });
+  assert.equal(pasteSrc.status, 200);
+  const lib2 = await html(`/clients/${clientId}`);
+  assert.ok(lib2.body.includes('brand-voice.md'), 'pasted source appears in the library');
+  assert.ok(lib2.body.includes('Fetch page'), 'url input rendered');
+  assert.ok(lib2.body.includes('Brand assets'), 'brand assets section rendered');
+  console.log('  library source inputs ok');
+
+  // logo upload + file streaming route (task 12)
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001' + '0d0a2db4', 'hex');
+  const form = new FormData();
+  form.append('logo', new Blob([png], { type: 'image/png' }), 'logo.png');
+  const up = await fetch(`${base}/api/clients/${clientId}/assets`, { method: 'POST', body: form });
+  const upData = await up.json();
+  assert.equal(up.status, 200, JSON.stringify(upData));
+  assert.ok(upData.brandKit.logoRef, 'logoRef recorded');
+  const fileRes = await fetch(`${base}/api/files/${upData.brandKit.logoRef}`);
+  assert.equal(fileRes.status, 200, 'stored file streams back');
+  assert.match(fileRes.headers.get('content-type'), /image/);
+  const denied = await fetch(`${base}/api/files/users/someone-else/secret.png`);
+  assert.equal(denied.status, 403, 'refs outside the namespace are refused');
+  console.log('  asset upload and file route ok');
+
+  // tracking table on Measurement (task 16) and export buttons (task 15)
+  const wb2 = await html(`/clients/${clientId}/campaigns/${cid}`);
+  assert.ok(wb2.body.includes('utm_campaign'), 'tracking plan reaches the page');
+  assert.ok(wb2.body.includes('Assets CSV') && wb2.body.includes('Social CSV'), 'export buttons render');
+  console.log('  tracking table and exports ok');
+
+  // stored images reappear after a reload (task 14)
+  const stored = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/images`).then((r) => r.json());
+  assert.ok(stored.images.length >= 1, 'images list persists');
+  // The image controls mount client-side after a /api/health fetch, so they are
+  // not in the server HTML. Assert the payload the client needs instead.
+  assert.ok(wb2.body.includes('image_prompt'), 'visual briefs reach the client for the generate buttons');
+  assert.ok(stored.images[0].storageRef.startsWith('users/'), 'stored image has a streamable ref');
+  console.log('  image state ok |', stored.images.length, 'stored');
+
   console.log('page tests: ok');
   stop(); process.exit(0);
 })().catch((e) => { console.error('page tests FAILED', e); stop(); process.exit(1); });

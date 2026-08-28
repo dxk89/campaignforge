@@ -72,3 +72,28 @@ const db = require('../web/.test-build/db.js');
 
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });
+
+// ---- memory (task 17): degrades to empty without a store, and null for claims
+(async () => {
+  const assert2 = require('assert');
+  delete process.env.FIREBASE_SERVICE_ACCOUNT;
+  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test';
+  const memory = require('../lib/memory');
+  const [ex, le, co, cl, none] = await Promise.all([
+    memory.exemplars({ clientId: 'c1', channel: 'meta' }),
+    memory.learnings({ clientId: 'c1' }),
+    memory.corrections({ clientId: 'c1', agent: 'copywriter' }),
+    memory.approvedClaims({ clientId: 'c1' }),
+    memory.approvedClaims({}),
+  ]);
+  assert2.deepEqual([ex, le, co], [[], [], []], 'lists are empty without a store');
+  assert2.equal(cl, null, 'approvedClaims returns null, not [], so buildRules falls back to proof points');
+  assert2.equal(none, null, 'no clientId returns null');
+
+  // and buildRules treats that null correctly
+  const { buildRules } = require('../lib/agents/packets');
+  const rules = buildRules({ productName: 'X', productDescription: 'd' }, { proof_points: [{ claim: 'four days faster' }] }, cl);
+  assert2.equal(rules.claimSeverity, 'warning', 'no registry means claim flags are warnings');
+  assert2.ok(rules.approvedClaims.includes('four days faster'), 'falls back to context proof points');
+  console.log('memory tests: ok');
+})().catch((e) => { console.error('memory tests FAILED', e); process.exit(1); });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs } from '@/components/Tabs';
 import {
@@ -8,6 +8,7 @@ import {
   GooglePanel, EmailPanel, SocialPanel, LifecyclePanel, HandoffPanel, MeasurementPanel,
 } from '@/components/panels';
 import { fmtEur, fmtInt, fmtMs } from '@/components/format';
+import { flattenAssets, socialRows, toCsv, download, clientSlug } from '@/components/exports';
 
 /** The agents this campaign runs, in dependency order. Skips are decided server-side. */
 const CHAIN = [
@@ -22,7 +23,7 @@ const CHAIN = [
 
 type State = Record<string, 'running' | 'done' | 'skipped' | 'failed'>;
 
-export default function Workbench({ clientId, campaign, client, outputs, passes, stale, economics }: any) {
+export default function Workbench({ clientId, campaign, client, outputs, passes, stale, economics, tracking }: any) {
   const router = useRouter();
   const [brief, setBrief] = useState(campaign.brief);
   const [state, setState] = useState<State>(() => {
@@ -35,6 +36,8 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState(outputs['brand-analyst'] ? 'research' : 'strategy');
   const [lang, setLang] = useState<'en' | 'pt'>('en');
+  const [imagesAvailable, setImagesAvailable] = useState(false);
+  useEffect(() => { fetch('/api/health').then((r) => r.json()).then((h) => setImagesAvailable(Boolean(h.images))).catch(() => {}); }, []);
 
   const assets = lang === 'pt' && outputs.localiser ? outputs.localiser : outputs.copywriter;
   const done = CHAIN.filter((c) => outputs[c.agent]).length;
@@ -111,7 +114,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
 
   return (
     <div className="workbench">
-      <BriefPanel brief={brief} setBrief={setBrief} onSave={saveBrief} client={client} />
+      <BriefPanel brief={brief} setBrief={setBrief} onSave={saveBrief} client={client} clientId={clientId} campaignId={campaign.campaignId} />
 
       <section className="results-panel">
         <ol className="chain">
@@ -155,10 +158,10 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               {tab === 'linkedin' && <LinkedInPanel assets={assets} />}
               {tab === 'google' && <GooglePanel assets={assets} />}
               {tab === 'email' && <EmailPanel assets={assets} />}
-              {tab === 'social' && <SocialPanel social={outputs['social-planner']} />}
+              {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} />}
               {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}
-              {tab === 'measurement' && <MeasurementPanel activation={outputs['ops-architect']} tracking={null} />}
+              {tab === 'measurement' && <MeasurementPanel activation={outputs['ops-architect']} tracking={tracking} />}
             </div>
           </>
         ) : (
@@ -183,6 +186,20 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
             ))}
           </div>
           <div className="econ-actions">
+            <button type="button" className="btn-secondary" onClick={() => {
+              const slug = clientSlug(client.name);
+              download(`${slug}-campaign.json`, 'application/json',
+                JSON.stringify({ brief: campaign.brief, ...outputs, tracking }, null, 2));
+            }}>JSON</button>
+            <button type="button" className="btn-secondary" onClick={() => {
+              const rows: unknown[][] = [['channel', 'type', 'language', 'field', 'text', 'char_count', 'tracking_url']];
+              rows.push(...flattenAssets(outputs.copywriter, 'en', tracking));
+              if (outputs.localiser) rows.push(...flattenAssets(outputs.localiser, 'pt', tracking));
+              download(`${clientSlug(client.name)}-assets.csv`, 'text/csv;charset=utf-8', toCsv(rows));
+            }} disabled={!outputs.copywriter}>Assets CSV</button>
+            <button type="button" className="btn-secondary" onClick={() => {
+              download(`${clientSlug(client.name)}-social.csv`, 'text/csv;charset=utf-8', toCsv(socialRows(outputs['social-planner'])));
+            }} disabled={!outputs['social-planner']}>Social CSV</button>
             <a className="btn-secondary" href={`/api/export/${clientId}`}>Export all</a>
           </div>
         </footer>
@@ -191,12 +208,41 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   );
 }
 
-function BriefPanel({ brief, setBrief, onSave, client }: any) {
+function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: any) {
   const set = (k: string, v: any) => setBrief({ ...brief, [k]: v });
+  const [parse, setParse] = useState<{ status: string; error?: boolean } | null>(null);
+  const router = useRouter();
+
+  async function readBrief(files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+    setParse({ status: `Reading ${file.name}…` });
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`/api/clients/${clientId}/campaigns/${campaignId}/brief/parse`, { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) { setParse({ status: data.error || 'Could not read the brief', error: true }); return; }
+    setBrief(data.brief);
+    const missing = ['productName', 'productDescription', 'targetAudience', 'objective', 'tone'].filter((k) => !data.brief[k]);
+    setParse({
+      status: `Filled ${data.filled.length} field${data.filled.length === 1 ? '' : 's'} from ${file.name}`
+        + (missing.length ? ` · still needed: ${missing.map((m) => m.replace(/([A-Z])/g, ' $1').toLowerCase()).join(', ')}` : '')
+        + (data.notes ? ` · Note from the brief: ${data.notes}` : '')
+        + ` · €${Number(data.usage.costEur || 0).toFixed(4)} · kept as a source`,
+    });
+    router.refresh();
+  }
+
   return (
     <aside className="panel brief-panel">
       <section className="block">
         <h2 className="block-title">Brief <span className="block-hint">{client.name}</span></h2>
+        <label className="dropzone dropzone-brief">
+          <input type="file" accept=".pdf,.docx,.txt,.md,.html,.htm" onChange={(e) => readBrief(e.target.files)} />
+          <span><strong>Upload a briefing document</strong> and the fields fill in</span>
+          <span className="dropzone-types">PDF, DOCX, TXT, MD · you can edit everything after</span>
+        </label>
+        {parse && <p className={`brief-status ${parse.error ? 'error' : ''}`}>{parse.status}</p>}
         <label className="field"><span>Product name</span>
           <input value={brief.productName || ''} onChange={(e) => set('productName', e.target.value)} onBlur={onSave} placeholder="Ledgerline" /></label>
         <label className="field"><span>What it does</span>

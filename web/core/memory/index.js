@@ -1,27 +1,59 @@
 /**
- * Client memory interface.
+ * Client memory.
  *
  * Agents are shown exemplars (outputs a human approved), learnings (from
  * results) and corrections (from the Critic) for the client they are working
- * on. Until the client library exists (infrastructure plan, Phase 1) every
- * query returns empty, and packets are assembled the same way either side of
- * that change. Swap the implementation, not the callers.
+ * on. The collections these read are created in Phase 2 and Phase 3; until
+ * then every query returns empty and packets are assembled identically, so
+ * nothing downstream changes when the data starts arriving.
  */
+const { read } = require('./firestore');
 
+/**
+ * Approved outputs for this client, ranked by performance then recency.
+ * Filtered by channel for the writers, by agent for everyone else.
+ */
 async function exemplars({ clientId, agent, channel, objective, limit = 6 }) {
-  return [];
+  if (!clientId) return [];
+  const where = [['kind', '==', 'approved']];
+  if (channel) where.push(['channel', '==', channel]);
+  else if (agent) where.push(['agent', '==', agent]);
+  const rows = await read(clientId, 'exemplars', { where, order: 'approvedAt', limit: limit * 3 });
+  const rank = (e) => (e.performance?.value ?? -1);
+  return rows
+    .sort((a, b) => (objective && a.objective === objective ? -1 : 0) - (objective && b.objective === objective ? -1 : 0)
+      || rank(b) - rank(a)
+      || String(b.approvedAt || '').localeCompare(String(a.approvedAt || '')))
+    .slice(0, limit);
 }
 
+/** Approved learnings from uploaded results. Newest first, capped. */
 async function learnings({ clientId }) {
-  return [];
+  return read(clientId, 'learnings', { where: [['status', '==', 'approved']], order: 'approvedAt', limit: 12 });
 }
 
+/** Corrections the editor has given for this client, so they are not repeated. */
 async function corrections({ clientId, agent }) {
-  return [];
+  const where = [['status', '==', 'confirmed']];
+  if (agent) where.push(['agent', '==', agent]);
+  return read(clientId, 'corrections', { where, order: 'createdAt', limit: 10 });
 }
 
+/**
+ * The claims a person has approved.
+ *
+ * Returns null when no registry exists, which is different from an empty
+ * array and is load-bearing: null tells buildRules to fall back to the
+ * research pass's proof points and treat claim flags as warnings. An empty
+ * array would mean "nothing is approved" and every number in the copy would
+ * become a violation.
+ */
 async function approvedClaims({ clientId }) {
-  return null; // null = no registry yet; agents fall back to research-pass proof points
+  if (!clientId) return null;
+  const now = new Date().toISOString();
+  const rows = await read(clientId, 'claims', { where: [['status', '==', 'approved']], limit: 100 });
+  if (!rows.length) return null;
+  return rows.filter((c) => !c.expiresAt || c.expiresAt > now);
 }
 
 module.exports = { exemplars, learnings, corrections, approvedClaims };

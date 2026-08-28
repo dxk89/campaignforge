@@ -103,6 +103,31 @@ const post = (p, body) => api(p, { method: 'POST', headers: { 'content-type': 'a
   assert.equal(buf.slice(0, 2).toString(), 'PK', 'is a zip');
   console.log('  export:', buf.length, 'bytes');
 
+  // briefing document parse (task 13)
+  const camp2 = await post(`/api/clients/${clientId}/campaigns`, { brief: {
+    productName: '', productDescription: '', targetAudience: '',
+    objective: 'lead_generation', tone: 'professional', languages: ['en'] } });
+  const cid2 = camp2.data.campaignId;
+  const briefForm = new FormData();
+  briefForm.append('file', new Blob(['Campaign brief: Ledgerline trial push for finance leads. Do not name competitors.'], { type: 'text/plain' }), 'brief.txt');
+  const parsed = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid2}/brief/parse`, { method: 'POST', body: briefForm });
+  const pdata = await parsed.json();
+  assert.equal(parsed.status, 200, JSON.stringify(pdata));
+  assert.ok(pdata.brief.productName, 'brief fields filled from the document');
+  assert.ok(pdata.filled.length >= 3, 'several fields filled: ' + pdata.filled.join(','));
+  const withBrief = await api(`/api/clients/${clientId}/sources`);
+  assert.ok(withBrief.data.sources.some((s) => s.kind === 'brief'), 'document kept as a source');
+  console.log('  brief parse filled:', pdata.filled.join(', '));
+
+  // a filled field is never overwritten
+  await api(`/api/clients/${clientId}/campaigns/${cid2}`, { method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ brief: { ...pdata.brief, productName: 'My Own Name' } }) });
+  const form2 = new FormData();
+  form2.append('file', new Blob(['Campaign brief: Ledgerline trial push.'], { type: 'text/plain' }), 'brief2.txt');
+  const again = await (await fetch(`${base}/api/clients/${clientId}/campaigns/${cid2}/brief/parse`, { method: 'POST', body: form2 })).json();
+  assert.equal(again.brief.productName, 'My Own Name', 'a filled field survives a second parse');
+  console.log('  filled fields are not overwritten');
+
   console.log('api tests: ok');
   stop();
   process.exit(0);

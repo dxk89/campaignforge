@@ -1,5 +1,11 @@
 # Phase 1: what is left
 
+> **Status, 27 Aug 2026:** tasks 11–17 and 19 are built and tested. Task 18
+> (running the data layer against the Firestore emulator) needs Java and has
+> not been run; the script is `npm run test:emulator`. Task 20 is a decision
+> for the owner. Everything below is kept as the record of what was done.
+
+
 Tasks 1–8 and 10 of `02-phase1-foundation.md` are built and all five test suites pass. This file lists what remains before Phase 2 starts. Work in order; run `npm test` after each; one commit per task.
 
 Two categories: **wiring** (routes that exist but no page calls them) and **carry-over** (prototype features that were not ported). Nothing here is a redesign; the contracts are already set.

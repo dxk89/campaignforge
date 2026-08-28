@@ -9,6 +9,8 @@ export const runtime = 'nodejs';
 const FIVE_DAYS = 60 * 60 * 24 * 5 * 1000;
 
 export async function POST(req: Request) {
+  const url = new URL(req.url);
+  if (url.searchParams.has('redirect')) return signOut(req); // form post from the header
   try {
     const { idToken } = await req.json();
     if (!idToken) return NextResponse.json({ error: 'idToken is required' }, { status: 400 });
@@ -26,6 +28,20 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
+  res.cookies.delete(SESSION_COOKIE);
+  return res;
+}
+
+/** Sign out from a plain form post, so the header needs no client component. */
+export async function PUT(req: Request) {
+  return signOut(req);
+}
+
+function signOut(req: Request) {
+  const url = new URL(req.url);
+  const res = url.searchParams.has('redirect')
+    ? NextResponse.redirect(new URL('/login', url.origin), 303)
+    : NextResponse.json({ ok: true });
   res.cookies.delete(SESSION_COOKIE);
   return res;
 }

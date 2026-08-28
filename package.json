@@ -7,10 +7,11 @@
   "scripts": {
     "start": "node legacy/server.js",
     "dev": "node --watch server.js",
-    "test": "node test/runtime.test.js && node test/db.test.js && node test/api.test.js && node test/pages.test.js && node test/frontend.test.js",
+    "test": "node test/runtime.test.js && node test/db.test.js && node test/export.test.js && node test/api.test.js && node test/pages.test.js && node test/frontend.test.js",
     "web": "cd web && next dev",
     "web:build": "cd web && next build",
-    "legacy": "node legacy/server.js"
+    "legacy": "node legacy/server.js",
+    "test:emulator": "cd web && npx firebase emulators:exec --only firestore,storage --project demo-cf \"cd .. && FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199 node test/db.test.js\""
   },
   "engines": {
     "node": ">=20"

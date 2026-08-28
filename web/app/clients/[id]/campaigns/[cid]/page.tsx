@@ -5,6 +5,8 @@ import { staleAgents } from '@/server/inputs';
 import { currentSession } from '@/server/auth';
 import Workbench from './workbench';
 
+const { trackingPlan } = require('@core/utm');
+
 export const dynamic = 'force-dynamic';
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string; cid: string }> }) {
@@ -27,6 +29,17 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
 
   const plain = (v: unknown) => JSON.parse(JSON.stringify(v));
 
+  // Deterministic, so it is computed on render rather than stored.
+  const assets = (results.copywriter as any) || {};
+  const tracking = results.copywriter
+    ? trackingPlan(
+        { ...campaign.brief, clientName: client.name },
+        assets,
+        (results.localiser as any) || null,
+        campaign.brief.landingUrl ?? client.settings.landingUrl ?? undefined,
+      )
+    : null;
+
   return (
     <main className="workbench-page">
       <p className="muted crumbs">
@@ -40,6 +53,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         passes={plain(passes)}
         stale={stale}
         economics={plain(ledgerTotals(entries))}
+        tracking={plain(tracking)}
       />
     </main>
   );

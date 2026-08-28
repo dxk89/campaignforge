@@ -1,8 +1,8 @@
-export default function Home() {
-  return (
-    <main className="shell">
-      <h1>Campaign Forge</h1>
-      <p className="muted">Phase 1 foundation. Sign-in and the client library land in tasks 2 to 4.</p>
-    </main>
-  );
+import { redirect } from 'next/navigation';
+import { currentSession } from '@/server/auth';
+
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  redirect((await currentSession()) ? '/clients' : '/login');
 }

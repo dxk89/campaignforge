@@ -1,6 +1,6 @@
 # CLAUDE.md — working in this repository
 
-Campaign Forge: an agentic campaign builder for one marketer running several clients. **New here? Read `HANDOVER.md` first, then this file.** Read this before changing anything. The design documents are `docs/Campaign-Forge-Product-and-Build-Plan.docx` (the plan), `AGENTS.md` (agent architecture), `INFRASTRUCTURE.md` (target infrastructure), `ARCHITECTURE.md` (production integration). Build specs per phase are in `docs/build/`. Work from the spec for the current phase; do not skip ahead. **Current position: Phase 1 tasks 1-8 and 10 are built; `docs/build/02b-phase1-remaining.md` is the next work.** `docs/build/06-agent-training.md` runs alongside every phase: when a phase's schedule in its §4 names an agent, build that agent's knowledge pack in the same phase.
+Campaign Forge: an agentic campaign builder for one marketer running several clients. **New here? Read `HANDOVER.md` first, then this file.** Read this before changing anything. The design documents are `docs/Campaign-Forge-Product-and-Build-Plan.docx` (the plan), `AGENTS.md` (agent architecture), `INFRASTRUCTURE.md` (target infrastructure), `ARCHITECTURE.md` (production integration). Build specs per phase are in `docs/build/`. Work from the spec for the current phase; do not skip ahead. **Current position: Phase 1 is complete except task 18 (emulator run, needs Java) and task 20 (a decision). `docs/build/01-week2-reviewers.md` is the next work.** `docs/build/06-agent-training.md` runs alongside every phase: when a phase's schedule in its §4 names an agent, build that agent's knowledge pack in the same phase.
 
 ## Commands
 
@@ -14,7 +14,9 @@ MOCK_CLAUDE=1 npm start              # same, on fixtures
 npm run web                          # Next dev server (web/)
 npm run web:build                    # Next production build; this typechecks
 
-npm test                             # runtime + db + api + front-end suites
+npm test                             # six suites: runtime, db+memory, export, api, pages, frontend
+npm run test:emulator                # data layer against real Firestore. Needs Java.
+                                     # Not part of npm test; must pass before a release.
 ```
 
 Phase 1 note: `web/` is the product. `lib/` is shared by both and stays plain CommonJS. `public/` and `server.js` are the legacy front end and are retired in task 10.

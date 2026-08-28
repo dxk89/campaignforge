@@ -15,6 +15,10 @@ export default function Library({ client, sources, campaigns }: Props) {
   const [voice, setVoice] = useState(client.voice);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState('');
+  const [pasteLabel, setPasteLabel] = useState('');
+  const [pasteText, setPasteText] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const kit = client.brandKit || {};
   const accents: string[] = kit.palette?.accents || [];
 
@@ -40,6 +44,51 @@ export default function Library({ client, sources, campaigns }: Props) {
     setBusy(true);
     await fetch(`/api/clients/${client.clientId}/sources`, { method: 'POST', body: form });
     setBusy(false);
+    router.refresh();
+  }
+
+  async function postSource(body: any) {
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/clients/${client.clientId}/sources`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) { setError(data.error || 'Could not add that source'); return false; }
+    router.refresh();
+    return true;
+  }
+
+  async function addUrl() {
+    if (!url.trim()) return;
+    if (await postSource({ url: url.trim() })) setUrl('');
+  }
+
+  async function addPaste() {
+    if (!pasteText.trim()) return;
+    if (await postSource({ label: pasteLabel.trim(), text: pasteText })) { setPasteText(''); setPasteLabel(''); }
+  }
+
+  async function uploadAssets(files: FileList | null, field: 'logo' | 'artwork') {
+    if (!files?.length) return;
+    const form = new FormData();
+    if (field === 'logo') form.append('logo', files[0]);
+    else Array.from(files).slice(0, 6).forEach((f) => form.append('artwork', f));
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/clients/${client.clientId}/assets`, { method: 'POST', body: form });
+    setBusy(false);
+    if (!res.ok) setError('Could not upload that file');
+    router.refresh();
+  }
+
+  /** Removing an asset is a PATCH on the brand kit; the file stays in storage. */
+  async function removeAsset(which: 'logo' | number) {
+    const next = { ...kit };
+    if (which === 'logo') next.logoRef = null;
+    else next.artworkRefs = (kit.artworkRefs || []).filter((_: string, i: number) => i !== which);
+    await fetch(`/api/clients/${client.clientId}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ brandKit: next }),
+    });
     router.refresh();
   }
 
@@ -90,11 +139,54 @@ export default function Library({ client, sources, campaigns }: Props) {
       </section>
 
       <section className="block">
+        <h2 className="block-title">Brand assets <span className="block-hint">logo goes on every graphic; artwork steers generated images</span></h2>
+        <div className="brand-assets">
+          <label className="asset-btn">
+            <input type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={(e) => uploadAssets(e.target.files, 'logo')} />
+            <span>Upload logo</span>
+          </label>
+          <label className="asset-btn">
+            <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={(e) => uploadAssets(e.target.files, 'artwork')} />
+            <span>Add artwork</span>
+          </label>
+        </div>
+        <div className="asset-strip">
+          {kit.logoRef && (
+            <div className="thumb logo" title="Logo">
+              <img src={`/api/files/${kit.logoRef}`} alt="logo" />
+              <button type="button" onClick={() => removeAsset('logo')} aria-label="Remove logo">×</button>
+            </div>
+          )}
+          {(kit.artworkRefs || []).map((ref: string, i: number) => (
+            <div className="thumb" key={ref} title={`Artwork ${i + 1}`}>
+              <img src={`/api/files/${ref}`} alt="" />
+              <button type="button" onClick={() => removeAsset(i)} aria-label="Remove artwork">×</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="block">
         <h2 className="block-title">Sources <span className="block-hint">{sources.length} on file</span></h2>
-        <label className="asset-btn">
-          <input type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm" onChange={(e) => addSources(e.target.files)} />
-          <span>Add files</span>
-        </label>
+        <div className="source-add">
+          <label className="asset-btn">
+            <input type="file" multiple accept=".pdf,.docx,.txt,.md,.csv,.json,.html,.htm" onChange={(e) => addSources(e.target.files)} />
+            <span>Add files</span>
+          </label>
+          <div className="inline-add">
+            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+              placeholder="https://client.com/product" disabled={busy} />
+            <button type="button" className="btn-secondary" onClick={addUrl} disabled={busy}>Fetch page</button>
+          </div>
+          <details className="paste">
+            <summary>Paste text</summary>
+            <input type="text" value={pasteLabel} onChange={(e) => setPasteLabel(e.target.value)} placeholder="Label, e.g. brand-voice.md" />
+            <textarea rows={4} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder="Paste a tone-of-voice guide, a landing page, customer quotes…" />
+            <button type="button" className="btn-secondary" onClick={addPaste} disabled={busy}>Add text</button>
+          </details>
+        </div>
+        {error && <p className="source-error">{error}</p>}
         <ul className="source-list" style={{ marginTop: 10 }}>
           {sources.map((s) => (
             <li key={s.sourceId}>
