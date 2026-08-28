@@ -181,6 +181,53 @@ export async function listImages(clientId: string, campaignId: string): Promise<
   return (await fsdb().collection(`${root()}/clients/${clientId}/campaigns/${campaignId}/images`).get()).docs.map((d) => d.data() as ImageDoc);
 }
 
+// ---- claims ------------------------------------------------------------------
+
+export type Claim = {
+  claimId: string; text: string; source: string; span: string | null; evidenceRef: string | null;
+  status: 'proposed' | 'approved' | 'rejected' | 'expired';
+  approvedAt: string | null; expiresAt: string | null; note: string | null; campaignId: string | null; createdAt: string;
+};
+
+const norm = (t: string) => String(t || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** Propose a claim. Deduplicated on normalised text so re-running research does not pile up copies. */
+export async function proposeClaim(clientId: string, input: { text: string; source: string; span?: string | null; campaignId?: string | null }): Promise<Claim | null> {
+  const existing = await listClaims(clientId);
+  if (existing.some((c) => norm(c.text) === norm(input.text))) return null;
+  const claimId = newId();
+  const doc: Claim = {
+    claimId, text: input.text, source: input.source, span: input.span ?? null, evidenceRef: null,
+    status: 'proposed', approvedAt: null, expiresAt: null, note: null,
+    campaignId: input.campaignId ?? null, createdAt: now(),
+  };
+  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/claims/${claimId}`).set(doc);
+  else memCol(memKey(clientId, 'claims')).set(claimId, doc);
+  return doc;
+}
+
+export async function listClaims(clientId: string): Promise<Claim[]> {
+  let docs: Claim[];
+  if (!storeEnabled) docs = [...memCol(memKey(clientId, 'claims')).values()];
+  else docs = (await fsdb().collection(`${root()}/clients/${clientId}/claims`).get()).docs.map((d) => d.data() as Claim);
+  const nowIso = now();
+  return docs
+    .map((c) => (c.status === 'approved' && c.expiresAt && c.expiresAt < nowIso ? { ...c, status: 'expired' as const } : c))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function updateClaim(clientId: string, claimId: string, patch: Partial<Claim>): Promise<Claim | null> {
+  const all = await listClaims(clientId);
+  const existing = all.find((c) => c.claimId === claimId);
+  if (!existing) return null;
+  const merged: Claim = { ...existing, ...patch, claimId };
+  if (patch.status === 'approved' && !merged.approvedAt) merged.approvedAt = now();
+  if (patch.status && patch.status !== 'approved') merged.approvedAt = null;
+  if (storeEnabled) await fsdb().doc(`${root()}/clients/${clientId}/claims/${claimId}`).set(merged);
+  else memCol(memKey(clientId, 'claims')).set(claimId, merged);
+  return merged;
+}
+
 // ---- ledger ------------------------------------------------------------------
 
 export async function addLedger(entry: Omit<LedgerEntry, 'entryId' | 'at'>): Promise<void> {

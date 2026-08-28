@@ -10,6 +10,8 @@ import { getClient, getCampaign, currentOutputs, listSources, hashOf } from './d
 import type { Version } from './types';
 
 const research = require('@core/prompts/research');
+const { buildRules } = require('@core/agents/packets');
+const memory = require('@core/memory');
 
 /** Which stored agents each agent depends on. Drives inputs and staleness. */
 export const DEPENDS: Record<string, string[]> = {
@@ -23,6 +25,23 @@ export const DEPENDS: Record<string, string[]> = {
 };
 
 export type BuiltInputs = { inputs: Record<string, unknown>; inputsHash: string };
+
+/**
+ * The compliance rules for this campaign: the client's avoid terms, its
+ * competitors, the brand spelling, and the approved claims when a registry
+ * exists. Used by the asset flags and by the Critic.
+ */
+export async function rulesFor(clientId: string, campaignId: string) {
+  const [client, campaign, outputs] = await Promise.all([
+    getClient(clientId), getCampaign(clientId, campaignId), currentOutputs(clientId, campaignId),
+  ]);
+  const context: any = outputs['brand-analyst']?.output ?? null;
+  // Client voice rules, edited by a person, take precedence over what research proposed.
+  const merged = context ? { ...context } : { voice: {}, competitors: [] };
+  if (client?.voice?.avoidTerms?.length) merged.voice = { ...(merged.voice || {}), avoid_terms: client.voice.avoidTerms };
+  const claims = await memory.approvedClaims({ clientId });
+  return buildRules({ ...(campaign?.brief || {}), clientName: client?.name }, merged, claims);
+}
 
 export async function buildInputs(clientId: string, campaignId: string, agent: string): Promise<BuiltInputs> {
   const [client, campaign, outputs] = await Promise.all([
@@ -73,9 +92,14 @@ export async function buildInputs(clientId: string, campaignId: string, agent: s
         landingUrl: campaign.brief.landingUrl ?? client.settings.landingUrl ?? undefined,
       };
       break;
-    case 'localiser':
-      inputs = { brief, clientId, context, assets: need('copywriter', 'The assets'), glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
+    case 'localiser': {
+      // Portuguese is adapted from the *edited* English, not from what the
+      // model first wrote. That is the whole point of the editable layer.
+      const { composeAssets } = await import('./assets');
+      const english = await composeAssets(clientId, campaignId, 'en', need('copywriter', 'The assets'));
+      inputs = { brief, clientId, context, assets: english, glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
       break;
+    }
     default:
       throw Object.assign(new Error(`Unknown agent "${agent}"`), { status: 404 });
   }

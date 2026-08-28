@@ -15,6 +15,7 @@ const agents = {
   'ops-architect': require('./ops-architect'),
   localiser: require('./localiser'),
   critic: require('./critic'),
+  'field-editor': require('./field-editor'),
 };
 
 module.exports = { agents, get: (name) => agents[name] };

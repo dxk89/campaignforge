@@ -1,6 +1,7 @@
 import { requireSession } from '@/server/auth';
 import { getClient, listSources, listCampaigns, listVersions, currentOutputs, listLedger } from '@/server/db';
 import { getFile } from '@/server/storage';
+import { listAssets, approvalState } from '@/server/assets';
 // archiver ships CommonJS with a callable default; the namespace import that
 // TypeScript wants under ESM is not callable, so use the interop default.
 import { default as archiver } from 'archiver';
@@ -37,9 +38,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const campaigns = await listCampaigns(id);
   add('campaigns.json', campaigns);
+  add('claims.json', await (await import('@/server/db')).listClaims(id));
   for (const c of campaigns) {
     add(`campaigns/${c.campaignId}/outputs.json`, await currentOutputs(id, c.campaignId));
     add(`campaigns/${c.campaignId}/versions.json`, await listVersions(id, c.campaignId));
+    const assets = await listAssets(id, c.campaignId);
+    add(`campaigns/${c.campaignId}/assets.json`, assets);
+    add(`campaigns/${c.campaignId}/approval.json`, approvalState(assets));
   }
   add('ledger.json', (await listLedger()).filter((e) => e.clientId === id));
 

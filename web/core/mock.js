@@ -407,6 +407,8 @@ FIXTURES.critic = {
   ],
 };
 
+FIXTURES['field-editor'] = { text: 'Close the month 4 days faster', note: '' };
+
 // Plausible usage numbers so the economics footer means something in mock mode.
 const USAGE = {
   brief: { input: 2140, output: 210 },
@@ -417,6 +419,7 @@ const USAGE = {
   social: { input: 5600, output: 6900 },
   activation: { input: 4900, output: 2650 },
   critic: { input: 3200, output: 620 },
+  'field-editor': { input: 900, output: 60 },
   localise: { input: 3120, output: 2360 },
 };
 
