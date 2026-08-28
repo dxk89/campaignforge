@@ -72,11 +72,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (agent === 'copywriter') assets = await explode(id, cid, version.versionId, fieldsOfAssets(result.output), 'en', rules);
       else if (agent === 'localiser') assets = await explode(id, cid, version.versionId, fieldsOfAssets(result.output), 'pt', rules);
       else if (agent === 'social-planner') assets = await explode(id, cid, version.versionId, fieldsOfSocial(result.output), 'en', rules);
+      else if (agent === 'landing-writer') {
+        const { fieldsOfLanding } = await import('@/server/assets');
+        assets = await explode(id, cid, version.versionId, fieldsOfLanding(result.output), 'en', rules);
+      }
     }
 
     // The editor's verdict on what was actually saved, for the writers only.
     let review = null;
-    const kind = { copywriter: 'assets', 'social-planner': 'social', localiser: 'localised', strategist: 'strategy' }[agent];
+    const kind = ({ copywriter: 'assets', 'social-planner': 'social', localiser: 'localised', strategist: 'strategy', 'landing-writer': 'landing' } as Record<string, string>)[agent];
     if (kind && result.output && body.review !== false) {
       try {
         review = await orchestrator.review(kind, result.output, { brief: (inputs as any).brief, context: (inputs as any).context, audience: (inputs as any).audience, rules: await rulesFor(id, cid) });

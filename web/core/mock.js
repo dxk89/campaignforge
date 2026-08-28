@@ -409,6 +409,59 @@ FIXTURES.critic = {
 
 FIXTURES['field-editor'] = { text: 'Close the month 4 days faster', note: '' };
 
+FIXTURES.landing = {
+  hero: {
+    headline: 'Close the month 4 days faster',
+    sub: 'Ledgerline matches your payouts, invoices and bank feeds overnight. You review the exceptions.',
+    cta: 'Start a free trial',
+  },
+  proof: [
+    { claim: 'Customers report closing the month 4 days faster on average', support: 'Measured across the 2026 customer survey.' },
+    { claim: 'Native connectors for Stripe, Adyen, GoCardless and 2,400 banks', support: 'Connect one to see your own exceptions.' },
+    { claim: 'SOC 2 Type II certified', support: 'For the security review your team will ask for.' },
+  ],
+  mechanism: [
+    { step: 'Connect a processor', detail: 'Stripe, Adyen or GoCardless, read-only, in a few minutes.' },
+    { step: 'Matching runs overnight', detail: 'Payouts against invoices and bank lines, net of fees and refunds.' },
+    { step: 'You review the exceptions', detail: 'A short list, each with the rule and the source lines behind it.' },
+    { step: 'Export to your ledger', detail: 'Clean matched entries into Xero, QuickBooks, NetSuite or Sage.' },
+  ],
+  objections: [
+    { objection: 'We already have Xero doing bank rec.', answer: 'Ledgerline sits in front of it. It does the payout matching Xero was never built for and exports matched entries into it. Nothing to migrate.' },
+    { objection: 'What do I tell the auditor?', answer: 'Every match shows its rule and its source lines. The audit trail is the product, not an export you have to build.' },
+    { objection: 'Another integration to maintain.', answer: 'Connect one processor to start. If it does not pay for itself in the first close, disconnect it.' },
+  ],
+  form: {
+    fields: [
+      { name: 'email', label: 'Work email', type: 'email', required: true, maps_to_mql: 'Company size 50 to 500 (inferred from the domain)' },
+      { name: 'title', label: 'Job title', type: 'text', required: true, maps_to_mql: 'Job title contains finance, controller, CFO or accounting' },
+      { name: 'company', label: 'Company', type: 'text', required: true, maps_to_mql: null },
+    ],
+    consent: 'We will use these details to set up your trial and to email you about it. Nothing else, and you can unsubscribe from any message.',
+    submit_label: 'Start a free trial',
+  },
+  seo: { title: 'Ledgerline: close the month 4 days faster', description: 'Reconciliation for finance teams. Payouts, invoices and bank feeds matched overnight. You review the exceptions. Free 14-day trial, no card.' },
+  inferences: [
+    'Company size 50 to 500 is inferred from the work email domain rather than asked.',
+    'Trial created and one engagement signal are behaviours, not form fields.',
+  ],
+};
+
+FIXTURES.analyst = {
+  learnings: [
+    {
+      statement: 'Proof-led LinkedIn copy produced about a third more trials per 1,000 impressions than positioning-led copy.',
+      evidence: { metric: 'Trials per 1,000 impressions', value: '4.1 versus 3.1', variants: ['LinkedIn variant 1 (four days faster)', 'LinkedIn variant 3 (works with your ledger)'], sample: '2,140 and 2,090 clicks', confidence: 'p = 0.02, 95% interval 0.3 to 1.7' },
+      boundary: 'LinkedIn only, finance titles at 50 to 500 person companies, four weeks in Q4. Says nothing about Meta, other audiences, or whether the effect survives repeated exposure.',
+      hypothesis: 'The number may work because this audience has a specific deadline in mind. Untested.',
+    },
+  ],
+  refusals: [
+    { experiment: 'Meta hook test', why: 'With 41 and 38 clicks the difference is inside the noise, whatever it looks like.', would_decide: 'About 300 clicks per variant at the current conversion rate; concentrate budget on two variants rather than three.' },
+  ],
+  confounds: ['The LinkedIn variants ran on the same days and budget, so the comparison is clean. The Meta set changed bids on day 9.'],
+};
+
 // Plausible usage numbers so the economics footer means something in mock mode.
 const USAGE = {
   brief: { input: 2140, output: 210 },
@@ -420,6 +473,8 @@ const USAGE = {
   activation: { input: 4900, output: 2650 },
   critic: { input: 3200, output: 620 },
   'field-editor': { input: 900, output: 60 },
+  landing: { input: 3400, output: 1450 },
+  analyst: { input: 2600, output: 900 },
   localise: { input: 3120, output: 2360 },
 };
 

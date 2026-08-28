@@ -45,4 +45,21 @@ async function read(clientId, collection, { order, dir = 'desc', limit = 20, whe
   }
 }
 
-module.exports = { db, read, clientPath };
+/**
+ * The in-memory fallback the web app uses when no store is configured. The
+ * routes write to globalThis; memory reads from it, so learnings and exemplars
+ * work in mock mode exactly as they will with Firestore.
+ */
+function memory(kind, clientId) {
+  const g = globalThis;
+  if (kind === 'learnings') return (g.__cfLearnings?.get(clientId)) || [];
+  if (kind === 'exemplars') return (g.__cfExemplars?.get(clientId)) || [];
+  if (kind === 'corrections') return (g.__cfCorrections?.get(clientId)) || [];
+  if (kind === 'claims') {
+    const all = g.__cfMem?.sub?.get(`${clientId}/claims`);
+    return all ? [...all.values()] : [];
+  }
+  return [];
+}
+
+module.exports = { db, read, clientPath, memory };

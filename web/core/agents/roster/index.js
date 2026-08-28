@@ -16,6 +16,8 @@ const agents = {
   localiser: require('./localiser'),
   critic: require('./critic'),
   'field-editor': require('./field-editor'),
+  'landing-writer': require('./landing-writer'),
+  analyst: require('./analyst'),
 };
 
 module.exports = { agents, get: (name) => agents[name] };

@@ -7,7 +7,7 @@
  * then every query returns empty and packets are assembled identically, so
  * nothing downstream changes when the data starts arriving.
  */
-const { read } = require('./firestore');
+const { read, memory: fallback } = require('./firestore');
 
 /**
  * Approved outputs for this client, ranked by performance then recency.
@@ -18,7 +18,10 @@ async function exemplars({ clientId, agent, channel, objective, limit = 6 }) {
   const where = [['kind', '==', 'approved']];
   if (channel) where.push(['channel', '==', channel]);
   else if (agent) where.push(['agent', '==', agent]);
-  const rows = await read(clientId, 'exemplars', { where, order: 'approvedAt', limit: limit * 3 });
+  let rows = await read(clientId, 'exemplars', { where, order: 'approvedAt', limit: limit * 3 });
+  if (!rows.length) {
+    rows = fallback('exemplars', clientId).filter((e) => e.kind === 'approved' && (!channel || e.channel === channel) && (channel || !agent || e.agent === agent));
+  }
   const rank = (e) => (e.performance?.value ?? -1);
   return rows
     .sort((a, b) => (objective && a.objective === objective ? -1 : 0) - (objective && b.objective === objective ? -1 : 0)
@@ -29,7 +32,10 @@ async function exemplars({ clientId, agent, channel, objective, limit = 6 }) {
 
 /** Approved learnings from uploaded results. Newest first, capped. */
 async function learnings({ clientId }) {
-  return read(clientId, 'learnings', { where: [['status', '==', 'approved']], order: 'approvedAt', limit: 12 });
+  if (!clientId) return [];
+  const rows = await read(clientId, 'learnings', { where: [['status', '==', 'approved']], order: 'approvedAt', limit: 12 });
+  if (rows.length) return rows;
+  return fallback('learnings', clientId).filter((l) => l.status === 'approved').slice(0, 12);
 }
 
 /** Corrections the editor has given for this client, so they are not repeated. */
@@ -51,7 +57,8 @@ async function corrections({ clientId, agent }) {
 async function approvedClaims({ clientId }) {
   if (!clientId) return null;
   const now = new Date().toISOString();
-  const rows = await read(clientId, 'claims', { where: [['status', '==', 'approved']], limit: 100 });
+  let rows = await read(clientId, 'claims', { where: [['status', '==', 'approved']], limit: 100 });
+  if (!rows.length) rows = fallback('claims', clientId).filter((c) => c.status === 'approved');
   if (!rows.length) return null;
   return rows.filter((c) => !c.expiresAt || c.expiresAt > now);
 }

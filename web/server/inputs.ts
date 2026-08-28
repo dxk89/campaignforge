@@ -22,6 +22,7 @@ export const DEPENDS: Record<string, string[]> = {
   'social-planner': ['strategist', 'copywriter', 'brand-analyst', 'customer-researcher'],
   'ops-architect': ['strategist', 'copywriter', 'brand-analyst', 'customer-researcher'],
   localiser: ['copywriter', 'brand-analyst'],
+  'landing-writer': ['strategist', 'copywriter', 'ops-architect', 'brand-analyst'],
 };
 
 export type BuiltInputs = { inputs: Record<string, unknown>; inputsHash: string };
@@ -90,6 +91,14 @@ export async function buildInputs(clientId: string, campaignId: string, agent: s
         brief, clientId, context, audience,
         strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets'),
         landingUrl: campaign.brief.landingUrl ?? client.settings.landingUrl ?? undefined,
+      };
+      break;
+    case 'landing-writer':
+      inputs = {
+        brief, clientId, context, audience,
+        strategy: need('strategist', 'The strategy'),
+        assets: need('copywriter', 'The assets'),
+        activation: need('ops-architect', 'The activation plan'),
       };
       break;
     case 'localiser': {
