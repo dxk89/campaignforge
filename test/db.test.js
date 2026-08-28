@@ -3,7 +3,22 @@
  * Run: node test/db.test.js
  */
 process.env.MOCK_AUTH = '1';
-delete process.env.FIREBASE_SERVICE_ACCOUNT;
+
+// Two backends, same assertions. With FIRESTORE_EMULATOR_HOST set (see
+// `npm run test:emulator`) this runs against a real Firestore; otherwise it
+// runs against the in-memory store. Production uses the former, so both must
+// pass before a release.
+const EMULATED = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+if (EMULATED) {
+  process.env.FIREBASE_SERVICE_ACCOUNT = Buffer.from(JSON.stringify({
+    project_id: process.env.GCLOUD_PROJECT || 'demo-cf',
+    client_email: 'test@demo-cf.iam.gserviceaccount.com',
+    private_key: '-----BEGIN PRIVATE KEY-----\nemulator\n-----END PRIVATE KEY-----\n',
+  })).toString('base64');
+  process.env.FIREBASE_STORAGE_BUCKET = 'demo-cf.appspot.com';
+} else {
+  delete process.env.FIREBASE_SERVICE_ACCOUNT;
+}
 const assert = require('assert');
 const path = require('path');
 
@@ -15,7 +30,8 @@ require('child_process').execSync(
 const db = require('../web/.test-build/db.js');
 
 (async () => {
-  db.__resetMemory();
+  console.log('  backend:', EMULATED ? 'firestore emulator' : 'in-memory');
+  if (!EMULATED) db.__resetMemory();
 
   // client lifecycle
   const client = await db.createClient({ name: 'Ledgerline', domain: 'ledgerline.example' });
@@ -76,7 +92,7 @@ const db = require('../web/.test-build/db.js');
 // ---- memory (task 17): degrades to empty without a store, and null for claims
 (async () => {
   const assert2 = require('assert');
-  delete process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!process.env.FIRESTORE_EMULATOR_HOST) delete process.env.FIREBASE_SERVICE_ACCOUNT;
   process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test';
   const memory = require('../lib/memory');
   const [ex, le, co, cl, none] = await Promise.all([

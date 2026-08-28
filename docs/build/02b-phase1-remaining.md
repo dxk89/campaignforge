@@ -1,9 +1,12 @@
 # Phase 1: what is left
 
-> **Status, 27 Aug 2026:** tasks 11–17 and 19 are built and tested. Task 18
-> (running the data layer against the Firestore emulator) needs Java and has
-> not been run; the script is `npm run test:emulator`. Task 20 is a decision
-> for the owner. Everything below is kept as the record of what was done.
+> **Status, 27 Aug 2026:** tasks 11–17 and 19 are built and tested. Task 18 is
+> **prepared but unrun**: `test/db.test.js` now runs against either backend and
+> `npm run test:emulator` drives it against a real Firestore, but the emulator
+> JAR downloads from `storage.googleapis.com`, which the build sandbox blocks.
+> Run it once on a machine with open network access; it is the only assurance
+> the production storage path has. Task 20 is a decision for the owner.
+> Everything below is kept as the record of what was done.
 
 
 Tasks 1–8 and 10 of `02-phase1-foundation.md` are built and all five test suites pass. This file lists what remains before Phase 2 starts. Work in order; run `npm test` after each; one commit per task.
