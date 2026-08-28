@@ -2,6 +2,23 @@
 
 import { useState } from 'react';
 
+/**
+ * Only same-origin paths. Resolving against the real origin and comparing
+ * origins closes the encodings a regex misses: a percent-encoded backslash
+ * or a stripped tab both resolve to another host, while looking like a
+ * relative path in the raw string.
+ */
+function safeNext(raw: string | null): string {
+  if (!raw) return '/clients';
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return '/clients';
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return '/clients';
+  }
+}
+
 /** Username and password. No third-party account needed to try the tool. */
 export default function Login() {
   const [error, setError] = useState<string | null>(null);
@@ -20,13 +37,13 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sign-in failed');
-      const next = new URLSearchParams(window.location.search).get('next') || '';
-      // Only a same-origin absolute path is accepted: exactly one leading
-      // slash, so "//evil.com" (protocol-relative), "https://evil.com" and
-      // "javascript:..." are all rejected rather than followed. The login
-      // page is public, so this link is reachable by anyone, not just a
-      // signed-in user clicking their own bookmark.
-      window.location.href = /^\/(?!\/)/.test(next) ? next : '/clients';
+      const next = new URLSearchParams(window.location.search).get('next');
+      // The login page is public, so this link is reachable by anyone, not
+      // just a signed-in user clicking their own bookmark. safeNext() parses
+      // rather than pattern-matches, so it rejects "//evil.com",
+      // "https://evil.com", "javascript:..." and encodings that decode to a
+      // cross-origin URL (e.g. a percent-encoded backslash or stripped tab).
+      window.location.href = safeNext(next);
     } catch (err: any) {
       setError(err.message || 'Sign-in failed');
       setBusy(false);

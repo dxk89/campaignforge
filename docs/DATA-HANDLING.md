@@ -36,7 +36,7 @@ The owner, signed in with credentials set on the deployment, plus any demo accou
 
 ## Questions this raises for a client, answered plainly
 
-*Is our material used to train models?* Anthropic's API terms govern that; they offer terms under which API content is not used for training. Check the terms in force for the account this deployment uses before answering a client in writing.
+*Is our material used to train models?* Two providers see your material, and each is governed separately. Anthropic's API terms govern the brief, company context and source text sent for campaign generation; they offer terms under which API content is not used for training. Google's Gemini API terms govern the visual brief and reference artwork sent when image generation is used, and those terms are not the same terms; check them separately. Check the terms in force for the accounts this deployment uses before answering a client in writing.
 
 *Can you delete everything?* Yes, per client, and the export lets you verify what existed first.
 

@@ -110,5 +110,43 @@ const s = require('../web/.test-build/session.js');
   assert.equal(globalThis.__cfThrottle.get('9.9.9.9').count, 1, 'the counter restarts after expiry');
   assert.equal(await th.isLocked('9.9.9.9'), false, 'one failure in a fresh window does not lock');
 
+  // --- safeNext (web/app/login/page.tsx) ---
+  // Replicated here rather than imported: the component is a .tsx client
+  // component reaching for `window`, and extracting it into a shared module
+  // would add an import path this pure-function test does not need. The
+  // expression below is the exact body of safeNext(), with window.location.origin
+  // fixed to a literal so it can run under plain Node.
+  const origin = 'https://app.example.com';
+  function safeNext(raw) {
+    if (!raw) return '/clients';
+    try {
+      const url = new URL(raw, origin);
+      if (url.origin !== origin) return '/clients';
+      return url.pathname + url.search + url.hash;
+    } catch {
+      return '/clients';
+    }
+  }
+
+  for (const allowed of ['/clients', '/clients?x=1', '/a/b#c']) {
+    assert.equal(safeNext(allowed), allowed, `${allowed} is passed through unchanged`);
+  }
+
+  // '/\\evil.com' in JS source is the two-character sequence "/\", the
+  // already-decoded form safeNext receives after URLSearchParams.get()
+  // percent-decodes a raw "next=/%5Cevil.com" query value. Testing the
+  // decoded form matches what the function actually sees at runtime.
+  for (const blocked of [
+    '//evil.com',
+    'https://evil.com',
+    'javascript:alert(1)',
+    '/\\evil.com',
+    '\t//evil.com',
+    null,
+    '',
+  ]) {
+    assert.equal(safeNext(blocked), '/clients', `${JSON.stringify(blocked)} falls back to /clients`);
+  }
+
   console.log('session tests: ok');
 })();
