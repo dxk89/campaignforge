@@ -1,55 +1,54 @@
 /**
- * Single-user auth.
+ * Sessions.
  *
- * One operator. A Firebase ID token is verified server-side and its email
- * checked against ALLOWED_EMAIL. No roles, no sharing, no session store.
- * Data is rooted at users/{uid} so adding a second user later is a rules
- * change rather than a migration.
+ * Three ways in, one shape out. Mock mode for tests, the owner against
+ * ADMIN_USERNAME/ADMIN_PASSWORD from the environment, and demo accounts
+ * against hashes in Firestore. Callers read session.workspaceId and never
+ * learn which it was, which is what keeps the data layer free of auth.
  *
- * MOCK_AUTH=1 bypasses verification for tests and local mock runs.
+ * Google sign-in was removed: interviewers should not need an account with a
+ * third party to try the tool.
  */
 import { cookies } from 'next/headers';
-import { getAuth } from 'firebase-admin/auth';
+import { verifySession, adminConfigured, type Session } from './session';
+import { workspaceActive } from './accounts';
 import { storeEnabled } from './firebase';
 
 export const SESSION_COOKIE = 'cf_session';
 const MOCK_AUTH = process.env.MOCK_AUTH === '1';
 
-export type Session = { email: string; uid: string };
+export type { Session };
 
-export async function verifyIdToken(idToken: string): Promise<Session> {
-  if (MOCK_AUTH) return { email: process.env.ALLOWED_EMAIL || 'mock@local', uid: 'owner' };
-  if (!storeEnabled) throw Object.assign(new Error('Auth is not configured on this deployment'), { status: 503 });
-  const { getApps } = await import('firebase-admin/app');
-  const decoded = await getAuth(getApps()[0]).verifyIdToken(idToken);
-  const allowed = process.env.ALLOWED_EMAIL;
-  if (!allowed) throw Object.assign(new Error('ALLOWED_EMAIL is not set'), { status: 503 });
-  if ((decoded.email || '').toLowerCase() !== allowed.toLowerCase()) {
-    throw Object.assign(new Error('This account is not permitted'), { status: 403 });
-  }
-  if (!decoded.email_verified) throw Object.assign(new Error('Email is not verified'), { status: 403 });
-  return { email: decoded.email!, uid: decoded.uid };
+// A deployment with a store but no way to sign in would serve an open
+// instance. Refuse at load instead, as claude.js and storage.ts do.
+if (storeEnabled && !MOCK_AUTH && !adminConfigured()) {
+  throw new Error(
+    'Firestore is configured but no sign-in is: set ADMIN_USERNAME and ADMIN_PASSWORD, ' +
+      'or MOCK_AUTH=1 to run without sign-in. See docs/DEPLOY.md.',
+  );
 }
 
-/** Read the session from the cookie. Returns null when signed out. */
 export async function currentSession(): Promise<Session | null> {
-  if (MOCK_AUTH) return { email: process.env.ALLOWED_EMAIL || 'mock@local', uid: 'owner' };
+  if (MOCK_AUTH) return { kind: 'owner', workspaceId: 'owner', username: 'mock' };
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  try {
-    const { getApps } = await import('firebase-admin/app');
-    const decoded = await getAuth(getApps()[0]).verifySessionCookie(token, true);
-    if ((decoded.email || '').toLowerCase() !== (process.env.ALLOWED_EMAIL || '').toLowerCase()) return null;
-    return { email: decoded.email!, uid: decoded.uid };
-  } catch {
-    return null;
-  }
+  const session = await verifySession(token);
+  if (!session) return null;
+  // Revocation must bite on the next request, not when the token expires.
+  if (session.kind === 'account' && !(await workspaceActive(session.workspaceId))) return null;
+  return session;
 }
 
-/** For route handlers: throw a 401 unless signed in. */
 export async function requireSession(): Promise<Session> {
   const s = await currentSession();
   if (!s) throw Object.assign(new Error('Sign in required'), { status: 401 });
+  return s;
+}
+
+/** Admin routes. A demo account gets 403, not a redirect to a form. */
+export async function requireOwner(): Promise<Session> {
+  const s = await requireSession();
+  if (s.kind !== 'owner') throw Object.assign(new Error('Not permitted'), { status: 403 });
   return s;
 }
