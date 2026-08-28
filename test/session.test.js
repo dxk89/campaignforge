@@ -9,7 +9,7 @@ process.env.ADMIN_PASSWORD = 'correct-horse';
 const assert = require('assert');
 const path = require('path');
 require('child_process').execSync(
-  'npx tsc server/session.ts server/accounts.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
+  'npx tsc server/session.ts server/accounts.ts server/throttle.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
   { cwd: path.join(__dirname, '..', 'web'), stdio: 'pipe' },
 );
 const s = require('../web/.test-build/session.js');
@@ -72,6 +72,16 @@ const s = require('../web/.test-build/session.js');
   assert.equal(await acc.workspaceActive(second.account.workspaceId), true, 'a live account is active');
   assert.equal(await acc.workspaceActive(made.account.workspaceId), false, 'a revoked account is inactive');
   assert.equal(await acc.workspaceActive('ws_does_not_exist'), false, 'an unknown workspace is inactive');
+
+  // --- throttle, in-memory backend (no FIREBASE_SERVICE_ACCOUNT set) ---
+  const th = require('../web/.test-build/throttle.js');
+  th.__resetThrottle();
+  assert.equal(await th.isLocked('1.2.3.4'), false);
+  for (let i = 0; i < th.MAX_FAILURES; i++) await th.recordFailure('1.2.3.4');
+  assert.equal(await th.isLocked('1.2.3.4'), true, 'locks after MAX_FAILURES');
+  assert.equal(await th.isLocked('5.6.7.8'), false, 'other addresses are unaffected');
+  await th.clearFailures('1.2.3.4');
+  assert.equal(await th.isLocked('1.2.3.4'), false, 'a success clears the counter');
 
   console.log('session tests: ok');
 })();
