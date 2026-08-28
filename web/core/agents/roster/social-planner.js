@@ -37,9 +37,9 @@ module.exports = {
     },
     required: ['pillars', 'posts'],
   },
-  packet: ({ brief, strategy, assets, context, audience, brandKit, memory }) => ({
+  packet: ({ ws, brief, strategy, assets, context, audience, brandKit, memory }) => ({
     user: prompt.userPrompt(brief, strategy, assets, research.contextForPrompt(context || research.emptyContext()), audiencePrompt.audienceForPrompt(audience)),
-    brief, context, brandKit: brandKit || { siteName: brief.clientName || brief.productName, palette: null, fonts: [] },
+    ws, brief, context, brandKit: brandKit || { siteName: brief.clientName || brief.productName, palette: null, fonts: [] },
     rules: buildRules(brief, context, memory?.approvedClaims),
   }),
   validate: (o, packet) => {

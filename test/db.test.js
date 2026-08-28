@@ -21,12 +21,17 @@ if (EMULATED) {
 const assert = require('assert');
 const path = require('path');
 
-// db.ts is TypeScript; compile it on the fly for the test.
+// db.ts is TypeScript; compile it on the fly for the test. assets.ts,
+// exemplars.ts and telemetry.ts are pulled in too so the cross-workspace
+// isolation checks below can exercise their in-memory namespacing directly,
+// not just db.ts's.
 require('child_process').execSync(
-  'npx tsc server/db.ts server/firebase.ts server/types.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
+  'npx tsc server/db.ts server/firebase.ts server/types.ts server/assets.ts server/exemplars.ts server/telemetry.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
   { cwd: path.join(__dirname, '..', 'web'), stdio: 'pipe' }
 );
 const db = require('../web/.test-build/db.js');
+const exemplars = require('../web/.test-build/exemplars.js');
+const telemetry = require('../web/.test-build/telemetry.js');
 
 (async () => {
   console.log('  backend:', EMULATED ? 'firestore emulator' : 'in-memory');
@@ -120,6 +125,35 @@ const db = require('../web/.test-build/db.js');
   const ledgerB = await db.listLedger(ws_b);
   assert.equal(ledgerB.length, 1, 'ws_b sees only its own ledger entries');
   assert.equal(db.ledgerTotals(ledgerB).costEur, 9.99, 'ws_b spend excludes ws_a spend');
+
+  // Telemetry: usage counters, in-memory keyed by "ws/month" (telemetry.ts).
+  // A flattened key (month only, as it was before this task) would make
+  // ws_a's count below read 3, not 1.
+  await telemetry.count(ws_a, 'run.copywriter', 1);
+  await telemetry.count(ws_b, 'run.copywriter', 1);
+  await telemetry.count(ws_b, 'run.copywriter', 2); // ws_b totals 3, distinct from ws_a's 1
+  const telA = await telemetry.read(ws_a);
+  const telB = await telemetry.read(ws_b);
+  assert.equal(telA.counters['run.copywriter'], 1, 'ws_a telemetry is exactly its own count, not summed with ws_b');
+  assert.equal(telB.counters['run.copywriter'], 3, 'ws_b telemetry is exactly its own count');
+
+  // Exemplars: the approved-copy bank, in-memory keyed by "ws/clientId"
+  // (exemplars.ts). A flattened key (clientId only) would make either
+  // workspace's list return both texts, or the wrong one, since clientA and
+  // clientB below share no id relationship that would mask the bug.
+  const assetFor = (text) => ({
+    assetId: 'meta.v1.headline.en', channel: 'meta', unit: 'v1', field: 'headline', language: 'en',
+    text, generatedText: text, versionId: 'v1', editedAt: null,
+    status: 'approved', approvedAt: null, note: null, flags: [],
+  });
+  await exemplars.recordExemplar(ws_a, clientA.clientId, assetFor('Close the month 4 days faster'), 'camp-a', {}, 'approved');
+  await exemplars.recordExemplar(ws_b, clientB.clientId, assetFor('Ship the report before Friday'), 'camp-b', {}, 'approved');
+  const exA = await exemplars.listExemplars(ws_a, clientA.clientId);
+  const exB = await exemplars.listExemplars(ws_b, clientB.clientId);
+  assert.equal(exA.length, 1, 'ws_a sees exactly one exemplar');
+  assert.equal(exA[0].text, 'Close the month 4 days faster', 'ws_a exemplar text is its own, not ws_b\'s');
+  assert.equal(exB.length, 1, 'ws_b sees exactly one exemplar');
+  assert.equal(exB[0].text, 'Ship the report before Friday', 'ws_b exemplar text is its own, not ws_a\'s');
 
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });

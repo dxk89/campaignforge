@@ -93,7 +93,7 @@ const ask_critic = {
     // Lazy require: the orchestrator requires the roster, which requires this file.
     const orchestrator = require('../orchestrator');
     const r = await orchestrator.runAgent('critic', {
-      output, kind, brief: packet.brief, context: packet.context, audience: packet.audience, rules: packet.rules,
+      ws: packet.ws, output, kind, brief: packet.brief, context: packet.context, audience: packet.audience, rules: packet.rules,
     });
     return { verdict: r.output?.verdict, must_fix: r.output?.must_fix || [], suggestions: r.output?.suggestions || [], usage: r.usage };
   },

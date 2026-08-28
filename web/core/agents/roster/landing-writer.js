@@ -41,13 +41,13 @@ module.exports = {
     },
     required: ['hero', 'proof', 'mechanism', 'objections', 'form', 'seo', 'inferences'],
   },
-  packet: ({ brief, strategy, assets, activation, context, audience, memory }) => ({
+  packet: ({ ws, brief, strategy, assets, activation, context, audience, memory }) => ({
     user: prompt.userPrompt({
       brief, strategy, assets, activation,
       contextBlock: contextBlock(context, audience, memory),
       claims: (memory?.approvedClaims || (context?.proof_points || []).map((p) => p.claim)).map((c) => (typeof c === 'string' ? c : c.text)),
     }),
-    brief, context, audience, activation,
+    ws, brief, context, audience, activation,
     rules: buildRules(brief, context, memory?.approvedClaims),
   }),
   validate: (o, packet) => {
