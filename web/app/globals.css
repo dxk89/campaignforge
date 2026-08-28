@@ -132,3 +132,44 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .source-add { display: flex; flex-direction: column; gap: 8px; }
 .inline-add { display: flex; gap: 6px; }
 .inline-add input { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; }
+
+/* ---------- Asset editing ---------- */
+.asset-field { padding: 8px 0; border-bottom: 1px dashed var(--line-soft); }
+.asset-field:last-child { border-bottom: 0; }
+.asset-field.approved { background: linear-gradient(90deg, var(--ok-soft) 0 3px, transparent 3px); padding-left: 10px; }
+.af-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.af-tag { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: 3px; }
+.af-tag.edited { background: var(--teal-soft); color: var(--teal-ink); }
+.af-tag.stale { background: var(--amber-soft); color: var(--amber); }
+.af-tag.approved { background: var(--ok-soft); color: var(--ok); }
+.asset-field input, .asset-field textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--panel); font-size: 13.5px; line-height: 1.5; resize: vertical; }
+.asset-field input:focus, .asset-field textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px var(--teal-soft); }
+.asset-field.over input, .asset-field.over textarea { border-color: var(--ember); }
+.af-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.af-foot .count { margin-top: 0; }
+.af-flag { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; }
+.af-flag.violation { background: var(--ember-soft); color: var(--ember); }
+.af-flag.warning { background: var(--amber-soft); color: var(--amber); }
+.af-actions { margin-left: auto; display: flex; gap: 4px; }
+.af-ask { display: flex; gap: 6px; margin-top: 6px; }
+.af-ask input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; }
+.af-error { color: var(--ember); font-size: 12px; margin: 4px 0 0; }
+.af-diff { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.af-diff summary { cursor: pointer; }
+.approval-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin: 12px 16px 0; border-radius: 4px; background: var(--panel-2); font-size: 13px; }
+.approval-bar .bar { flex: 1; height: 6px; background: var(--line-soft); border-radius: 3px; overflow: hidden; }
+.approval-bar .bar span { display: block; height: 100%; background: var(--ok); }
+.editor-verdict { margin: 12px 16px 0; padding: 10px 14px; border-radius: 4px; background: var(--teal-soft); color: var(--teal-ink); font-size: 13px; }
+.editor-verdict li { margin: 4px 0; }
+.editor-verdict .why { color: var(--muted); }
+
+.claim-group { margin-top: 12px; }
+.claim-head { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 6px; }
+.claim-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.claim { padding: 8px 10px; border-radius: 4px; background: var(--panel-2); border-left: 3px solid var(--line); }
+.claim.approved { border-left-color: var(--ok); background: var(--ok-soft); }
+.claim.rejected { border-left-color: var(--muted); opacity: 0.6; }
+.claim.expired { border-left-color: var(--amber); background: var(--amber-soft); }
+.claim-text { font-size: 13.5px; }
+.claim-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 2px; }
+.claim-actions { display: flex; gap: 4px; margin-top: 6px; }

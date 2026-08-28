@@ -8,6 +8,7 @@ import {
   GooglePanel, EmailPanel, SocialPanel, LifecyclePanel, HandoffPanel, MeasurementPanel,
 } from '@/components/panels';
 import { fmtEur, fmtInt, fmtMs } from '@/components/format';
+import { useAssets, ApprovalBar, EditorVerdict, EditableChannel } from '@/components/EditablePanels';
 import { flattenAssets, socialRows, toCsv, download, clientSlug } from '@/components/exports';
 
 /** The agents this campaign runs, in dependency order. Skips are decided server-side. */
@@ -37,6 +38,8 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   const [tab, setTab] = useState(outputs['brand-analyst'] ? 'research' : 'strategy');
   const [lang, setLang] = useState<'en' | 'pt'>('en');
   const [imagesAvailable, setImagesAvailable] = useState(false);
+  const [review, setReview] = useState<any>(null);
+  const editing = useAssets(clientId, campaign.campaignId, lang);
   useEffect(() => { fetch('/api/health').then((r) => r.json()).then((h) => setImagesAvailable(Boolean(h.images))).catch(() => {}); }, []);
 
   const assets = lang === 'pt' && outputs.localiser ? outputs.localiser : outputs.copywriter;
@@ -64,6 +67,8 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
         const data = await res.json();
         if (!res.ok) throw Object.assign(new Error(data.error || 'Failed'), { agent });
         setState((s) => ({ ...s, [agent]: data.skipped ? 'skipped' : 'done' }));
+        if (data.review) setReview(data.review);
+        if (data.assets) editing.reload();
       } catch (err: any) {
         setState((s) => ({ ...s, [agent]: 'failed' }));
         setError(`${step.label}: ${err.message}. The passes that finished are saved; press Resume to continue.`);
@@ -150,14 +155,24 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
           <>
             <Tabs tabs={tabs} active={tabs.some((t) => t.id === tab) ? tab : tabs[0].id} onSelect={setTab}
               lang={lang} onLang={setLang} hasPt={Boolean(outputs.localiser)} />
+            {['meta', 'linkedin', 'google', 'email'].includes(tab) && (
+              <>
+                <ApprovalBar approval={editing.approval} onApproveAll={async () => {
+                  for (const a of editing.assets.filter((x: any) => x.status !== 'approved' && !x.flags?.some((f: any) => f.severity === 'violation'))) {
+                    await editing.patch(a.assetId, { status: 'approved' });
+                  }
+                }} />
+                <EditorVerdict review={review} />
+              </>
+            )}
             <div className="tab-panel">
               {tab === 'research' && <ResearchPanel context={outputs['brand-analyst']} />}
               {tab === 'audience' && <AudiencePanel audience={outputs['customer-researcher']} />}
               {tab === 'strategy' && <StrategyPanel strategy={outputs.strategist} />}
-              {tab === 'meta' && <MetaPanel assets={assets} />}
-              {tab === 'linkedin' && <LinkedInPanel assets={assets} />}
-              {tab === 'google' && <GooglePanel assets={assets} />}
-              {tab === 'email' && <EmailPanel assets={assets} />}
+              {tab === 'meta' && <EditableChannel assets={editing.assets} channel="meta" title="Meta" ctx={editing} />}
+              {tab === 'linkedin' && <EditableChannel assets={editing.assets} channel="linkedin" title="LinkedIn" ctx={editing} />}
+              {tab === 'google' && <EditableChannel assets={editing.assets} channel="google" title="Google RSA" ctx={editing} />}
+              {tab === 'email' && <EditableChannel assets={editing.assets} channel="email" title="Email" ctx={editing} />}
               {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} />}
               {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}
@@ -200,6 +215,17 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
             <button type="button" className="btn-secondary" onClick={() => {
               download(`${clientSlug(client.name)}-social.csv`, 'text/csv;charset=utf-8', toCsv(socialRows(outputs['social-planner'])));
             }} disabled={!outputs['social-planner']}>Social CSV</button>
+            <button type="button" className="btn-secondary" onClick={async () => {
+              const res = await fetch(`/api/clients/${clientId}/campaigns/${campaign.campaignId}/package?language=${lang}`);
+              const data = await res.json();
+              if (res.status === 409) {
+                if (!confirm(`${data.error}. Download anyway?`)) return;
+                const forced = await (await fetch(`/api/clients/${clientId}/campaigns/${campaign.campaignId}/package?language=${lang}&force=1`)).json();
+                download(`${clientSlug(client.name)}-package.json`, 'application/json', JSON.stringify(forced, null, 2));
+                return;
+              }
+              download(`${clientSlug(client.name)}-package.json`, 'application/json', JSON.stringify(data, null, 2));
+            }}>Package</button>
             <a className="btn-secondary" href={`/api/export/${clientId}`}>Export all</a>
           </div>
         </footer>

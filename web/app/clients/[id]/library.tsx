@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Claims from './claims';
 
 type Props = { client: any; sources: any[]; campaigns: any[] };
 
@@ -198,6 +199,8 @@ export default function Library({ client, sources, campaigns }: Props) {
           ))}
         </ul>
       </section>
+
+      <Claims clientId={client.clientId} />
 
       <section className="block">
         <h2 className="block-title">Campaigns</h2>
