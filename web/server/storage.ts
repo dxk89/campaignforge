@@ -22,7 +22,29 @@ import {
 } from '@aws-sdk/client-s3';
 import { storeEnabled } from './firebase';
 
-const ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+/**
+ * Cloudflare shows the endpoint in its dashboard as
+ * https://<account_id>.r2.cloudflarestorage.com/<bucket>, so pasting the whole
+ * string into R2_ACCOUNT_ID is the obvious mistake rather than a careless one.
+ * It used to survive configuration and fail at the first upload with
+ * "getaddrinfo ENOTFOUND <bucket>.https": the template below built
+ * https://https://... , whose hostname parses as the literal "https", and the
+ * S3 client prefixed the bucket to it. Nothing said which variable was wrong.
+ *
+ * So take the account id out of whatever shape it arrives in. A value that
+ * still does not look like an account id afterwards is reported at load, by
+ * name, rather than left to surface as a DNS error two screens later.
+ */
+function accountId(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  let v = raw.trim();
+  if (v.includes('://')) { try { v = new URL(v).hostname; } catch { /* fall through */ } }
+  const host = v.match(/^([^./]+)\.r2\.cloudflarestorage\.com$/i);
+  if (host) v = host[1];
+  return v;
+}
+
+const ACCOUNT_ID = accountId(process.env.R2_ACCOUNT_ID);
 const ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const BUCKET = process.env.R2_BUCKET;
@@ -57,6 +79,19 @@ const memFiles = globalThis.__cfFiles ?? (globalThis.__cfFiles = new Map<string,
 declare global { var __cfR2: S3Client | undefined; }
 function client(): S3Client {
   if (globalThis.__cfR2) return globalThis.__cfR2;
+  // Checked here rather than at module load on purpose. The guard above
+  // throws at load because uploads accepted into memory are lost silently,
+  // which nothing else would reveal. A malformed account id is not that: it
+  // is loud either way, and failing at load would take the entire product
+  // down over a broken upload path. So this one fails where it is used, with
+  // the value quoted, and the rest of the app keeps serving.
+  if (!/^[0-9a-f]{32}$/i.test(ACCOUNT_ID!)) {
+    throw new Error(
+      `R2_ACCOUNT_ID is "${process.env.R2_ACCOUNT_ID}", which is not a Cloudflare account id. ` +
+        'It must be the 32-character hex id on its own, not the S3 API URL: take the ' +
+        '<account_id> out of https://<account_id>.r2.cloudflarestorage.com/<bucket>.',
+    );
+  }
   globalThis.__cfR2 = new S3Client({
     region: 'auto',
     endpoint: `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`,
