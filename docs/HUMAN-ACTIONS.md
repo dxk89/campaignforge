@@ -32,9 +32,8 @@ It should build. If it does not, the log will name a missing environment variabl
 Without this the app runs but forgets everything on restart.
 
 1. **console.firebase.google.com → Add project.** Analytics not needed.
-2. **Authentication → Get started → Google** → enable → set a support email → Save.
-3. **Firestore Database → Create database** → *production mode* → region `europe-west3`.
-4. **Object storage is Cloudflare R2, not Firebase Storage.** At
+2. **Firestore Database → Create database** → *production mode* → region `europe-west3`.
+3. **Object storage is Cloudflare R2, not Firebase Storage.** At
    dash.cloudflare.com → R2, create a bucket, then **Manage API Tokens** →
    create a token with Object Read & Write scoped to it. Note the Account ID,
    Access Key ID, Secret Access Key and bucket name for the variables below.
@@ -43,23 +42,24 @@ Without this the app runs but forgets everything on restart.
    /api/files. Leave these unset and uploads go to memory and vanish on the
    next cold start; the app refuses to start rather than let that happen
    silently once Firestore is configured.*
-5. **Project settings → General → Your apps → Add app → Web.** Copy `apiKey`, `authDomain`, `projectId`, `storageBucket`, `appId`.
-6. **Project settings → Service accounts → Generate new private key.** Then, in a terminal:
+4. **Project settings → Service accounts → Generate new private key.** Then, in a terminal:
    ```bash
    base64 -i serviceAccount.json | tr -d '\n'     # macOS
    base64 -w0 serviceAccount.json                 # Linux
    ```
    Keep that string; it is a full-access credential. Never commit it.
-7. **Deploy the security rules.** From a clone of the repo:
+5. **Deploy the security rules.** From a clone of the repo:
    ```bash
    npm i -g firebase-tools && firebase login
-   export ALLOWED_EMAIL=you@yourdomain.com
    node scripts/deploy-rules.js
    firebase use <your-project-id>
    firebase deploy --only firestore:rules
    ```
-   Skipping this leaves Firestore on its defaults: in production mode every read is denied and the app looks broken.
-8. **Authentication → Settings → Authorised domains** → add your Vercel domain. Without it the sign-in popup closes with "unauthorised domain".
+   These rules are a deny-all: Firestore is reached only through the Admin
+   SDK on the server, which bypasses them. Workspace isolation is enforced by
+   the `ws` parameter in application code, not by these rules. Skipping the
+   deploy leaves Firestore on the project's defaults, which are more
+   permissive than the deny-all this app relies on.
 
 ---
 
@@ -77,14 +77,11 @@ Settings → Environment Variables, all environments, then redeploy.
 | `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens |
 | `R2_SECRET_ACCESS_KEY` | shown once at token creation |
 | `R2_BUCKET` | your bucket name |
-| `ALLOWED_EMAIL` | the only address that may sign in |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | from §2.5 |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | from §2.5 |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | from §2.5 |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | from §2.5 |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | from §2.5 |
+| `ADMIN_USERNAME` | the owner's sign-in username |
+| `ADMIN_PASSWORD` | the owner's sign-in password |
+| `SESSION_SECRET` | at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
-**Optional:** `GEMINI_API_KEY` (images; without it the typographic cards still work), `JINA_API_KEY` (better site scanning, free tier), `ALLOWED_UID` (defaults to `owner`).
+**Optional:** `GEMINI_API_KEY` (images; without it the typographic cards still work), `JINA_API_KEY` (better site scanning, free tier).
 
 `docs/DEPLOY.md` has the full table including what breaks when each is missing.
 
@@ -94,8 +91,8 @@ Settings → Environment Variables, all environments, then redeploy.
 
 In this order. Each step depends on the one before.
 
-1. `https://your-app.vercel.app/api/health` → `{"ok":true,"mock":false,"auth":true,...}`. `auth:false` means `ALLOWED_EMAIL` is missing; `mock:true` means `MOCK_CLAUDE` is set.
-2. Sign in. **Then try a different Google account and confirm it is refused.** That is the only test of the allowlist that matters.
+1. `https://your-app.vercel.app/api/health` → `{"ok":true,"mock":false,"auth":true,...}`. `auth:false` means `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing; `mock:true` means `MOCK_CLAUDE` is set.
+2. Sign in as the owner with `ADMIN_USERNAME`/`ADMIN_PASSWORD`. **Then try a wrong password and confirm it is refused.** That is the only test of the credential check that matters.
 3. **New client** with a real company URL. Within ten seconds you should see their palette, fonts and page count. An empty palette means the site is client-rendered, which is reported rather than hidden.
 4. Open the client: sources listed with character counts.
 5. **New campaign**, fill the three text fields, **Generate campaign**. Roughly €2–3 with research on, two to four minutes.

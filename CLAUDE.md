@@ -134,7 +134,8 @@ web/                         The product. Next.js 16, App Router
     brief.js verdicts.js mock.js
   server/db.ts               typed data layer, Firestore or in-memory
   server/inputs.ts           buildInputs + staleAgents + DEPENDS. Read before touching runs
-  server/auth.ts             single-user session handling
+  server/auth.ts             sessions: owner via ADMIN_USERNAME/ADMIN_PASSWORD,
+                             demo accounts via Firestore, each with its own workspace
   server/spend.ts            the monthly ceiling; refuses a run before it spends
   server/telemetry.ts assets.ts exemplars.ts results.ts resultsStore.ts storage.ts
   app/api/                   29 routes: agent runs, clients, campaigns, sources, claims,
@@ -150,7 +151,7 @@ legacy/                      the prototype Express app and vanilla front end. St
 knowledge/                   per-agent expertise packs and worked examples. 47 files
 evals/                       golden briefs, scorers, merge gate. See evals/README.md
 test/                        nine suites plus fixture-site/
-scripts/deploy-rules.js      injects ALLOWED_EMAIL into the Firestore/Storage rules
+scripts/deploy-rules.js      copies firestore.rules into .rules-build/ for deploy
 docs/build/                  phase specs
 ```
 
@@ -273,6 +274,13 @@ Each of these cost someone time to discover.
   uploads into memory and lose them on the next cold start, with nothing in
   the logs. Firebase Storage rules are gone from `firebase.json`, so the
   deploy command is `--only firestore:rules` and no bucket needs to exist.
+- **`firestore.rules` is a deny-all and does not protect tenant data.** The
+  server reaches Firestore only through the Admin SDK, which bypasses rules
+  entirely; there is no `request.auth` any more, since Firebase Auth is gone.
+  Workspace isolation is enforced in application code, by the `ws` parameter
+  threaded through `web/server`, not by these rules. They exist only to stop
+  a browser reaching Firestore directly. Do not read them as the access
+  control for who can see which workspace.
 - **`web/` and `legacy/` share the runtime.** A change to `web/core/` must keep
   both green, which is why the legacy suite still runs.
 - **Two lockfiles.** Root and `web/`. Next warns about inferring the workspace
