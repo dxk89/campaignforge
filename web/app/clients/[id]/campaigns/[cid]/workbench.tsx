@@ -38,6 +38,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   const [busy, setBusy] = useState(false);
   const [line, setLine] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
   const [tab, setTab] = useState(outputs['brand-analyst'] ? 'research' : 'strategy');
   const [lang, setLang] = useState<'en' | 'pt'>('en');
   const [imagesAvailable, setImagesAvailable] = useState(false);
@@ -74,6 +75,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
         const data = await res.json();
         if (!res.ok) throw Object.assign(new Error(data.error || 'Failed'), { agent });
         setState((s) => ({ ...s, [agent]: data.skipped ? 'skipped' : 'done' }));
+        if (data.skipped && data.reason) setReasons((r) => ({ ...r, [agent]: data.reason }));
         if (data.review) setReview(data.review);
         if (data.assets) editing.reload();
       } catch (err: any) {
@@ -126,7 +128,8 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   const activePasses = Object.entries(passes || {});
 
   return (
-    <div className="workbench">
+    <>
+      <div className="workbench">
       <BriefPanel brief={brief} setBrief={setBrief} onSave={saveBrief} client={client} clientId={clientId} campaignId={campaign.campaignId} />
 
       <section className="results-panel">
@@ -138,6 +141,9 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               data-stale={stale.includes(c.agent) ? 'true' : undefined}
             >
               <span className="chain-dot" />{c.label}
+              {state[c.agent] === 'skipped' && reasons[c.agent] && (
+                <span className="skip-why">{reasons[c.agent]}</span>
+              )}
               <span className="stage-tag">
                 {state[c.agent] === 'running' ? 'running'
                   : state[c.agent] === 'failed' ? 'failed'
@@ -206,6 +212,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
           </div>
         )}
       </section>
+      </div>
 
       {activePasses.length > 0 && (
         <footer className="economics">
@@ -251,7 +258,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
           </div>
         </footer>
       )}
-    </div>
+    </>
   );
 }
 

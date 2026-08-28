@@ -529,3 +529,68 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   margin-left: 5px;
   vertical-align: 1px;
 }
+
+/* ---------- Workbench layout corrections --------------------------------
+   Three faults, all visible at the bottom of a finished campaign.
+
+   The brief panel is sticky and was pinned 12px from the top of the viewport,
+   but the header is sticky too and about 65px tall, so the panel slid under
+   it and its first line was clipped.
+
+   The panel also overlapped the cost bar by roughly 380x260px, hiding the
+   start of every figure and half the export buttons. It is a sticky grid item
+   and should stay inside its own row; it did not. The footer is now outside
+   the grid entirely, so the overlap is not merely restyled but impossible.
+
+   The per-agent figures were adjacent spans with no separator, so they read as
+   "0.9scopywriter" and "incompletesocial-planner".
+   -------------------------------------------------------------------------- */
+.workbench .brief-panel {
+  top: 78px;
+  max-height: calc(100vh - 96px);
+}
+
+/* Outside the grid now, so it needs its own width and spacing. */
+.economics {
+  margin: 16px 24px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  align-items: flex-start;
+}
+
+.econ-totals { display: flex; gap: 18px; margin: 0; }
+.econ-totals div { display: flex; flex-direction: column; gap: 1px; }
+.econ-totals dt { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.econ-totals dd { margin: 0; font-family: var(--mono); font-weight: 600; font-size: 14px; }
+
+/* Each agent's figures are their own chip, so they cannot run together. */
+.econ-passes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 320px;
+}
+.econ-passes span {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.econ-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+
+/* Why a pass was skipped, said in the row rather than left to be guessed. */
+.skip-why {
+  font-size: 11.5px;
+  color: var(--muted);
+  font-style: italic;
+  margin-left: 4px;
+}
+
+@media (max-width: 980px) {
+  .workbench .brief-panel { top: auto; max-height: none; }
+  .economics { margin: 16px 0 24px; }
+}
