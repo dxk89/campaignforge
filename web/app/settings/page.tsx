@@ -8,6 +8,7 @@ import { listClients } from '@/server/db';
 import { getSettings } from '@/server/spend';
 import { read as readTelemetry } from '@/server/telemetry';
 import Ceiling from './ceiling';
+import DemoAccounts from '@/components/DemoAccounts';
 
 const images = require('@core/images');
 const { MOCK } = require('@core/claude');
@@ -62,6 +63,8 @@ export default async function Settings() {
           </tbody></table>
         ) : <p className="muted">Nothing recorded yet.</p>}
       </section>
+
+      {session.kind === 'owner' && <DemoAccounts />}
 
       <section className="block">
         <h2 className="block-title">Prompts</h2>

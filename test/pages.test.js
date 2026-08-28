@@ -97,6 +97,7 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.equal(set.status, 200);
   assert.ok(set.body.includes('Data handling'), 'settings shows the data-handling statement');
   assert.ok(set.body.includes('In memory'), 'settings is honest about the store');
+  assert.ok(set.body.includes('Demo accounts'), 'settings shows the demo accounts panel for the owner');
   console.log('  settings page ok');
 
   // nav and root redirect (task 11)
