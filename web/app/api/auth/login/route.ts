@@ -16,8 +16,27 @@ import { SESSION_COOKIE } from '@/server/auth';
 export const runtime = 'nodejs';
 const SEVEN_DAYS = 60 * 60 * 24 * 7;
 
+/**
+ * The client address, for throttling only.
+ *
+ * x-forwarded-for is a client-supplied list that a proxy appends to, so its
+ * FIRST entry is whatever the caller chose to send: reading it would let an
+ * attacker rotate the header and get a fresh throttle bucket per request.
+ * Vercel sets x-vercel-forwarded-for and x-real-ip itself and overwrites any
+ * client value, so prefer those; fall back to the LAST x-forwarded-for entry,
+ * which is the one appended by the nearest trusted hop.
+ */
 function clientIp(req: Request): string {
-  return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+  const vercel = req.headers.get('x-vercel-forwarded-for');
+  if (vercel) return vercel.split(',').pop()!.trim();
+  const real = req.headers.get('x-real-ip');
+  if (real) return real.trim();
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) {
+    const last = fwd.split(',').pop()!.trim();
+    if (last) return last;
+  }
+  return 'unknown';
 }
 
 export async function POST(req: Request) {
