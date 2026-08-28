@@ -19,6 +19,7 @@ const { loadMemory } = require('./packets');
 const { trackingPlan } = require('../utm');
 const research = require('../prompts/research');
 const { costEur } = require('../pricing');
+const promptStore = require('../prompts/store');
 
 const resolve = (v, inputs) => (typeof v === 'function' ? v(inputs) : v);
 
@@ -28,8 +29,12 @@ async function runAgent(name, inputs = {}, opts = {}) {
 
   const memory = await loadMemory({ clientId: inputs.clientId, agent: name, channel: inputs.channel, objective: inputs.brief?.objective });
   const packet = agent.packet({ ...inputs, memory });
-  const resolved = { ...agent, role: resolve(agent.role, inputs), budget: resolve(agent.budget, inputs) };
+  // A stored prompt version overrides the code default; which one was used is
+  // recorded on the result so a campaign can be traced to its wording.
+  const { role, promptVersion } = await promptStore.roleFor(name, resolve(agent.role, inputs));
+  const resolved = { ...agent, role, budget: resolve(agent.budget, inputs) };
   const result = await run(resolved, packet, { budget: opts.budget, ledger: opts.ledger });
+  result.promptVersion = promptVersion;
 
   console.log(`[${name}] ${result.usage.input} in / ${result.usage.output} out, ${result.usage.calls || 1} call(s), ${result.usage.ms} ms, €${result.usage.costEur}${result.complete ? '' : ' INCOMPLETE: ' + result.problems.join('; ')}`);
   return result;

@@ -23,6 +23,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   return guarded(async () => {
     const { scope, target, constraint } = await req.json();
     if (!scope || !target) throw bad('scope and target are required');
+    const { checkCeiling } = await import('@/server/spend');
+    await checkCeiling(scope === 'asset' ? 'field-editor' : target);
+    const { count } = await import('@/server/telemetry');
+    await count(`regenerate.${scope}`);
     const rules = await rulesFor(id, cid);
 
     if (scope === 'asset') {

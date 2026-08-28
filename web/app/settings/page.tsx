@@ -5,6 +5,9 @@ import { redirect } from 'next/navigation';
 import { currentSession } from '@/server/auth';
 import { storeEnabled } from '@/server/firebase';
 import { listClients } from '@/server/db';
+import { getSettings } from '@/server/spend';
+import { read as readTelemetry } from '@/server/telemetry';
+import Ceiling from './ceiling';
 
 const images = require('@core/images');
 const { MOCK } = require('@core/claude');
@@ -14,7 +17,8 @@ export const dynamic = 'force-dynamic';
 export default async function Settings() {
   const session = await currentSession();
   if (!session) redirect('/login');
-  const clients = await listClients();
+  const [clients, settings, telemetry] = await Promise.all([listClients(), getSettings(), readTelemetry()]);
+  const counters = Object.entries(telemetry.counters as Record<string, number>).sort((a, b) => b[1] - a[1]);
 
   let dataHandling = '';
   try {
@@ -37,6 +41,30 @@ export default async function Settings() {
           <div><dt>Images</dt><dd>{images.available() ? 'Available' : 'Off (no GEMINI_API_KEY)'}</dd></div>
         </dl>
         <p className="muted" style={{ marginTop: 8 }}><Link href="/ledger">View the ledger →</Link></p>
+      </section>
+
+      <section className="block">
+        <h2 className="block-title">Monthly ceiling</h2>
+        <p className="muted">The ledger shows spend after the fact. This refuses before it.</p>
+        <Ceiling initial={JSON.parse(JSON.stringify(settings))} />
+      </section>
+
+      <section className="block">
+        <h2 className="block-title">Usage this month <span className="block-hint">{telemetry.month}</span></h2>
+        {counters.length ? (
+          <table className="grid-table"><tbody>
+            <tr><th>What</th><th>Count</th></tr>
+            {counters.slice(0, 20).map(([k, v]) => <tr key={k}><td className="mono">{k}</td><td className="num">{v}</td></tr>)}
+          </tbody></table>
+        ) : <p className="muted">Nothing recorded yet.</p>}
+      </section>
+
+      <section className="block">
+        <h2 className="block-title">Prompts</h2>
+        <p className="muted">
+          Every agent&rsquo;s role, editable as a version with a change note.{' '}
+          <Link href="/prompts">Open prompts →</Link>
+        </p>
       </section>
 
       <section className="block">

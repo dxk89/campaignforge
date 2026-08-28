@@ -29,6 +29,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return { agent, skipped: true, reason: 'Portuguese is not requested' };
     }
 
+    // Refuse before spending if the month's ceiling would be passed.
+    const { checkCeiling } = await import('@/server/spend');
+    const ceiling = await checkCeiling(agent);
+    const { count } = await import('@/server/telemetry');
+    await count(`run.${agent}`);
+
     const { inputs, inputsHash } = await buildInputs(id, cid, agent);
     if (body.constraint) (inputs as any).constraint = String(body.constraint);
 
@@ -41,7 +47,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       agent,
       output: result.output,
       inputsHash,
-      promptVersion: null,
+      promptVersion: result.promptVersion ?? null,
       model: result.usage.model || 'unknown',
       usage: result.usage,
       trace: result.trace || [],
@@ -100,7 +106,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return {
       agent, versionId: version.versionId, output: result.output,
       usage: result.usage, complete: result.complete, problems: result.problems || [],
-      assets: assets?.length ?? 0, review,
+      assets: assets?.length ?? 0, review, warning: ceiling.warning,
     };
   });
 }
