@@ -196,3 +196,83 @@ const storage = require('../web/.test-build/storage.js');
   assert2.ok(rules.approvedClaims.includes('four days faster'), 'falls back to context proof points');
   console.log('memory tests: ok');
 })().catch((e) => { console.error('memory tests FAILED', e); process.exit(1); });
+
+/**
+ * Firestore path parity.
+ *
+ * A Firestore path alternates collection and document, so a chain ending in
+ * .doc() needs an even number of components and one ending in .collection()
+ * an odd number. Getting this wrong throws only when a real store is
+ * attached, and every suite here runs against the in-memory one, so
+ * 'system/spend/global' shipped to production and 500ed the whole Settings
+ * page - taking the admin panel, which renders inside it, down with it.
+ *
+ * This reads the source rather than calling anything, which is the only way
+ * to check it without a live Firestore. Parity is counted across the whole
+ * chain from fsdb(), because each link is relative to the last:
+ * .collection('system').doc('auth').collection('accounts') is three
+ * components and correct, though no single call in it looks it.
+ *
+ * Each ${...} counts as one component - an id, a month, an ip key. A chain
+ * interpolating a path helper (root, path, rpath, lpath) expands to a number
+ * of components this cannot see, so it is skipped; those are covered by the
+ * emulator suite, which uses a real store.
+ */
+(async () => {
+  const assertPaths = require('assert');
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(__dirname, '..', 'web', 'server');
+
+  const OPAQUE = /\$\{\s*(root|path|rpath|lpath)\s*\(/;
+  // The argument may itself contain a call - `.../${key(ip)}` - so one level
+  // of nesting is allowed before the closing paren is taken as the end.
+  const LINK = /\.(doc|collection)\(\s*((?:[^()]|\([^()]*\))*?)\s*\)/g;
+  const STRING = /^([`'"])([^`'"]*)\1$/;
+
+  // A path pulled out into a constant - SETTINGS_PATH - is still a literal
+  // path, so resolve single-quoted consts declared in the same file rather
+  // than treating the reference as one opaque component.
+  const constants = (src) => {
+    const found = {};
+    for (const [, name, , value] of src.matchAll(/\bconst\s+(\w+)\s*=\s*([`'"])([^`'"]*)\2\s*;/g)) found[name] = value;
+    return found;
+  };
+
+  let checked = 0;
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const src = fs.readFileSync(path.join(dir, file), 'utf8');
+    const consts = constants(src);
+    for (const [chain] of src.matchAll(/fsdb\(\)((?:\s*\.(?:doc|collection)\([^()]*(?:\([^()]*\))?[^()]*\))+)/g)) {
+      if (OPAQUE.test(chain)) continue;
+      let components = 0;
+      let last = null;
+      for (const [, method, arg] of chain.matchAll(LINK)) {
+        last = method;
+        const m = STRING.exec(arg);
+        const literal = m ? m[2] : (arg in consts ? consts[arg] : undefined);
+        // A genuinely dynamic argument - .doc(row.id) - is one component.
+        components += literal === undefined
+          ? 1
+          : literal.replace(/\$\{[^}]*\}/g, 'x').split('/').filter(Boolean).length;
+      }
+      const wanted = last === 'doc' ? 0 : 1;
+      assertPaths.equal(
+        components % 2,
+        wanted,
+        `${file}: ${chain.replace(/\s+/g, ' ')} is ${components} components; ` +
+          `a chain ending in .${last}() needs an ${wanted === 0 ? 'even' : 'odd'} number`
+      );
+      checked++;
+    }
+  }
+  assertPaths.ok(checked >= 3, `expected several chains to check, saw ${checked}`);
+
+  // The one that broke, named explicitly so a regression is unambiguous.
+  const spend = fs.readFileSync(path.join(dir, 'spend.ts'), 'utf8');
+  assertPaths.ok(
+    /SETTINGS_PATH = 'system\/spend'/.test(spend),
+    'the global ceiling document is system/spend, a two-component path'
+  );
+  console.log(`firestore path tests: ok (${checked} chains)`);
+})().catch((e) => { console.error('firestore path tests FAILED', e); process.exit(1); });

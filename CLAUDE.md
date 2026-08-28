@@ -286,6 +286,21 @@ Each of these cost someone time to discover.
 - **Two lockfiles.** Root and `web/`. Next warns about inferring the workspace
   root on every build. Harmless, but do not delete either: the root one carries
   the test and legacy deps, `web/`'s carries the product's.
+- **The root `web` and `web:build` scripts must call `npm run`, not `next`
+  directly.** `next` is installed only in `web/node_modules/.bin`, and npm
+  puts the *root* `node_modules/.bin` on PATH before running a script, so
+  `cd web && next build` fails with "'next' is not recognized" in every
+  shell. `cd web && npm run build` re-enters npm inside `web/`, which puts
+  the right bin directory on PATH. The scripts read as if the `cd` were
+  enough; it is not.
+- **A Firestore path needs an even number of components to be a document.**
+  `system/spend/global` is three, so it names a collection, and the ceiling
+  read threw on every call: Settings 500ed, the admin panel that renders
+  inside it went with it, and the spend cap was never enforced. This is only
+  reachable when `storeEnabled` is true, which no suite here is, so
+  `test/db.test.js` checks the parity of every `fsdb()` chain statically
+  instead. Add a path, and it is checked; make it opaque behind a helper, and
+  it is skipped and belongs in the emulator suite.
 - **Model IDs in `web/core/pricing.js` are a generation behind.**
   `claude-sonnet-4-6` at USD 3/15 and `claude-haiku-4-5-20251001` at USD 1/5
   are both still valid IDs at correct rates, so nothing is broken, but the

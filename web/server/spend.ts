@@ -27,7 +27,16 @@ const DEFAULTS: UserSettings = { monthlyCeilingEur: null, ceilingAction: 'refuse
 
 // A per-workspace ceiling would hand every new demo account a fresh
 // allowance and bound nothing. One ceiling, across every workspace.
-const settingsDoc = () => fsdb().doc('system/spend/global');
+//
+// Two components, not three. A Firestore path alternates collection and
+// document, so an odd number of components names a COLLECTION: the earlier
+// 'system/spend/global' was collection system, document spend, collection
+// global, and every read threw "must point to a document". It reached
+// production because settingsDoc() is only called when storeEnabled is true
+// and every test suite runs against the in-memory store. test/db.test.js now
+// checks this parity statically for every path in server/.
+export const SETTINGS_PATH = 'system/spend';
+const settingsDoc = () => fsdb().doc(SETTINGS_PATH);
 
 export async function getSettings(): Promise<UserSettings> {
   if (!storeEnabled) return { ...DEFAULTS, ...(globalThis.__cfSpendSettings || {}) };
