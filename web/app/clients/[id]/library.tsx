@@ -22,6 +22,30 @@ export default function Library({ client, sources, campaigns }: Props) {
   const [error, setError] = useState<string | null>(null);
   const kit = client.brandKit || {};
   const accents: string[] = kit.palette?.accents || [];
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string[]>(accents);
+
+  /**
+   * The palette is read off the site's CSS, which is a guess however good the
+   * heuristics are: a brand can use a colour that never appears in a
+   * stylesheet at all, in a logo or a print guideline. The colours drive
+   * every generated graphic, so a wrong one is wrong on everything, and
+   * before this there was no way to correct it. Saving writes the whole
+   * palette back and clears `uncertain`, because a person choosing the
+   * colours is not a guess.
+   */
+  async function savePalette(next: string[]) {
+    setBusy(true);
+    const res = await fetch(`/api/clients/${client.clientId}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ brandKit: { ...kit, palette: { ...kit.palette, accents: next, uncertain: false } } }),
+    });
+    setBusy(false);
+    setSaved(res.ok ? 'Saved' : 'Could not save');
+    setTimeout(() => setSaved(null), 1600);
+    setEditing(false);
+    router.refresh();
+  }
 
   async function saveVoice() {
     setBusy(true);
@@ -78,7 +102,13 @@ export default function Library({ client, sources, campaigns }: Props) {
     setBusy(true); setError(null);
     const res = await fetch(`/api/clients/${client.clientId}/assets`, { method: 'POST', body: form });
     setBusy(false);
-    if (!res.ok) setError('Could not upload that file');
+    // The route already explains itself - a misconfigured bucket names the
+    // variable to fix - and "Could not upload that file" threw that away,
+    // leaving a configuration error looking like a bad file.
+    if (!res.ok) {
+      const detail = await res.json().catch(() => null);
+      setError(detail?.error || `Could not upload that file (${res.status})`);
+    }
     router.refresh();
   }
 
@@ -102,12 +132,57 @@ export default function Library({ client, sources, campaigns }: Props) {
     <div className="library">
       <section className="block">
         <h2 className="block-title">Brand kit</h2>
+        {kit.palette?.uncertain && !editing ? (
+          <p className="notice-warn">
+            Every colour found on the site belongs to a CSS framework rather than the brand,
+            so these are probably wrong. Set them here.
+          </p>
+        ) : null}
         {accents.length ? (
-          <div className="swatches">
-            {[...accents, kit.palette?.dark, kit.palette?.light].filter(Boolean).map((c: string) => (
-              <span key={c} className="swatch" style={{ background: c }} title={c} />
-            ))}
-          </div>
+          <>
+            <div className="swatches">
+              {[...accents, kit.palette?.dark, kit.palette?.light].filter(Boolean).map((c: string) => (
+                <span key={c} className="swatch" style={{ background: c }} title={c} />
+              ))}
+            </div>
+            {editing ? (
+              <div className="palette-edit">
+                {draft.map((c, i) => (
+                  <span key={i} className="palette-edit__item">
+                    <input
+                      type="color" value={c} aria-label={`Accent ${i + 1}`}
+                      onChange={(e) => setDraft(draft.map((d, j) => (j === i ? e.target.value : d)))}
+                    />
+                    <input
+                      type="text" value={c} spellCheck={false} aria-label={`Accent ${i + 1} hex`}
+                      onChange={(e) => setDraft(draft.map((d, j) => (j === i ? e.target.value : d)))}
+                    />
+                    <button type="button" className="link" onClick={() => setDraft(draft.filter((_, j) => j !== i))}>
+                      remove
+                    </button>
+                  </span>
+                ))}
+                <div className="palette-edit__actions">
+                  {draft.length < 5 ? (
+                    <button type="button" onClick={() => setDraft([...draft, '#000000'])}>Add a colour</button>
+                  ) : null}
+                  <button
+                    type="button" disabled={busy}
+                    onClick={() => savePalette(draft.filter((c) => /^#[0-9a-f]{6}$/i.test(c.trim())).map((c) => c.trim().toLowerCase()))}
+                  >
+                    Save colours
+                  </button>
+                  <button type="button" className="link" onClick={() => { setDraft(accents); setEditing(false); }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="link" onClick={() => { setDraft(accents); setEditing(true); }}>
+                Edit colours
+              </button>
+            )}
+          </>
         ) : <p className="muted">No palette yet. Scan the site or upload brand assets.</p>}
         <p className="kit-line">
           <b>{kit.siteName || client.name}</b>{kit.tagline ? ` · ${kit.tagline}` : ''}

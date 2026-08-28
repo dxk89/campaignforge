@@ -594,3 +594,31 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   .workbench .brief-panel { top: auto; max-height: none; }
   .economics { margin: 16px 0 24px; }
 }
+
+/* ---------- Palette editor ------------------------------------------------
+   The extracted palette is a reading of the site's CSS, and a brand colour
+   can live somewhere a stylesheet never mentions. These colours drive every
+   generated graphic, so correcting them has to be possible in the product
+   rather than only in the database.
+   -------------------------------------------------------------------------- */
+.palette-edit { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.palette-edit__item { display: flex; align-items: center; gap: 8px; }
+.palette-edit__item input[type="color"] {
+  width: 34px; height: 30px; padding: 2px;
+  border: 1px solid var(--line); border-radius: 5px; background: var(--panel); cursor: pointer;
+}
+.palette-edit__item input[type="text"] { width: 110px; font-family: var(--mono); text-transform: lowercase; }
+.palette-edit__actions { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+
+/* Said where the colours are shown, not in a toast that scrolls away. */
+.notice-warn {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  background: var(--amber-soft);
+  border: 1px solid #e8d08a;
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--amber);
+}
