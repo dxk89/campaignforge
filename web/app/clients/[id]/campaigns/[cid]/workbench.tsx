@@ -46,7 +46,11 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   useEffect(() => { fetch('/api/health').then((r) => r.json()).then((h) => setImagesAvailable(Boolean(h.images))).catch(() => {}); }, []);
 
   const assets = lang === 'pt' && outputs.localiser ? outputs.localiser : outputs.copywriter;
-  const done = CHAIN.filter((c) => outputs[c.agent]).length;
+  // A skipped agent is settled, not outstanding: without this a finished run
+  // still offers "Resume (2 left)" for the passes the server deliberately
+  // declined, and clicking it re-attempts them.
+  const settled = CHAIN.filter((c) => outputs[c.agent] || state[c.agent] === 'skipped').length;
+  const done = settled;
   const started = done > 0;
 
   async function saveBrief() {
@@ -128,8 +132,19 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
       <section className="results-panel">
         <ol className="chain">
           {CHAIN.map((c) => (
-            <li key={c.agent} data-state={state[c.agent] || (outputs[c.agent] ? 'done' : undefined)}>
+            <li
+              key={c.agent}
+              data-state={state[c.agent] || (outputs[c.agent] ? 'done' : undefined)}
+              data-stale={stale.includes(c.agent) ? 'true' : undefined}
+            >
               <span className="chain-dot" />{c.label}
+              <span className="stage-tag">
+                {state[c.agent] === 'running' ? 'running'
+                  : state[c.agent] === 'failed' ? 'failed'
+                  : state[c.agent] === 'skipped' ? 'skipped'
+                  : stale.includes(c.agent) ? 'stale'
+                  : outputs[c.agent] ? 'done' : ''}
+              </span>
             </li>
           ))}
         </ol>
@@ -276,11 +291,11 @@ function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: a
           <span className="dropzone-types">PDF, DOCX, TXT, MD · you can edit everything after</span>
         </label>
         {parse && <p className={`brief-status ${parse.error ? 'error' : ''}`}>{parse.status}</p>}
-        <label className="field"><span>Product name</span>
+        <label className="field"><span>Product name <b className="req">required</b></span>
           <input value={brief.productName || ''} onChange={(e) => set('productName', e.target.value)} onBlur={onSave} placeholder="Ledgerline" /></label>
-        <label className="field"><span>What it does</span>
+        <label className="field"><span>What it does <b className="req">required</b></span>
           <textarea rows={3} value={brief.productDescription || ''} onChange={(e) => set('productDescription', e.target.value)} onBlur={onSave} /></label>
-        <label className="field"><span>Target audience</span>
+        <label className="field"><span>Target audience <b className="req">required</b></span>
           <textarea rows={2} value={brief.targetAudience || ''} onChange={(e) => set('targetAudience', e.target.value)} onBlur={onSave} /></label>
         <div className="field-row">
           <label className="field"><span>Objective</span>

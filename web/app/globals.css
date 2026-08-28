@@ -313,9 +313,16 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .chain li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--radius); font-size: 13.5px; }
 .chain li:hover { background: var(--panel-2); }
 .chain-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: 0 0 auto; }
-.chain li.done .chain-dot { background: var(--ok); }
-.chain li.active .chain-dot { background: var(--teal); animation: pulse 1.4s ease-in-out infinite; }
-.chain li.stale .chain-dot { background: var(--amber); }
+/* The workbench sets data-state on each item, so match that rather than a
+   class the markup never applies. */
+.chain li[data-state="done"] .chain-dot { background: var(--ok); }
+.chain li[data-state="running"] .chain-dot { background: var(--teal); animation: pulse 1.4s ease-in-out infinite; }
+.chain li[data-state="failed"] .chain-dot { background: var(--ember); }
+.chain li[data-state="skipped"] .chain-dot { background: var(--line); opacity: .5; }
+.chain li[data-stale="true"] .chain-dot { background: var(--amber); }
+.chain li[data-state="running"] { background: var(--teal-soft); font-weight: 600; }
+.chain li[data-state="done"] { color: var(--muted); }
+.chain li[data-stale="true"] { color: var(--amber); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 .idx { font-family: var(--mono); font-size: 11.5px; color: var(--muted); min-width: 15px; }
 .stage-tag { font-size: 11px; color: var(--muted); margin-left: auto; text-transform: uppercase; letter-spacing: .04em; }
@@ -506,3 +513,19 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   color: var(--amber);
 }
 .data-notice-inline a { color: var(--amber); font-weight: 600; }
+
+/* The three fields the generate step actually requires. Marked before the
+   attempt rather than reported after it. */
+.req {
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--amber);
+  background: var(--amber-soft);
+  border: 1px solid #e8d08a;
+  padding: 0 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  vertical-align: 1px;
+}
