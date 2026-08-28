@@ -392,6 +392,21 @@ FIXTURES.audience = {
   };
 })();
 
+FIXTURES.critic = {
+  verdict: 'revise',
+  must_fix: [
+    {
+      path: 'email.emails[1].body',
+      problem: 'The walkthrough figures (23 exceptions out of 4,100) read as a customer result but no approved claim supports them.',
+      why: 'A number that looks like a customer outcome and is not one is the client\'s liability, not ours. Frame it explicitly as an illustrative scenario or cut it.',
+    },
+  ],
+  suggestions: [
+    'Meta variant 3 opens with compatibility, which is the weakest of the three hooks for a cold audience. Consider leading with the exceptions mechanism.',
+    'The LinkedIn variants all open with a statistic. One opening with a scene would give the set more range.',
+  ],
+};
+
 // Plausible usage numbers so the economics footer means something in mock mode.
 const USAGE = {
   brief: { input: 2140, output: 210 },
@@ -401,6 +416,7 @@ const USAGE = {
   audience: { input: 4100, output: 1450 },
   social: { input: 5600, output: 6900 },
   activation: { input: 4900, output: 2650 },
+  critic: { input: 3200, output: 620 },
   localise: { input: 3120, output: 2360 },
 };
 

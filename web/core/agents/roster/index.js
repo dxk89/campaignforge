@@ -14,6 +14,7 @@ const agents = {
   'social-planner': require('./social-planner'),
   'ops-architect': require('./ops-architect'),
   localiser: require('./localiser'),
+  critic: require('./critic'),
 };
 
 module.exports = { agents, get: (name) => agents[name] };

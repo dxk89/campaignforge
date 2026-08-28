@@ -6,16 +6,18 @@ const { buildRules } = require('../packets');
 const { validateSocial } = require('../../limits');
 const { checkCompliance } = require('../tools/compliance');
 const { renderGraphic } = require('../../graphics');
-const { check_social_limits, check_compliance, render_card } = require('../tools');
+const { check_social_limits, check_compliance, render_card, ask_critic } = require('../tools');
 
 module.exports = {
   name: 'social-planner',
   fixture: 'social',
   model: MODELS.sonnet,
   role: prompt.systemPrompt().replace('Return ONLY a JSON object, no prose, no markdown, no code fences:', 'When every post is within its limit and clean, call the submit tool with this shape:') +
-    '\n\nBefore submitting, call check_social_limits on your posts and check_compliance on the calendar, and fix everything they report. You may call render_card to confirm a graphic fits its template.',
-  tools: [check_social_limits, check_compliance, render_card],
-  budget: { maxTurns: 5, maxOutputTokens: 12000 },
+    '\n\nBefore submitting, call check_social_limits on your posts and check_compliance on the calendar, and fix everything they report. You may call render_card to confirm a graphic fits its template. Then call ask_critic with kind "social" on your point-of-view posts and fix every must_fix item.',
+  criticKind: 'social',
+  
+  tools: [check_social_limits, check_compliance, render_card, ask_critic],
+  budget: { maxTurns: 6, maxOutputTokens: 12000 },
   schema: {
     type: 'object',
     properties: {

@@ -3,16 +3,18 @@ const prompt = require('../../prompts/localise');
 const copywriter = require('./copywriter');
 const { validateAssets } = require('../../limits');
 const { checkCompliance } = require('../tools/compliance');
-const { check_limits, check_compliance } = require('../tools');
+const { check_limits, check_compliance, ask_critic } = require('../tools');
 
 module.exports = {
   name: 'localiser',
   fixture: 'localise',
   model: MODELS.sonnet,
   role: prompt.systemPrompt().replace('Return ONLY the JSON object with the same shape as the input, no prose, no markdown, no code fences. Set "branch_note" in Portuguese too.', 'Set "branch_note" in Portuguese too. When every asset is within its limits and free of Brazilian forms, call the submit tool with the same shape as the input.') +
-    '\n\nBefore submitting, call check_limits (language pt) and check_compliance (language pt) and fix everything they report.',
-  tools: [check_limits, check_compliance],
-  budget: { maxTurns: 5, maxOutputTokens: 7000 },
+    '\n\nBefore submitting, call check_limits (language pt) and check_compliance (language pt) and fix everything they report. Then call ask_critic with kind "localised" for a register check and fix every must_fix item.',
+  criticKind: 'localised',
+  
+  tools: [check_limits, check_compliance, ask_critic],
+  budget: { maxTurns: 6, maxOutputTokens: 7000 },
   schema: copywriter.schema,
   packet: ({ assets, glossary, brief, context }) => ({
     user: prompt.userPrompt(assets, glossary), brief, assets,

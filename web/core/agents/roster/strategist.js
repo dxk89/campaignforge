@@ -1,4 +1,5 @@
 const { MODELS } = require('../../pricing');
+const { ask_critic } = require('../tools');
 const prompt = require('../../prompts/strategy');
 const { contextBlock } = require('../packets');
 
@@ -6,9 +7,11 @@ module.exports = {
   name: 'strategist',
   fixture: 'strategy',
   model: MODELS.sonnet,
-  role: prompt.systemPrompt().replace('Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact shape:', 'When you are done, call the submit tool with this shape:'),
-  tools: [],
-  budget: { maxTurns: 3, maxOutputTokens: 2000 },
+  role: prompt.systemPrompt().replace('Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact shape:', 'When you are done, call the submit tool with this shape:')
+    + '\n\nIf you are stretching a proof point to fit an angle, call ask_critic with kind "strategy" before submitting and address any must_fix item.',  criticKind: 'strategy',
+  
+  tools: [ask_critic],
+  budget: { maxTurns: 4, maxOutputTokens: 2000 },
   schema: {
     type: 'object',
     properties: {

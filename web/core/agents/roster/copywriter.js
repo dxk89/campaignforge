@@ -3,7 +3,7 @@ const prompt = require('../../prompts/assets');
 const { contextBlock, buildRules } = require('../packets');
 const { validateAssets } = require('../../limits');
 const { checkCompliance } = require('../tools/compliance');
-const { check_limits, check_compliance } = require('../tools');
+const { check_limits, check_compliance, ask_critic } = require('../tools');
 
 const AD = (props, req) => ({ type: 'object', properties: props, required: req });
 const S = { type: 'string' };
@@ -13,9 +13,11 @@ module.exports = {
   fixture: 'assets',
   model: MODELS.sonnet,
   role: prompt.systemPrompt().replace('Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact shape:', 'When every asset is within its limits and clean, call the submit tool with this shape:') +
-    '\n\nBefore submitting, call check_limits and check_compliance on your draft and fix everything they report. Submit only a clean set.',
-  tools: [check_limits, check_compliance],
-  budget: { maxTurns: 5, maxOutputTokens: 7000 },
+    '\n\nBefore submitting, call check_limits and check_compliance on your draft and fix everything they report. Then call ask_critic on your draft with kind "assets" and fix every must_fix item it returns; suggestions are optional. Submit only a clean set.',
+  criticKind: 'assets',
+  
+  tools: [check_limits, check_compliance, ask_critic],
+  budget: { maxTurns: 6, maxOutputTokens: 7000 },
   schema: {
     type: 'object',
     properties: {

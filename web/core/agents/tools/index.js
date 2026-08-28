@@ -85,6 +85,20 @@ const generate_image = {
   },
 };
 
-const TOOLS = { check_limits, check_social_limits, check_compliance, validate_activation, fetch_url, scan_site, utm_plan, render_card, generate_image };
+const ask_critic = {
+  name: 'ask_critic',
+  description: 'Ask the editor to review your draft before you submit it. Returns must_fix items you must fix and suggestions you may take or leave. Call this once, on your near-final draft.',
+  input_schema: obj({ output: { type: 'object' }, kind: { type: 'string', enum: ['assets', 'social', 'strategy', 'localised', 'landing'] } }, ['output', 'kind']),
+  run: async ({ output, kind }, packet) => {
+    // Lazy require: the orchestrator requires the roster, which requires this file.
+    const orchestrator = require('../orchestrator');
+    const r = await orchestrator.runAgent('critic', {
+      output, kind, brief: packet.brief, context: packet.context, audience: packet.audience, rules: packet.rules,
+    });
+    return { verdict: r.output?.verdict, must_fix: r.output?.must_fix || [], suggestions: r.output?.suggestions || [], usage: r.usage };
+  },
+};
+
+const TOOLS = { ask_critic, check_limits, check_social_limits, check_compliance, validate_activation, fetch_url, scan_site, utm_plan, render_card, generate_image };
 
 module.exports = { TOOLS, ...TOOLS };

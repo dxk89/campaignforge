@@ -71,4 +71,15 @@ async function runCampaign(brief, opts = {}) {
   };
 }
 
-module.exports = { runAgent, runCampaign, summarise, roster: roster.agents };
+/**
+ * The final review. Writers call the Critic mid-run through ask_critic; this
+ * is the separate gate the routes use after a writer returns, so a person sees
+ * the editor's verdict on what was actually saved.
+ */
+async function review(kind, output, inputs = {}, opts = {}) {
+  if (!output) return null;
+  const r = await runAgent('critic', { ...inputs, output, kind }, opts);
+  return { ...(r.output || { verdict: 'pass', must_fix: [], suggestions: [] }), usage: r.usage };
+}
+
+module.exports = { runAgent, runCampaign, summarise, review, roster: roster.agents };

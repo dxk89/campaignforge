@@ -82,6 +82,12 @@ async function run(agent, packet, opts = {}) {
       tools,
       messages,
     });
+    if (!res || !Array.isArray(res.content)) {
+      // A malformed or empty response from the provider. Stop cleanly with
+      // whatever was validated so far rather than throwing into the caller.
+      trace.push({ turn, note: 'provider returned no content' });
+      break;
+    }
     usage.calls++;
     usage.input += res.usage?.input_tokens || 0;
     usage.output += res.usage?.output_tokens || 0;

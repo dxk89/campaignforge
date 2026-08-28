@@ -36,5 +36,51 @@ const brief = { productName: 'Ledgerline', objective: 'trial_signups' };
   r = await run(strategist, strategist.packet({ brief, context: null }));
   assert.equal(r.complete, true); assert.equal(r.trace[0].note, 'no tool call; nudged');
 
+  // ---- Critic: gate rules, and ask_critic as a tool round-trip -------------
+  // Note: one async block, because every case shares the scripted `script`
+  // queue. Two concurrent blocks would interleave their fake responses.
+  const critic = require('../lib/agents/roster/critic');
+  const orchestrator = require('../lib/agents/orchestrator');
+  const packet = critic.packet({ output: FIXTURES.assets, kind: 'assets', brief, context: FIXTURES.research });
+
+  // verdict/must_fix consistency is enforced. The critic's budget is two turns
+  // (it reads, it does not iterate), so each bad shape gets its own run.
+  const bad = [
+    [{ verdict: 'pass', must_fix: [{ path: 'a', problem: 'b', why: 'because it misleads the reader' }], suggestions: [] }, /requires must_fix to be empty/],
+    [{ verdict: 'revise', must_fix: [], suggestions: [] }, /requires at least one must_fix/],
+    [{ verdict: 'revise', must_fix: [{ path: 'a', problem: 'b', why: 'short' }], suggestions: [] }, /no usable "why"/],
+  ];
+  for (const [output, expected] of bad) {
+    script = [[submit(output, 'x')], [submit({ ...FIXTURES.critic }, 'x2')]];
+    r = await run(critic, packet);
+    assert.match(r.trace[0].tools[0].problems[0], expected);
+    assert.equal(r.complete, true, 'the corrected submit is accepted');
+  }
+
+  // a clean pass is accepted first time
+  script = [[submit({ verdict: 'pass', must_fix: [], suggestions: ['tighter subject on email 3'] }, 'y1')]];
+  r = await run(critic, packet);
+  assert.equal(r.complete, true);
+  assert.equal(r.output.verdict, 'pass', 'the critic can pass clean work');
+
+  // writers can call ask_critic mid-run and get must_fix back
+  script = [
+    [call('ask_critic', { output: clean, kind: 'assets' }, 'c1')],
+    [submit({ verdict: 'revise', must_fix: [{ path: 'email.emails[1].body', problem: 'unsupported figure', why: 'it reads as a customer result and is not one' }], suggestions: [] }, 'c2')], // the nested critic run
+    [submit(clean, 'c3')],
+  ];
+  r = await run(copywriter, copywriter.packet({ brief, strategy: FIXTURES.strategy, context: FIXTURES.research, memory: {} }));
+  assert.equal(r.complete, true, 'copywriter submits after the critic');
+  const criticCall = r.trace[0].tools.find((t) => t.name === 'ask_critic');
+  assert.ok(criticCall, 'ask_critic appears in the trace');
+  assert.match(criticCall.result, /must_fix/, 'the critic verdict came back to the writer');
+
+  // orchestrator.review() is the separate final gate
+  script = [[submit({ verdict: 'pass', must_fix: [], suggestions: [] }, 'r1')]];
+  const verdict = await orchestrator.review('assets', clean, { brief, context: FIXTURES.research });
+  assert.equal(verdict.verdict, 'pass');
+  assert.ok(verdict.usage.costEur >= 0, 'review reports its own cost');
+
+  console.log('critic tests: ok');
   console.log('runtime tests: ok');
 })().catch((e) => { console.error('runtime tests FAILED', e); process.exit(1); });

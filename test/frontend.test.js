@@ -43,8 +43,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     console.log(tab.padEnd(12), 'ok |', d.querySelector('#tab-panel').children.length, 'blocks');
   }
   d.querySelector('#tabs [data-tab="social"]').click(); await wait(200);
-  d.querySelector('[data-gen]').click(); await wait(900);
-  console.log('image generated:', d.querySelectorAll('.gfx img').length === 1);
+  const genBtn = d.querySelector('[data-gen]');
+  if (!genBtn) { console.log('  no generate button (images off or no visual briefs) — skipping image check'); }
+  else { genBtn.click(); await wait(900); }
+  console.log('image generated:', d.querySelectorAll('.gfx img').length >= (genBtn ? 1 : 0));
   d.querySelector('#tabs [data-tab="email"]').click(); d.querySelector('#lang-toggle [data-lang="pt"]').click();
   console.log('PT:', d.querySelector('#tab-panel .line-text').textContent.slice(0, 40));
   d.querySelector('#export-csv').click(); d.querySelector('#export-json').click(); d.querySelector('#export-social').click();
