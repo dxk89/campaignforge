@@ -83,5 +83,24 @@ const s = require('../web/.test-build/session.js');
   await th.clearFailures('1.2.3.4');
   assert.equal(await th.isLocked('1.2.3.4'), false, 'a success clears the counter');
 
+  // The window expires by comparison against its own timestamp, so backdate the
+  // record rather than waiting. This drives the real branch in isLocked/recordFailure.
+  const backdate = (ip, ms) => {
+    const k = ip;
+    const rec = globalThis.__cfThrottle.get(k);
+    globalThis.__cfThrottle.set(k, { count: rec.count, firstAt: Date.now() - ms });
+  };
+
+  th.__resetThrottle();
+  for (let i = 0; i < th.MAX_FAILURES; i++) await th.recordFailure('9.9.9.9');
+  assert.equal(await th.isLocked('9.9.9.9'), true, 'locked inside the window');
+  backdate('9.9.9.9', th.WINDOW_MS + 1000);
+  assert.equal(await th.isLocked('9.9.9.9'), false, 'the lock lifts once the window passes');
+
+  // A failure after expiry starts a fresh window rather than topping up the old count.
+  await th.recordFailure('9.9.9.9');
+  assert.equal(globalThis.__cfThrottle.get('9.9.9.9').count, 1, 'the counter restarts after expiry');
+  assert.equal(await th.isLocked('9.9.9.9'), false, 'one failure in a fresh window does not lock');
+
   console.log('session tests: ok');
 })();
