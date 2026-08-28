@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // Reference artwork travels as data URLs, read back from Storage.
     const artwork: string[] = [];
     for (const ref of (client.brandKit.artworkRefs || []).slice(0, 6)) {
-      const f = await getFile(ref);
+      const f = await getFile(ws, ref);
       if (f) artwork.push(`data:${f.mime};base64,${f.buffer.toString('base64')}`);
     }
 

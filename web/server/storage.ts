@@ -69,7 +69,12 @@ export async function putFile(ws: string, path: string, buffer: Buffer, mime = '
   return ref;
 }
 
-export async function getFile(ref: string): Promise<{ buffer: Buffer; mime: string } | null> {
+export async function getFile(ws: string, ref: string): Promise<{ buffer: Buffer; mime: string } | null> {
+  if (!ws) throw new Error('A workspace id is required. This is a bug: the caller did not pass session.workspaceId.');
+  // Refs are caller-supplied in the file-streaming route, so the workspace
+  // prefix is enforced here rather than at one call site: a ref belonging to
+  // another workspace is indistinguishable from one that does not exist.
+  if (!ref.startsWith(`users/${ws}/`)) return null;
   if (!storageEnabled) return memFiles.get(ref) ?? null;
   try {
     const res = await client().send(new GetObjectCommand({ Bucket: BUCKET, Key: ref }));

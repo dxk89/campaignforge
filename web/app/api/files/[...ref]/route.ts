@@ -17,10 +17,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ ref: st
   }
   const { ref } = await params;
   const full = ref.join('/');
-  if (!full.startsWith(`users/${session.workspaceId}/`)) {
-    return new Response(JSON.stringify({ error: 'Not permitted' }), { status: 403, headers: { 'content-type': 'application/json' } });
-  }
-  const file = await getFile(full);
+  const file = await getFile(session.workspaceId, full);
   if (!file) return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'content-type': 'application/json' } });
   return new Response(new Uint8Array(file.buffer), {
     headers: { 'content-type': file.mime, 'cache-control': 'private, max-age=3600' },

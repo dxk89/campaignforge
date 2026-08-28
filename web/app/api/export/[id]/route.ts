@@ -51,11 +51,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   add('ledger.json', (await listLedger(ws)).filter((e) => e.clientId === id));
 
   for (const ref of [client.brandKit.logoRef, ...(client.brandKit.artworkRefs || [])].filter(Boolean) as string[]) {
-    const file = await getFile(ref);
+    const file = await getFile(ws, ref);
     if (file) archive.append(file.buffer, { name: `files/${ref.split('/').pop()}` });
   }
   for (const s of sources.filter((s) => s.storageRef)) {
-    const file = await getFile(s.storageRef!);
+    const file = await getFile(ws, s.storageRef!);
     if (file) archive.append(file.buffer, { name: `files/sources/${s.name}` });
   }
 

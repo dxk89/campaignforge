@@ -26,12 +26,13 @@ const path = require('path');
 // isolation checks below can exercise their in-memory namespacing directly,
 // not just db.ts's.
 require('child_process').execSync(
-  'npx tsc server/db.ts server/firebase.ts server/types.ts server/assets.ts server/exemplars.ts server/telemetry.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
+  'npx tsc server/db.ts server/firebase.ts server/types.ts server/assets.ts server/exemplars.ts server/telemetry.ts server/storage.ts --outDir .test-build --module commonjs --target es2022 --skipLibCheck --esModuleInterop',
   { cwd: path.join(__dirname, '..', 'web'), stdio: 'pipe' }
 );
 const db = require('../web/.test-build/db.js');
 const exemplars = require('../web/.test-build/exemplars.js');
 const telemetry = require('../web/.test-build/telemetry.js');
+const storage = require('../web/.test-build/storage.js');
 
 (async () => {
   console.log('  backend:', EMULATED ? 'firestore emulator' : 'in-memory');
@@ -158,6 +159,15 @@ const telemetry = require('../web/.test-build/telemetry.js');
   assert.equal(exA[0].text, 'Close the month 4 days faster', 'ws_a exemplar text is its own, not ws_b\'s, despite the same clientId');
   assert.equal(exB.length, 1, 'ws_b sees exactly one exemplar for a clientId shared with ws_a');
   assert.equal(exB[0].text, 'Ship the report before Friday', 'ws_b exemplar text is its own, not ws_a\'s, despite the same clientId');
+
+  // Storage: the same cross-workspace isolation, but for object storage
+  // (server/storage.ts). getFile enforces the users/<ws>/ prefix itself now,
+  // rather than leaving it to a single route, so this proves the module-level
+  // guard directly.
+  storage.__resetFiles();
+  const refA = await storage.putFile('ws_a', 'clients/c1/logo.png', Buffer.from('A'), 'image/png');
+  assert.ok((await storage.getFile('ws_a', refA)).buffer.toString() === 'A', 'own workspace can read its file');
+  assert.equal(await storage.getFile('ws_b', refA), null, 'another workspace cannot read it');
 
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });

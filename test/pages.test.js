@@ -131,7 +131,7 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.equal(fileRes.status, 200, 'stored file streams back');
   assert.match(fileRes.headers.get('content-type'), /image/);
   const denied = await fetch(`${base}/api/files/users/someone-else/secret.png`);
-  assert.equal(denied.status, 403, 'refs outside the namespace are refused');
+  assert.equal(denied.status, 404, 'refs outside the namespace read as not found, not 403, so the response reveals nothing about another workspace');
   console.log('  asset upload and file route ok');
 
   // tracking table on Measurement (task 16) and export buttons (task 15)
