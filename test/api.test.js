@@ -8,9 +8,10 @@ const { spawn } = require('child_process');
 const path = require('path');
 const assert = require('assert');
 
-const root = path.join(__dirname, '..');
+const { startNext } = require('./helpers/next-server');
+
 const env = { ...process.env, MOCK_CLAUDE: '1', MOCK_AUTH: '1', ALLOWED_EMAIL: 'test@example.com', PORT: '3223' };
-const server = spawn('npx', ['next', 'start', '-p', '3223'], { cwd: path.join(root, 'web'), env, stdio: 'ignore' });
+const server = startNext(3223, env);
 const site = spawn('python3', ['-m', 'http.server', '8099'], { cwd: path.join(__dirname, 'fixture-site'), stdio: 'ignore' });
 const stop = () => { server.kill(); site.kill(); };
 process.on('exit', stop);
