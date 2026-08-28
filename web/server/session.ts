@@ -74,7 +74,8 @@ export async function verifySession(token: string): Promise<Session | null> {
     const { payload } = await jwtVerify(token, secret());
     const { kind, workspaceId, username } = payload as Record<string, unknown>;
     if (kind !== 'owner' && kind !== 'account') return null;
-    if (typeof workspaceId !== 'string' || typeof username !== 'string') return null;
+    if (typeof workspaceId !== 'string' || !workspaceId) return null;
+    if (typeof username !== 'string' || !username) return null;
     return { kind, workspaceId, username };
   } catch {
     return null;

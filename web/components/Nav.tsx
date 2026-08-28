@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { currentSession } from '@/server/auth';
+import SignOut from './SignOut';
 
 /** Global header. Renders the brand alone when signed out. */
 export default async function Nav() {
@@ -16,17 +17,9 @@ export default async function Nav() {
           <Link href="/clients">Clients</Link>
           <Link href="/ledger">Ledger</Link>
           <Link href="/settings">Settings</Link>
-          <SignOut email={session.email} />
+          <SignOut username={session.username} />
         </nav>
       )}
     </header>
-  );
-}
-
-function SignOut({ email }: { email: string }) {
-  return (
-    <form action="/api/auth/session?redirect=1" method="post">
-      <button type="submit" className="signout" title={email}>Sign out</button>
-    </form>
   );
 }

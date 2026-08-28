@@ -31,6 +31,14 @@ const s = require('../web/.test-build/session.js');
   assert.equal(await s.verifySession('not-a-token'), null);
   assert.equal(await s.verifySession(token.slice(0, -3) + 'aaa'), null, 'tampered token is rejected');
 
+  // jose lives in web/node_modules, not the root; require it by path since this
+  // file runs from the repo root and a bare require('jose') would not resolve.
+  const { SignJWT } = require('../web/node_modules/jose');
+  const emptyWs = await new SignJWT({ kind: 'account', workspaceId: '', username: 'x' })
+    .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setExpirationTime('7d')
+    .sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  assert.equal(await s.verifySession(emptyWs), null, 'an empty workspaceId is rejected');
+
   assert.equal(s.checkAdmin('david', 'correct-horse'), true);
   assert.equal(s.checkAdmin('david', 'wrong'), false);
   assert.equal(s.checkAdmin('someone', 'correct-horse'), false);
