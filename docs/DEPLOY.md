@@ -74,6 +74,13 @@ The script copies `firestore.rules` into `.rules-build/`, which is gitignored.
 
 4. Deploy.
 
+**If you are redeploying an existing instance that already had a monthly
+ceiling set:** the ceiling moved from a per-workspace document to a single
+global one (`system/spend/global`), and nothing migrates the old value
+across. It comes back as "none" with no error, no log line, and no warning
+in the UI. Go to **Settings** straight after deploying and re-enter the
+monthly ceiling, or the spend cap is silently off until you do.
+
 ## 4. Verify, in order
 
 1. `https://your-app.vercel.app/api/health` → expect `{"ok":true,"mock":false,"images":true|false,"auth":true,"stack":"next"}`.

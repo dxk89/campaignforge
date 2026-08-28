@@ -5,6 +5,8 @@ import { NextResponse } from 'next/server';
 const { MOCK } = require('@core/claude');
 const images = require('@core/images');
 
+import { adminConfigured } from '@/server/session';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +15,7 @@ export async function GET() {
     ok: true,
     mock: MOCK,
     images: images.available(),
-    auth: Boolean(process.env.ALLOWED_EMAIL),
+    auth: adminConfigured(),
     stack: 'next',
   });
 }

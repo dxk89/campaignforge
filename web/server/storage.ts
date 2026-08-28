@@ -58,7 +58,15 @@ function client(): S3Client {
   return globalThis.__cfR2;
 }
 
-const key = (ws: string, p: string) => `users/${ws}/${p}`;
+const key = (ws: string, p: string) => {
+  // A workspace id is required. This is a bug: the caller did not pass
+  // session.workspaceId. Matches the guard in db.ts's root(): currently
+  // unreachable, but without it a missing ws would silently write to
+  // users/undefined/... in storage while the database throws for the same
+  // input, which is the kind of asymmetry that turns into a real bug later.
+  if (!ws) throw new Error('A workspace id is required. This is a bug: the caller did not pass session.workspaceId.');
+  return `users/${ws}/${p}`;
+};
 
 export async function putFile(ws: string, path: string, buffer: Buffer, mime = 'application/octet-stream'): Promise<string> {
   const ref = key(ws, path);

@@ -48,11 +48,13 @@ export default async function Settings() {
         <p className="muted" style={{ marginTop: 8 }}><Link href="/ledger">View the ledger →</Link></p>
       </section>
 
-      <section className="block">
-        <h2 className="block-title">Monthly ceiling</h2>
-        <p className="muted">The ledger shows spend after the fact. This refuses before it.</p>
-        <Ceiling initial={JSON.parse(JSON.stringify(settings))} />
-      </section>
+      {session.kind === 'owner' && (
+        <section className="block">
+          <h2 className="block-title">Monthly ceiling</h2>
+          <p className="muted">The ledger shows spend after the fact. This refuses before it.</p>
+          <Ceiling initial={JSON.parse(JSON.stringify(settings))} />
+        </section>
+      )}
 
       <section className="block">
         <h2 className="block-title">Usage this month <span className="block-hint">{telemetry.month}</span></h2>

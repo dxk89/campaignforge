@@ -20,7 +20,13 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sign-in failed');
-      window.location.href = new URLSearchParams(window.location.search).get('next') || '/clients';
+      const next = new URLSearchParams(window.location.search).get('next') || '';
+      // Only a same-origin absolute path is accepted: exactly one leading
+      // slash, so "//evil.com" (protocol-relative), "https://evil.com" and
+      // "javascript:..." are all rejected rather than followed. The login
+      // page is public, so this link is reachable by anyone, not just a
+      // signed-in user clicking their own bookmark.
+      window.location.href = /^\/(?!\/)/.test(next) ? next : '/clients';
     } catch (err: any) {
       setError(err.message || 'Sign-in failed');
       setBusy(false);

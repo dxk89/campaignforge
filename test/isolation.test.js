@@ -155,6 +155,14 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
   assert.equal(bobDeleteAccount.status, 403, JSON.stringify(bobDeleteAccount.data));
   console.log('  admin routes refuse a non-owner on GET, POST and DELETE');
 
+  // 5b. The spend ceiling moved to a single document shared by every
+  // workspace (system/spend/global), so a write to it is no longer scoped to
+  // the caller's own workspace: it changes the cap for everyone, including
+  // the owner. A demo account must not be able to touch it.
+  const bobPatchCeiling = await api('/api/settings', { method: 'PATCH', body: { monthlyCeilingEur: null }, cookie: bobCookie });
+  assert.equal(bobPatchCeiling.status, 403, JSON.stringify(bobPatchCeiling.data));
+  console.log('  demo account cannot PATCH /api/settings (global ceiling):', bobPatchCeiling.status);
+
   // 6. Revoke alice as admin; her still-unexpired cookie must be refused on
   // the very next request, not merely once the seven-day token expires.
   const revoked = await api(`/api/admin/accounts/${aliceId}`, { method: 'DELETE', cookie: ownerCookie });
