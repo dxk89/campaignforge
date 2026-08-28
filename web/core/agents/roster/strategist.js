@@ -22,7 +22,7 @@ module.exports = {
     },
     required: ['angles', 'lead_angle', 'lead_reasoning', 'hooks', 'key_messages'],
   },
-  packet: ({ ws, brief, context, audience, memory }) => ({ user: prompt.userPrompt(brief, contextBlock(context, audience, memory)), ws, brief, context }),
+  packet: ({ brief, context, audience, memory }) => ({ user: prompt.userPrompt(brief, contextBlock(context, audience, memory)), brief, context }),
   validate: (o) => {
     const p = [];
     const names = (o.angles || []).map((a) => a.name);

@@ -28,9 +28,9 @@ module.exports = {
     },
     required: ['meta', 'linkedin', 'google', 'email'],
   },
-  packet: ({ ws, brief, strategy, context, audience, memory }) => ({
+  packet: ({ brief, strategy, context, audience, memory }) => ({
     user: prompt.userPrompt(brief, strategy, contextBlock(context, audience, memory)),
-    ws, brief, strategy, context, rules: buildRules(brief, context, memory?.approvedClaims),
+    brief, strategy, context, rules: buildRules(brief, context, memory?.approvedClaims),
   }),
   // Gate: hard limit breaches and compliance violations block; warnings pass through to the UI.
   validate: (o, packet) => {

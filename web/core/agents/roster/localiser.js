@@ -16,8 +16,8 @@ module.exports = {
   tools: [check_limits, check_compliance, ask_critic],
   budget: { maxTurns: 6, maxOutputTokens: 7000 },
   schema: copywriter.schema,
-  packet: ({ ws, assets, glossary, brief, context }) => ({
-    user: prompt.userPrompt(assets, glossary), ws, brief, assets,
+  packet: ({ assets, glossary, brief, context }) => ({
+    user: prompt.userPrompt(assets, glossary), brief, assets,
     rules: { avoid: [], competitors: context?.competitors || [], brandName: brief?.clientName || brief?.productName, approvedClaims: null, claimSeverity: 'warning' },
   }),
   validate: (o, packet) => {

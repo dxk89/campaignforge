@@ -138,22 +138,26 @@ const telemetry = require('../web/.test-build/telemetry.js');
   assert.equal(telB.counters['run.copywriter'], 3, 'ws_b telemetry is exactly its own count');
 
   // Exemplars: the approved-copy bank, in-memory keyed by "ws/clientId"
-  // (exemplars.ts). A flattened key (clientId only) would make either
-  // workspace's list return both texts, or the wrong one, since clientA and
-  // clientB below share no id relationship that would mask the bug.
+  // (exemplars.ts). Deliberately reuse the SAME clientId string across both
+  // workspaces here: that is the only case a flattened key (clientId alone)
+  // collides on. Using two random clientIds, as an earlier version of this
+  // test did, does not discriminate — distinct ids land on distinct keys
+  // even with ws dropped entirely, so that shape passes against a broken
+  // implementation too.
+  const sharedClientId = 'shared-client-id';
   const assetFor = (text) => ({
     assetId: 'meta.v1.headline.en', channel: 'meta', unit: 'v1', field: 'headline', language: 'en',
     text, generatedText: text, versionId: 'v1', editedAt: null,
     status: 'approved', approvedAt: null, note: null, flags: [],
   });
-  await exemplars.recordExemplar(ws_a, clientA.clientId, assetFor('Close the month 4 days faster'), 'camp-a', {}, 'approved');
-  await exemplars.recordExemplar(ws_b, clientB.clientId, assetFor('Ship the report before Friday'), 'camp-b', {}, 'approved');
-  const exA = await exemplars.listExemplars(ws_a, clientA.clientId);
-  const exB = await exemplars.listExemplars(ws_b, clientB.clientId);
-  assert.equal(exA.length, 1, 'ws_a sees exactly one exemplar');
-  assert.equal(exA[0].text, 'Close the month 4 days faster', 'ws_a exemplar text is its own, not ws_b\'s');
-  assert.equal(exB.length, 1, 'ws_b sees exactly one exemplar');
-  assert.equal(exB[0].text, 'Ship the report before Friday', 'ws_b exemplar text is its own, not ws_a\'s');
+  await exemplars.recordExemplar(ws_a, sharedClientId, assetFor('Close the month 4 days faster'), 'camp-a', {}, 'approved');
+  await exemplars.recordExemplar(ws_b, sharedClientId, assetFor('Ship the report before Friday'), 'camp-b', {}, 'approved');
+  const exA = await exemplars.listExemplars(ws_a, sharedClientId);
+  const exB = await exemplars.listExemplars(ws_b, sharedClientId);
+  assert.equal(exA.length, 1, 'ws_a sees exactly one exemplar for a clientId shared with ws_b');
+  assert.equal(exA[0].text, 'Close the month 4 days faster', 'ws_a exemplar text is its own, not ws_b\'s, despite the same clientId');
+  assert.equal(exB.length, 1, 'ws_b sees exactly one exemplar for a clientId shared with ws_a');
+  assert.equal(exB[0].text, 'Ship the report before Friday', 'ws_b exemplar text is its own, not ws_a\'s, despite the same clientId');
 
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });

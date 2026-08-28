@@ -82,5 +82,43 @@ const brief = { productName: 'Ledgerline', objective: 'trial_signups' };
   assert.ok(verdict.usage.costEur >= 0, 'review reports its own cost');
 
   console.log('critic tests: ok');
+
+  // ---- orchestrator forces ws onto the packet ------------------------------
+  // Regression: ask_critic broke in production because it read packet.ws, but
+  // packet is whatever subset of inputs a roster agent's own packet() chose
+  // to return, and none of them forwarded ws. The fix moved the guarantee
+  // into orchestrator.runAgent itself, which is the one place that builds a
+  // packet from inputs, so no roster file can opt out of it by omission.
+  // strategist.packet() here deliberately does NOT return ws (confirmed by
+  // reading web/core/agents/roster/strategist.js), so if this assertion
+  // passes it is because runAgent added ws back in, not because the agent
+  // happened to forward it.
+  {
+    const path = require('path');
+    const runtimePath = path.join(__dirname, '..', 'web', 'core', 'agents', 'runtime.js');
+    const orchestratorPath = path.join(__dirname, '..', 'web', 'core', 'agents', 'orchestrator.js');
+    const runtimeReal = require(runtimePath);
+    const originalRun = runtimeReal.run;
+    let capturedPacket = null;
+    // Mutate the shared exports object in place, then force orchestrator.js
+    // to re-evaluate so its `const { run } = require('./runtime')` picks up
+    // the patched function rather than the reference it destructured when
+    // first required earlier in this file.
+    runtimeReal.run = async (agent, packet, opts) => { capturedPacket = packet; return originalRun(agent, packet, opts); };
+    delete require.cache[orchestratorPath];
+    const orchestratorFresh = require(orchestratorPath);
+
+    assert.ok(!('ws' in strategist.packet({ brief, context: null })), 'sanity check: strategist.packet() alone does not carry ws');
+
+    script = [[submit(FIXTURES.strategy, 'ws1')]];
+    await orchestratorFresh.runAgent('strategist', { brief, context: null, ws: 'ws-regression-check' });
+    assert.ok(capturedPacket, 'runtime.run was called');
+    assert.equal(capturedPacket.ws, 'ws-regression-check', 'orchestrator.runAgent forces ws onto the packet even when the agent\'s own packet() omits it');
+
+    runtimeReal.run = originalRun;
+    delete require.cache[orchestratorPath];
+  }
+  console.log('ws-in-packet regression: ok');
+
   console.log('runtime tests: ok');
 })().catch((e) => { console.error('runtime tests FAILED', e); process.exit(1); });

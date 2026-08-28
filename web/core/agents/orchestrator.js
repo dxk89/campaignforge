@@ -28,7 +28,16 @@ async function runAgent(name, inputs = {}, opts = {}) {
   if (!agent) { const e = new Error(`unknown agent "${name}"`); e.status = 404; throw e; }
 
   const memory = await loadMemory({ ws: inputs.ws, clientId: inputs.clientId, agent: name, channel: inputs.channel, objective: inputs.brief?.objective });
-  const packet = agent.packet({ ...inputs, memory });
+  // agent.packet() returns whatever hand-picked subset of inputs that roster
+  // file chose to keep; ws is forced onto the result afterwards rather than
+  // relying on every packet() to remember to forward it. Without this, a new
+  // roster agent that adds ask_critic and writes its own packet() inherits a
+  // silent trap: nothing catches a missing ws in mock mode or in any test,
+  // because promptStore.roleFor only throws once a store is configured, so
+  // the failure appears solely in a Firestore-backed deployment. This is the
+  // single place that builds a packet from inputs, so it is the one place
+  // that can guarantee this instead of leaving it to per-agent discipline.
+  const packet = { ...agent.packet({ ...inputs, memory }), ws: inputs.ws };
   // A stored prompt version overrides the code default; which one was used is
   // recorded on the result so a campaign can be traced to its wording.
   const { role, promptVersion } = await promptStore.roleFor(name, resolve(agent.role, inputs), inputs.ws);
