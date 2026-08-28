@@ -22,10 +22,17 @@ function init(): App {
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT is not set');
   const json = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
-  app = initializeApp({
-    credential: cert(json),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${json.project_id}.appspot.com`,
-  });
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${json.project_id}.appspot.com`;
+  // The emulator authenticates nothing, so there is no real private key to
+  // present and cert() would throw parsing the placeholder one. Project id
+  // alone is what it wants. Gated on FIRESTORE_EMULATOR_HOST, which the
+  // emulator sets and production never does, so the credentialled path below
+  // is untouched.
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    app = initializeApp({ projectId: json.project_id, storageBucket });
+    return app;
+  }
+  app = initializeApp({ credential: cert(json), storageBucket });
   return app;
 }
 

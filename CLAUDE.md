@@ -231,6 +231,12 @@ Each of these cost someone time to discover.
 - **`web/core/claude.js` throws at module load** when there is no
   `ANTHROPIC_API_KEY` and no `MOCK_CLAUDE`. That is why builds and scripts need
   one or the other. Never move this check to first-request time.
+- **`web/server/firebase.ts` skips `cert()` under the emulator.** The emulator
+  authenticates nothing, so there is no real private key to present and
+  `cert()` throws parsing the placeholder one. `init()` branches on
+  `FIRESTORE_EMULATOR_HOST`, which the emulator sets and production never
+  does. Remove that branch and `npm run test:emulator` cannot get past its
+  first line, which is how the Firestore path went unproven for four phases.
 - **Next 16 renamed `middleware` to `proxy`.** The file is `web/proxy.ts` and
   exports a default function.
 - **`archiver`'s published types are not callable under ESM.** There is a local

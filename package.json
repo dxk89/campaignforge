@@ -11,7 +11,7 @@
     "web": "cd web && next dev",
     "web:build": "cd web && next build",
     "legacy": "node legacy/server.js",
-    "test:emulator": "cd web && npx firebase emulators:exec --only firestore --project demo-cf \"cd .. && FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-cf node test/db.test.js\"",
+    "test:emulator": "node scripts/emulator-test.js",
     "evals": "node evals/run.js",
     "evals:mock": "node evals/run.js --mock",
     "gate": "node evals/gate.js"
