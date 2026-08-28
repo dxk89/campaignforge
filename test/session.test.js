@@ -58,12 +58,20 @@ const s = require('../web/.test-build/session.js');
   assert.notEqual(second.account.workspaceId, made.account.workspaceId, 'accounts get separate workspaces');
 
   await assert.rejects(() => acc.createAccount('alice'), /already exists/, 'usernames are unique');
+  await assert.rejects(() => acc.createAccount('Alice'), /already exists/, 'usernames collide case-insensitively');
+  await assert.rejects(() => acc.createAccount('  alice  '), /already exists/, 'usernames collide after trimming');
+  const upper = await acc.authenticate('ALICE', made.password);
+  assert.ok(upper && upper.workspaceId === made.account.workspaceId, 'sign-in normalises the username too');
 
   await acc.revokeAccount(made.account.id);
   assert.equal(await acc.authenticate('alice', made.password), null, 'revoked accounts cannot sign in');
   const listed = await acc.listAccounts();
   assert.equal(listed.length, 2, 'revoked accounts remain listed');
   assert.ok(!('hash' in listed[0]), 'hashes are never returned');
+
+  assert.equal(await acc.workspaceActive(second.account.workspaceId), true, 'a live account is active');
+  assert.equal(await acc.workspaceActive(made.account.workspaceId), false, 'a revoked account is inactive');
+  assert.equal(await acc.workspaceActive('ws_does_not_exist'), false, 'an unknown workspace is inactive');
 
   console.log('session tests: ok');
 })();
