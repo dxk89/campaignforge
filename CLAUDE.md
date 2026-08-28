@@ -301,7 +301,10 @@ Each of these cost someone time to discover.
 
 ## Deploying
 
-Vercel, with **Root Directory set to `web`**. Framework preset Next.js, no
+Vercel, with **Root Directory set to `web`** and **Framework Preset set to
+Next.js**. Neither is the default for this repository: the project was first
+imported as an Express app, and a preset left on Other fails the build with
+"No entrypoint found". No
 build or install command overrides; `web/vercel.json` only raises the function
 timeout to 300 seconds. The runtime lives at `web/core/` and `web/package.json`
 carries every dependency it needs, because Vercel traces files from the root

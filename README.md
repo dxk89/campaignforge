@@ -43,7 +43,19 @@ Mock mode returns a fixture campaign for a fictional product (Ledgerline). One G
 
 ## Deploy
 
-**Vercel.** Push the repo to GitHub, import it at vercel.com/new (framework preset: Other), add `ANTHROPIC_API_KEY` under Environment Variables, deploy. Or from the terminal:
+**Vercel.** Push the repo to GitHub and import it at vercel.com/new. Two
+settings must be right, and neither is guessed correctly by default for this
+repository:
+
+- **Root Directory: `web`.** The product and the agent runtime both live
+  there. Vercel traces and installs files from the Root Directory, so
+  anything above it is not reliably included.
+- **Framework Preset: Next.js.** If this is left as Other, Vercel builds it as
+  a generic Node app and fails with "No entrypoint found", because it is
+  looking for an Express-style `index.js` that no longer exists.
+
+Then add the environment variables from `docs/DEPLOY.md` and deploy. Or from
+the terminal:
 
 ```bash
 npm i -g vercel
@@ -52,7 +64,11 @@ vercel env add ANTHROPIC_API_KEY
 vercel --prod
 ```
 
-`vercel.json` routes every `/api/*` request to one function (`api/index.js`, which is the same Express app as `server.js`) and gives it a 300-second limit, which is the Fluid compute maximum on every plan. The front end in `public/` is served from the CDN. Set `MOCK_CLAUDE=1` as an environment variable to demo without spend.
+`web/vercel.json` raises the function timeout to 300 seconds, the Fluid
+compute maximum on every plan, which matters because a full campaign run
+takes two to four minutes. It lives inside `web/` because Vercel reads it
+from the Root Directory; a copy at the repo root is silently ignored. Set
+`MOCK_CLAUDE=1` as an environment variable to demo without spend.
 
 **Render.** `render.yaml` describes one free-tier web service. Connect the repo, deploy, then add `ANTHROPIC_API_KEY` in the dashboard. Health check is `/api/health`.
 

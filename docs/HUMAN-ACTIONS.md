@@ -18,7 +18,9 @@ The build failed because the agent runtime sat outside the deployed directory. T
 
 1. Vercel → your `campaignforge` project → **Settings → General**.
 2. **Root Directory**: set to `web`. Save.
-3. Leave Framework Preset as Next.js (auto-detected). Clear any custom Build or Install command.
+3. **Framework Preset: Next.js.** If it says Other, change it: that is the
+   leftover from when this repo was an Express app, and it fails the build with
+   "No entrypoint found". Clear any custom Build or Install command.
 4. **Deployments → Redeploy** the latest commit.
 
 It should build. If it does not, the log will name a missing environment variable, which §2 supplies.
