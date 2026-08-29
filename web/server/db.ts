@@ -145,8 +145,25 @@ export async function addVersion(ws: string, clientId: string, campaignId: strin
   if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/versions/${versionId}`).set(doc);
   else memCol(memKey(ws, clientId, campaignId, 'versions')).set(versionId, doc);
 
+  // A pass that submitted nothing must not replace one that did. This used to
+  // happen unconditionally, so a re-run that ran out of turns overwrote a good
+  // result with null; the output was still in version history, and no route
+  // reads history back, so the work was gone. Rerunning a pass that sometimes
+  // fails should cost money, never progress.
+  //
+  // The test is the output, not `complete`. A pass can submit a real output
+  // and still be incomplete - the mock copywriter's deliberately over-limit
+  // Google headline is exactly that - and that output is a usable result the
+  // workbench shows with its flags. Only a null output is nothing.
+  //
+  // A first failure still takes the pointer: there is nothing to protect, and
+  // the workbench needs the record to show the pass as failed rather than as
+  // never run.
   const campaign = await getCampaign(ws, clientId, campaignId);
-  if (campaign) await updateCampaign(ws, clientId, campaignId, { current: { ...campaign.current, [v.agent]: versionId } });
+  const replacing = Boolean(campaign?.current?.[v.agent]);
+  if (campaign && (doc.output != null || !replacing)) {
+    await updateCampaign(ws, clientId, campaignId, { current: { ...campaign.current, [v.agent]: versionId } });
+  }
   return doc;
 }
 

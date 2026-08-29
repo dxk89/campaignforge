@@ -334,14 +334,39 @@ const storage = require('../web/.test-build/storage.js');
   });
 
   const usage = { input: 0, output: 0, ms: 0, costEur: 0 };
-  const version = (agent, output) => dbm.addVersion(ws, client.clientId, campaign.campaignId, {
-    agent, output, inputsHash: 'h', promptVersion: null, model: 'test', usage,
+  const version = (agent, output, complete = true) => dbm.addVersion(ws, client.clientId, campaign.campaignId, {
+    agent, output, inputsHash: 'h', promptVersion: null, model: 'test', usage, complete,
   });
   await version('brand-analyst', { company_summary: 's', proof_points: [], glossary: [] });
   await version('strategist', { angles: [], lead_angle: 'x', key_messages: [] });
-  // Exactly what the runtime writes for a pass that never called submit: the
-  // record and its cost are kept, the output is null.
-  await version('copywriter', null);
+  // A null current output, which is what campaigns written before addVersion
+  // stopped moving the pointer for a failed pass still hold. complete is left
+  // undefined here on purpose: that is the shape of those older records, and
+  // it is the only way the pointer still lands on a null output.
+  await dbm.addVersion(ws, client.clientId, campaign.campaignId, {
+    agent: 'copywriter', output: null, inputsHash: 'h', promptVersion: null, model: 'test', usage,
+  });
+  const cur = await dbm.currentOutputs(ws, client.clientId, campaign.campaignId);
+  assertNeed.equal(cur.copywriter.output, null, 'the fixture really does have a null current output');
+
+  // A failed re-run must not replace a good output. This happened on
+  // production: a copy pass succeeded, a second run of it submitted nothing,
+  // and the null took over as current. The good version was still in history
+  // and no route reads history back, so the work was unreachable.
+  const clientB = await dbm.createClient(ws, { name: 'Clobber Co', website: 'https://example.com', brandKit: {}, voice: {} });
+  const campB = await dbm.createCampaign(ws, clientB.clientId, {
+    brief: { productName: 'P', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', channels: ['linkedin'], languages: ['en'] },
+  });
+  const good = await dbm.addVersion(ws, clientB.clientId, campB.campaignId, {
+    agent: 'copywriter', output: { meta: ['kept'] }, inputsHash: 'h', promptVersion: null, model: 'test', usage, complete: true,
+  });
+  await dbm.addVersion(ws, clientB.clientId, campB.campaignId, {
+    agent: 'copywriter', output: null, inputsHash: 'h', promptVersion: null, model: 'test', usage,
+    complete: false, problems: ['no output submitted'],
+  });
+  const currentB = await dbm.currentOutputs(ws, clientB.clientId, campB.campaignId);
+  assertNeed.equal(currentB.copywriter.versionId, good.versionId, 'a failed re-run must not become the current output');
+  assertNeed.deepEqual(currentB.copywriter.output, { meta: ['kept'] }, 'the good output survives a failed re-run');
 
   let err = null;
   try {
