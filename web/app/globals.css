@@ -35,6 +35,12 @@
 
 * { box-sizing: border-box; }
 
+/* Nothing may be wider than what contains it. An image arrives at whatever
+   resolution someone exported it at, and without this a single large upload
+   sets the width of the page it appears on. */
+img, svg, video, canvas { max-width: 100%; }
+img, video { height: auto; }
+
 html, body { height: 100%; }
 
 body {
@@ -268,6 +274,20 @@ input:focus, select:focus, textarea:focus {
 textarea { resize: vertical; min-height: 76px; line-height: 1.45; }
 input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 
+/* A flex item's min-width is auto, so a field with a long value refuses to
+   shrink and widens the row instead - which is how one long URL pushed the
+   form past the edge of the panel. These say the field may shrink, and never
+   exceed what holds it. */
+.field, .field-row > .field { min-width: 0; }
+.field > input, .field > select, .field > textarea { max-width: 100%; }
+
+/* And a cap on how wide a single line of input gets. A text field stretched
+   across a wide monitor is hard to read back and makes the form look broken
+   rather than roomy; a textarea is left full width because its content is a
+   paragraph. */
+.field > input, .field > select { max-width: 460px; }
+.field-row > .field > input, .field-row > .field > select { max-width: 100%; }
+
 /* ---------- Buttons ---------- */
 .btn-primary, .btn-secondary {
   display: inline-flex;
@@ -306,7 +326,11 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .brand { display: flex; flex-direction: column; gap: 1px; }
 .brand-mark { font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: -0.01em; }
 .brand-sub { font-size: 12px; color: var(--muted); }
-.logo { max-height: 36px; max-width: 130px; object-fit: contain; }
+/* .logo was sized here as though it were the <img>. It is the wrapping div,
+   and max-width/max-height beat the width/height on .thumb, so the logo
+   thumbnail was squashed to 130x36 whatever .thumb asked for. The sizing
+   lives with the other thumbnail rules now; the image inside is capped by
+   .thumb img. */
 
 /* ---------- Agent chain ---------- */
 .chain { display: flex; flex-direction: column; gap: 2px; margin: 0 0 16px; padding: 0; list-style: none; }
@@ -421,11 +445,65 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   font-size: 13.5px;
 }
 .pillars ul, .flow ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* A pillar is <b>name</b> followed by a bare text node, so the two ran
+   together and read as "educatePractical close mechanics". Flex makes the
+   text node its own item, which a gap can then separate; the alternative was
+   punctuation invented in the markup. */
+.pillars > div { display: flex; flex-wrap: wrap; gap: 2px 9px; margin-bottom: 5px; }
+.pillars > div > b { color: var(--ink); }
 .utm-url { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
 .img-prompt { font-size: 12.5px; color: var(--muted); font-style: italic; }
-.thumb { max-width: 100%; border-radius: var(--radius); border: 1px solid var(--line); display: block; }
+/* A thumbnail is a fixed box the image sits inside, not a box the image
+   sets the size of. The constraint used to be on .thumb while the <img>
+   inside it was unconstrained, so a logo exported at its native resolution
+   rendered at native resolution and pushed the whole page apart. contain
+   rather than cover because a logo cropped to fill a square is not a logo. */
+.thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  padding: 6px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.thumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+/* Logos are usually wide, so give that one a wider box than the square. */
+.thumb.logo { width: 150px; }
+
+/* The remove control belongs on the thumbnail, not in the flow after it. */
+.thumb > button {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 13px;
+}
+.thumb > button:hover { color: var(--ember); border-color: var(--ember); }
+
 .gfx, .gfx-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.asset-strip { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+/* A generated image is evidence to judge, not the page. Cap its height so a
+   portrait render cannot push the copy it belongs to off the screen. */
+.gfx > img, .gfx > div > svg, .gfx svg {
+  max-width: 100%;
+  max-height: 320px;
+  height: auto;
+  border-radius: var(--radius);
+  display: block;
+}
+.asset-strip { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .brand-assets { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
 .web-research { font-size: 12.5px; color: var(--muted); }
 .warnings-only { font-size: 12.5px; color: var(--amber); }
