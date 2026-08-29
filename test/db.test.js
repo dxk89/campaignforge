@@ -41,7 +41,9 @@ const storage = require('../web/.test-build/storage.js');
   // Every call below takes the workspace id explicitly, as every real caller
   // now must (session.workspaceId). 'owner' matches MOCK_AUTH's workspace, so
   // this exercises the same root the suite always has.
-  const ws = 'owner';
+  // Its own workspace: the block above counts the clients in 'owner' and this
+  // one shares the in-memory store with it.
+  const ws = 'ws-null-dependency';
 
   // client lifecycle
   const client = await db.createClient(ws, { name: 'Ledgerline', domain: 'ledgerline.example' });
@@ -276,3 +278,81 @@ const storage = require('../web/.test-build/storage.js');
   );
   console.log(`firestore path tests: ok (${checked} chains)`);
 })().catch((e) => { console.error('firestore path tests FAILED', e); process.exit(1); });
+
+/**
+ * A dependency that ran but submitted nothing is not a dependency that is met.
+ *
+ * The runtime records a pass that exhausts its call budget without calling
+ * submit: cost, token counts and problems are all kept, and the output is
+ * null, because invariant 2 forbids accepting an ungated output. buildInputs
+ * used to test only whether the record existed, so it handed that null on as
+ * though it were the assets and the next pass died inside a prompt builder
+ * with "Cannot read properties of null (reading 'meta')" - a TypeError naming
+ * a channel, for a copy pass that did not finish.
+ *
+ * Compiled separately from the block above because inputs.ts pulls in the
+ * whole server module graph.
+ */
+(async () => {
+  const assertNeed = require('assert');
+  const path = require('path');
+  const cp = require('child_process');
+  const web = path.join(__dirname, '..', 'web');
+
+  process.env.MOCK_CLAUDE = '1';
+  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test';
+  // tsc takes --paths only from a config file, and inputs.ts imports through
+  // both the @/ and @core/ aliases, so the config is written rather than
+  // passed as flags.
+  const cfg = path.join(web, '.test-inputs.tsconfig.json');
+  require('fs').writeFileSync(cfg, JSON.stringify({
+    compilerOptions: {
+      outDir: '.test-build', module: 'commonjs', target: 'es2022',
+      skipLibCheck: true, esModuleInterop: true, moduleResolution: 'node',
+      baseUrl: '.', paths: { '@core/*': ['core/*'], '@/*': ['./*'] },
+    },
+    files: ['server/inputs.ts'],
+  }));
+  cp.execSync('npx tsc -p .test-inputs.tsconfig.json', { cwd: web, stdio: 'pipe' });
+
+  // tsc rewrites types, not require paths, so @core/ survives into the
+  // emitted JS. inputs.ts uses three of them and they all live in web/core.
+  const Module = require('module');
+  const resolve = Module._resolveFilename;
+  Module._resolveFilename = function (request, ...rest) {
+    const req = request.startsWith('@core/') ? path.join(web, 'core', request.slice('@core/'.length)) : request;
+    return resolve.call(this, req, ...rest);
+  };
+
+  const dbm = require('../web/.test-build/db.js');
+  const { buildInputs } = require('../web/.test-build/inputs.js');
+  const ws = 'owner';
+
+  const client = await dbm.createClient(ws, { name: 'Null Output Co', website: 'https://example.com', brandKit: {}, voice: {} });
+  const campaign = await dbm.createCampaign(ws, client.clientId, {
+    brief: { productName: 'P', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', channels: ['linkedin', 'email'], languages: ['en'] },
+  });
+
+  const usage = { input: 0, output: 0, ms: 0, costEur: 0 };
+  const version = (agent, output) => dbm.addVersion(ws, client.clientId, campaign.campaignId, {
+    agent, output, inputsHash: 'h', promptVersion: null, model: 'test', usage,
+  });
+  await version('brand-analyst', { company_summary: 's', proof_points: [], glossary: [] });
+  await version('strategist', { angles: [], lead_angle: 'x', key_messages: [] });
+  // Exactly what the runtime writes for a pass that never called submit: the
+  // record and its cost are kept, the output is null.
+  await version('copywriter', null);
+
+  let err = null;
+  try {
+    await buildInputs(ws, client.clientId, campaign.campaignId, 'social-planner');
+  } catch (e) { err = e; }
+
+  assertNeed.ok(err, 'a null dependency output must be refused, not passed on');
+  assertNeed.equal(err.status, 409, 'refused as a dependency problem, not a 500');
+  assertNeed.ok(
+    /has not been generated yet/.test(err.message),
+    `the message should name the missing pass, got: ${err.message}`
+  );
+  console.log('null-dependency tests: ok');
+})().catch((e) => { console.error('null-dependency tests FAILED', e); process.exit(1); });

@@ -51,9 +51,23 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
   if (!client) throw Object.assign(new Error('Client not found'), { status: 404 });
   if (!campaign) throw Object.assign(new Error('Campaign not found'), { status: 404 });
 
+  /**
+   * A dependency's output, or a 409 saying which pass to run first.
+   *
+   * Checks the output, not just the record. A pass that runs but never calls
+   * submit - it exhausted its call budget, say - is recorded with its cost
+   * and problems and a null output, which is correct: invariant 2 says an
+   * ungated output is never accepted. But the record exists, so testing the
+   * record alone returned null as though it were the assets, and the next
+   * pass died on it with "Cannot read properties of null (reading 'meta')".
+   * A TypeError naming a channel is a poor way to learn the copy pass did not
+   * finish.
+   */
   const need = (a: string, label: string) => {
     const v = outputs[a];
-    if (!v) throw Object.assign(new Error(`${label} has not been generated yet`), { status: 409 });
+    if (!v || v.output == null) {
+      throw Object.assign(new Error(`${label} has not been generated yet`), { status: 409 });
+    }
     return v.output as any;
   };
 
