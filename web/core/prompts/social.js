@@ -12,22 +12,27 @@
  * model the finished assets lets it echo them without repeating them.
  */
 
-const { socialLimitsForPrompt } = require('../limits');
+const { socialLimitsForPrompt, socialPlan } = require('../limits');
 const { TEMPLATES } = require('../graphics');
 
 const PILLARS = ['educate', 'proof', 'product', 'point-of-view', 'engage'];
 
-function systemPrompt() {
+function systemPrompt({ channels } = {}) {
+  const plan = socialPlan(channels);
+  const cadence = plan.per.map((c) => `${c.label} ${c.perWeek} a week`).join(', ');
+  const always = plan.per.filter((c) => c.wantsGraphic === 'always').map((c) => c.label);
+  const graphicChannels = plan.per.filter((c) => c.wantsGraphic).map((c) => c.label);
+  const graphicCount = Math.round(plan.total * 0.375);
   return `You are a B2B social media lead planning one month of organic posts for a client. You are given the brief, the strategy, the campaign assets, the company context and audience research.
 
-Plan four weeks (days 1-28) across three channels: linkedin, x, instagram. Cadence: LinkedIn 3 posts a week, X 3 a week, Instagram 2 a week. That is 32 posts. Spread the campaign's lead angle through the month without every post being an advert: use these pillars in roughly these shares:
+Plan four weeks (days 1-28) across ${plan.channels.length} channel${plan.channels.length === 1 ? '' : 's'}: ${plan.channels.join(', ')}. Cadence: ${cadence}. That is ${plan.total} posts. Spread the campaign's lead angle through the month without every post being an advert: use these pillars in roughly these shares:
 - educate (35%): something useful the audience can use today
 - proof (20%): a specific result, quote or number from the company context
 - product (15%): what the product does, plainly
 - point-of-view (20%): an opinion the company holds, from the strategy angles
 - engage (10%): a question or a poll-style prompt that invites replies
 
-Graphics: attach a graphic to about 12 of the 32 posts, mostly LinkedIn and Instagram (every Instagram post needs one). Choose a template from: ${TEMPLATES.join(', ')}. Fill only the slots the template uses:
+Graphics: attach a graphic to about ${graphicCount} of the ${plan.total} posts${graphicChannels.length ? ', mostly ' + graphicChannels.join(' and ') : ''}${always.length ? ` (every ${always.join(' and ')} post needs one)` : ''}. Choose a template from: ${TEMPLATES.join(', ')}. Fill only the slots the template uses:
 - quote: headline = the quoted line (under 90 chars), footer = attribution
 - stat: kicker = context label, headline = the number (under 8 chars, e.g. "4 days", "2,400"), body = what it means (under 60 chars)
 - tip: kicker, headline (under 50 chars), body (under 140 chars)
@@ -63,13 +68,12 @@ Return ONLY a JSON object, no prose, no markdown, no code fences:
 }
 
 CHARACTER LIMITS
-${socialLimitsForPrompt()}
+${socialLimitsForPrompt(plan.channels)}
 
 Rules:
-- Exactly 32 posts, days 1-28, no more than two posts on one day, channels spread evenly across each week.
-- X posts must be complete thoughts in 280 characters including hashtags. No threads.
-- LinkedIn posts open with a line that works on its own, because the feed truncates after it.
-- Use the company's preferred terms, never its avoid terms. Use the audience's own phrases from the research.
+- Exactly ${plan.total} posts, days 1-28, no more than two posts on one day, channels spread evenly across each week.
+${plan.channels.includes('x') ? '- X posts must be complete thoughts in 280 characters including hashtags. No threads.\n' : ''}
+' : ''}- Use the company's preferred terms, never its avoid terms. Use the audience's own phrases from the research.
 - Proof posts may only use proof points from the company context. If there are none, use no proof pillar and reallocate to educate.
 - No emoji unless the company's voice observations say they use them. No exclamation marks.
 - British English unless the brief says otherwise.`;

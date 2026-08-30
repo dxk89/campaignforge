@@ -262,7 +262,30 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   );
 }
 
+/**
+ * Labels for the social channels, and the default the planner falls back to.
+ * The authority is core/limits.js SOCIAL_CHANNELS, which also holds each
+ * platform's limits and cadence; this is only what the checkbox says, because
+ * core/ is CommonJS and this file is a client component.
+ */
+const SOCIAL_CHANNEL_OPTIONS: [string, string][] = [
+  ['linkedin', 'LinkedIn'],
+  ['x', 'X'],
+  ['instagram', 'Instagram'],
+  ['facebook', 'Facebook'],
+  ['tiktok', 'TikTok'],
+  ['threads', 'Threads'],
+  ['youtube', 'YouTube'],
+  ['pinterest', 'Pinterest'],
+];
+const DEFAULT_SOCIAL = ['linkedin', 'x', 'instagram'];
+const PER_WEEK: Record<string, number> = {
+  linkedin: 3, x: 3, instagram: 2, facebook: 2, tiktok: 2, threads: 3, youtube: 1, pinterest: 2,
+};
+
 function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: any) {
+  const socialChannels: string[] = (brief.socialChannels?.length ? brief.socialChannels : DEFAULT_SOCIAL);
+  const socialCount = socialChannels.reduce((n, c) => n + (PER_WEEK[c] || 0) * 4, 0);
   const set = (k: string, v: any) => setBrief({ ...brief, [k]: v });
   const [parse, setParse] = useState<{ status: string; error?: boolean } | null>(null);
   const router = useRouter();
@@ -327,6 +350,34 @@ function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: a
             <input type="checkbox" checked={(brief.languages || []).includes('pt')}
               onChange={(e) => { set('languages', e.target.checked ? ['en', 'pt'] : ['en']); }} onBlur={onSave} /> Portuguese (pt-PT)
           </label>
+        </fieldset>
+        {/*
+          The social channels the month is planned for. Defaulted rather than
+          empty, because an unticked list would silently produce no calendar,
+          and the cadence and post count follow the choice: three channels is
+          32 posts, two is fewer, and the planner is told which limits and
+          which audience each one has.
+        */}
+        <fieldset className="field langs">
+          <legend>Social channels <em className="opt">{socialCount} posts a month</em></legend>
+          {SOCIAL_CHANNEL_OPTIONS.map(([key, label]) => {
+            const on = socialChannels.includes(key);
+            return (
+              <label className="check" key={key}>
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                      ? [...socialChannels, key]
+                      : socialChannels.filter((c) => c !== key);
+                    set('socialChannels', next.length ? next : [key]);
+                  }}
+                  onBlur={onSave}
+                /> {label}
+              </label>
+            );
+          })}
         </fieldset>
         <label className="check web-research">
           <input type="checkbox" checked={Boolean(brief.webResearch)} onChange={(e) => set('webResearch', e.target.checked)} onBlur={onSave} />

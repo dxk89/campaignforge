@@ -32,18 +32,87 @@ const LIMITS = {
   },
 };
 
-const SOCIAL_LIMITS = {
-  linkedin: { text: { max: 3000, hard: true, soft: 1300 }, hashtags: 5 },
-  x: { text: { max: 280, hard: true }, hashtags: 3 },
-  instagram: { text: { max: 2200, hard: true }, hashtags: 30 },
+/**
+ * The social channels a campaign can be planned for.
+ *
+ * Each carries what the planner needs to write for it: the platform's own
+ * limits, a default weekly cadence, and one line on who is actually reading,
+ * because the same angle lands differently on LinkedIn and TikTok, and a
+ * planner told only "write for TikTok" writes LinkedIn copy with hashtags.
+ *
+ * Limits checked 2026-08-30. Platforms move them, so invariant 6's habit
+ * applies here too: a change carries the date it was checked.
+ */
+const SOCIAL_CHANNELS = {
+  linkedin: {
+    label: 'LinkedIn', perWeek: 3, wantsGraphic: true,
+    text: { max: 3000, hard: true, soft: 1300 }, hashtags: 5,
+    note: 'professional feed, truncated after the first line, so the opening line has to work alone',
+  },
+  x: {
+    label: 'X', perWeek: 3, wantsGraphic: false,
+    text: { max: 280, hard: true }, hashtags: 3,
+    note: 'one complete thought, no threads, and the hashtags count towards the limit',
+  },
+  instagram: {
+    label: 'Instagram', perWeek: 2, wantsGraphic: 'always',
+    text: { max: 2200, hard: true }, hashtags: 30,
+    note: 'the image carries the post and the caption explains it; aim for five to eight hashtags rather than thirty',
+  },
+  facebook: {
+    label: 'Facebook', perWeek: 2, wantsGraphic: true,
+    text: { max: 63206, hard: true, soft: 500 }, hashtags: 3,
+    note: 'a broader, less specialist audience than LinkedIn; the same point with less jargon',
+  },
+  tiktok: {
+    label: 'TikTok', perWeek: 2, wantsGraphic: false,
+    text: { max: 2200, hard: true, soft: 150 }, hashtags: 5,
+    note: 'the caption supports a video that does not exist yet, so write it as the hook for one',
+  },
+  threads: {
+    label: 'Threads', perWeek: 3, wantsGraphic: false,
+    text: { max: 500, hard: true }, hashtags: 3,
+    note: 'conversational and short: a remark rather than a post',
+  },
+  youtube: {
+    label: 'YouTube', perWeek: 1, wantsGraphic: true,
+    text: { max: 5000, hard: true, soft: 300 }, hashtags: 3,
+    note: 'a video or Shorts description, of which only the first two lines show before the fold',
+  },
+  pinterest: {
+    label: 'Pinterest', perWeek: 2, wantsGraphic: 'always',
+    text: { max: 500, hard: true }, hashtags: 3,
+    note: 'search-led rather than feed-led, so say plainly what the pin is for',
+  },
 };
 
-function socialLimitsForPrompt() {
-  return [
-    'LinkedIn: text max 3,000 chars (hard), aim under 1,300; up to 5 hashtags.',
-    'X: text max 280 chars INCLUDING hashtags (hard); up to 3 hashtags.',
-    'Instagram: caption max 2,200 chars (hard); up to 30 hashtags, aim for 5-8.',
-  ].join('\n');
+const DEFAULT_SOCIAL_CHANNELS = ['linkedin', 'x', 'instagram'];
+
+// The shape validateSocial has always read, derived so there is one catalogue.
+const SOCIAL_LIMITS = Object.fromEntries(
+  Object.entries(SOCIAL_CHANNELS).map(([k, c]) => [k, { text: c.text, hashtags: c.hashtags }])
+);
+
+/** The channels this campaign is for, falling back to the original three. */
+function socialChannelsFor(list) {
+  const chosen = (list || []).filter((c) => SOCIAL_CHANNELS[c]);
+  return chosen.length ? chosen : DEFAULT_SOCIAL_CHANNELS;
+}
+
+function socialLimitsForPrompt(list) {
+  return socialChannelsFor(list).map((k) => {
+    const c = SOCIAL_CHANNELS[k];
+    const soft = c.text.soft ? `, aim under ${c.text.soft.toLocaleString('en-GB')}` : '';
+    const incl = k === 'x' ? ' INCLUDING hashtags' : '';
+    return `${c.label}: max ${c.text.max.toLocaleString('en-GB')} chars${incl} (hard)${soft}; up to ${c.hashtags} hashtags. ${c.note}.`;
+  }).join('\n');
+}
+
+/** Posts per channel across four weeks, and the total. */
+function socialPlan(list) {
+  const chosen = socialChannelsFor(list);
+  const per = chosen.map((k) => ({ channel: k, ...SOCIAL_CHANNELS[k], total: SOCIAL_CHANNELS[k].perWeek * 4 }));
+  return { channels: chosen, per, total: per.reduce((n, c) => n + c.total, 0) };
 }
 
 /**
@@ -145,4 +214,4 @@ function validateAssets(assets, language) {
   return issues;
 }
 
-module.exports = { LIMITS, SOCIAL_LIMITS, limitsForPrompt, socialLimitsForPrompt, validateAssets, validateSocial, wordCount };
+module.exports = { LIMITS, SOCIAL_LIMITS, SOCIAL_CHANNELS, DEFAULT_SOCIAL_CHANNELS, socialChannelsFor, socialPlan, limitsForPrompt, socialLimitsForPrompt, validateAssets, validateSocial, wordCount };
