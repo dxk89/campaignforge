@@ -34,6 +34,13 @@ export const metadata: Metadata = {
     url: '/',
   },
   twitter: { card: 'summary_large_image', title: 'Campaign Forge — brief in, campaign out', description },
+  // Deliberately out of the index. This is a demonstration holding real
+  // client briefs and generated copy, shown to people who are sent the link.
+  // Being findable adds nothing and puts half-finished work under a search
+  // for the owner's name. app/robots.ts says the same thing to crawlers that
+  // read that instead.
+  robots: { index: false, follow: false, nocache: true,
+    googleBot: { index: false, follow: false, noimageindex: true } },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -11,7 +11,12 @@
  *   claim       a number, %, currency or comparative not covered by an approved
  *               claim (only when an approved-claims list is supplied)
  *   pt-br       Brazilian forms in text marked as pt-PT
+ *   ai-word,    the deterministic half of the DK Humaniser: banned vocabulary,
+ *   ai-phrase,  stock phrases, em dashes and the structural tells. See
+ *   em-dash...  core/ai-tells.js for why only half of it lives in code.
  */
+const { findTells, TIER1, TIER2 } = require('../../ai-tells');
+const AI_WORDS = new Set([...TIER1, ...TIER2].map((w) => w.toLowerCase()));
 
 const SUPERLATIVES = ['revolutionary', 'game-changing', 'game changing', 'cutting-edge', 'cutting edge', 'seamless', 'seamlessly', 'unlock', 'empower', 'empowering', 'ai-powered', 'world-class', 'best-in-class', 'next-generation', 'synergy', 'leverage', 'disrupt', 'supercharge', 'effortless', 'robust', 'holistic'];
 // Brazilian forms. Matched with a unicode-aware word boundary (see wordRe);
@@ -57,7 +62,25 @@ function checkCompliance(output, rules = {}) {
   for (const { path, text } of texts(output)) {
     for (const t of avoid) if (wordRe(t).test(text)) flags.push({ path, rule: 'avoid', detail: `uses avoid term "${t}"`, severity: 'violation' });
     for (const c of competitors) if (wordRe(c).test(text)) flags.push({ path, rule: 'competitor', detail: `names competitor "${c}"`, severity: 'violation' });
-    for (const w of SUPERLATIVES) if (wordRe(w).test(text)) flags.push({ path, rule: 'superlative', detail: `"${w}"`, severity: 'warning' });
+    // Several of these are also AI vocabulary, and two flags on one word
+    // read as two problems. The AI-tell check reports them at the higher
+    // severity, so the superlative rule keeps only what it alone catches.
+    for (const w of SUPERLATIVES) {
+      if (AI_WORDS.has(w.toLowerCase())) continue;
+      if (wordRe(w).test(text)) flags.push({ path, rule: 'superlative', detail: `"${w}"`, severity: 'warning' });
+    }
+    // The house standard for copy is the DK Humaniser. Its deterministic half
+    // runs here, so the same rule that warns an agent mid-draft is the one
+    // that gates its submit.
+    // English only. The vocabulary list is English, and several entries are
+    // ordinary Portuguese words - vital, crucial, paradigma - so running it
+    // over the localised set would flag correct pt-PT copy as slop. The
+    // localiser's register check is ask_critic's job.
+    if (rules.language !== 'pt') {
+      for (const t of findTells(text, { allow: rules.houseTerms })) {
+        flags.push({ path, rule: t.rule, detail: t.detail, severity: t.severity });
+      }
+    }
     if (/\[[^\]]{1,40}\]|\{[a-z_ ]{1,30}\}|\blorem\b|\bTBD\b|\bTODO\b|\bxx+\b/i.test(text)) flags.push({ path, rule: 'placeholder', detail: 'looks like leftover scaffolding', severity: 'violation' });
     if (brand && !/hashtags\[\d+\]$/.test(path)) { // hashtags are conventionally lower-case
       const m = text.match(new RegExp(`\\b${escapeRe(brand)}\\b`, 'i'));

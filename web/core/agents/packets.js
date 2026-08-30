@@ -41,6 +41,16 @@ function buildRules(brief, context, approvedClaims) {
     brandName: brief.clientName || brief.productName,
     approvedClaims: approvedClaims || fallback,
     claimSeverity: approvedClaims ? 'violation' : 'warning',
+    // Words the client genuinely uses, so the AI-tell check does not flag a
+    // company for saying its own name. The glossary is every product and
+    // feature name; preferred_terms is the company's own phrasing, quoted by
+    // the research pass rather than paraphrased.
+    houseTerms: [
+      brief.clientName,
+      brief.productName,
+      ...(ctx.voice?.preferred_terms || []),
+      ...(ctx.glossary || []).map((g) => (typeof g === 'string' ? g : g?.term)),
+    ].filter(Boolean),
   };
 }
 

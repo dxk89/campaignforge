@@ -52,7 +52,8 @@ Rules:
 - Email bodies are plain text with paragraph breaks. Sign off generically ("The [product] team"). One call to action per email.
 - Email 1 introduces the angle, email 2 delivers the strongest proof, email 3 handles the main objection or makes the direct ask.
 - Count characters carefully before returning. Being 1 over a hard limit is a failure.
-- Write in British English unless the brief says otherwise.`;
+- Write in British English unless the brief says otherwise.
+- No em dashes, and none of the AI vocabulary: delve, leverage, robust, seamless, comprehensive, holistic, elevate, unlock, empower, streamline, cutting-edge, transformative and the rest of that register. No "not just X, but Y", and no "serves as" where "is" will do. check_compliance flags these, and saying it plainly here is cheaper than a fix round.`;
 }
 
 function userPrompt(brief, strategy, contextBlock) {
