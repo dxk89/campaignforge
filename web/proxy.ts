@@ -7,7 +7,10 @@
  */
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC = ['/login', '/api/auth/login', '/api/health'];
+// /robots.txt is public because a crawler cannot obey a rule it is redirected
+// away from. Everything behind it needs a session anyway, so this only makes
+// the refusal legible rather than opening anything.
+const PUBLIC = ['/login', '/api/auth/login', '/api/health', '/robots.txt'];
 
 export default function proxy(req: NextRequest) {
   if (process.env.MOCK_AUTH === '1') return NextResponse.next();
