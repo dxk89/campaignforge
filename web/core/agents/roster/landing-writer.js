@@ -13,7 +13,7 @@ module.exports = {
   criticKind: 'landing',
   role: prompt.systemPrompt() + '\n\nBefore submitting, call check_compliance on your draft and fix every violation, then call ask_critic with kind "landing" and fix every must_fix item.',
   tools: [check_compliance, ask_critic],
-  budget: { maxTurns: 5, maxOutputTokens: 3500 },
+  budget: { maxTurns: 8, maxOutputTokens: 3500 },
   schema: {
     type: 'object',
     properties: {

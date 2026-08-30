@@ -10,12 +10,17 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
 
 1. **Brief.** Five fields: product, description, audience, objective, tone. Or upload a briefing document (PDF, DOCX, TXT, MD) and the fields fill in; the document is kept as a source.
 2. **Company voice.** Upload brand guidelines, product pages, past campaigns, customer quotes, sales decks. Fetch a URL. Paste text. Optionally let it search the company's website.
-3. **Generate.** One request, four sequential Claude calls:
+3. **Generate.** Each pass runs on its own, so a campaign can be resumed,
+   re-run one stage at a time, and priced per stage:
    - *Research* distils the material into a company context: voice, preferred and avoided terms, proof points with sources, product facts, audience insights, competitors, a glossary, and gaps.
+   - *Audience* researches the buyer on the web, when the brief asks for it, and returns what they already believe and what would move them.
    - *Strategy* proposes three angles grounded in that context and picks one.
    - *Assets* writes 3 Meta ads, 3 LinkedIn ads, a Google RSA (8 headlines, 4 descriptions) and a 3-email nurture sequence with a branch note, all executing the chosen angle in the company's voice.
+   - *Social* plans a month of posts against content pillars, each with a visual brief and an on-brand typographic card generated in code.
+   - *Activation* builds the lifecycle, the handoff to sales and the measurement plan: UTMs, events and the questions the campaign has to answer.
+   - *Landing* writes the page the ads point at, against the same claim rules.
    - *Localisation* (if Portuguese is ticked) adapts, rather than translates, everything into pt-PT using the glossary.
-5. **Check.** Every character limit is stated in the prompt and then validated in code. Breaches are flagged in the interface, not silently accepted.
+4. **Check.** Every character limit is stated in the prompt and then validated in code. Breaches are flagged in the interface, not silently accepted.
 5. **Economics.** Tokens in and out per pass, web searches, cost in EUR at dated rates, generation time.
 6. **Export.** Copy any asset. Export everything as JSON, or as CSV with one row per field.
 
@@ -37,7 +42,11 @@ MOCK_CLAUDE=1 MOCK_AUTH=1 npm run web
 
 That runs the whole product on fixtures against an in-memory store. It is how the test suites run, and it is deliberate: a reviewer should be able to see everything working in one command.
 
-`npm test` runs five suites: the agent runtime against a scripted model, the data layer, the API contract, server-rendered pages, and the legacy front end.
+`npm test` runs thirteen files: the agent runtime against a scripted model,
+turn-budget arithmetic, the data layer, Firestore path shapes, brand-palette
+extraction, colour contrast, the export builders, the API contract, workspace
+isolation, the three phase suites, server-rendered pages, and the legacy front
+end. None of them needs a key, a Firebase project, or a network.
 
 Mock mode returns a fixture campaign for a fictional product (Ledgerline). One Google headline in the fixture is deliberately over the limit so you can see the validation flag.
 

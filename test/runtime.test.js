@@ -122,3 +122,55 @@ const brief = { productName: 'Ledgerline', objective: 'trial_signups' };
 
   console.log('runtime tests: ok');
 })().catch((e) => { console.error('runtime tests FAILED', e); process.exit(1); });
+
+/**
+ * Turn budgets must cover what the role text demands.
+ *
+ * Every API call is one turn, tool calls included. An agent told to call
+ * check_limits, check_compliance and ask_critic before submitting cannot
+ * finish in fewer than five: draft and check, fix and re-check, critic, fix
+ * and re-check, submit. That was the exact shape of the one copywriter run
+ * that succeeded on production. Its budget was six, so a single extra fix
+ * round - one compliance flag - exhausted it, and two of three real runs
+ * ended with "no output submitted" after spending EUR 0.40 each.
+ *
+ * maxTurns is a ceiling, not a spend commitment: a pass that finishes in five
+ * turns costs five turns whatever the ceiling is. Headroom is therefore free
+ * on success and is the difference between a result and nothing on a bad run.
+ *
+ * This asserts the arithmetic rather than the numbers, so adding a mandated
+ * tool to a role fails here instead of in production.
+ */
+(async () => {
+  const assertBudget = require('assert');
+  const { agents } = require('../web/core/agents/roster');
+  const MANDATED = /\b(check_limits|check_compliance|check_social_limits|ask_critic)\b/g;
+
+  let checked = 0;
+  for (const agent of Object.values(agents)) {
+    if (!agent || typeof agent !== 'object' || !agent.name || !agent.role) continue;
+    // brand-analyst and critic build their role from the brief, so ask for the
+    // default text rather than assuming every role is a plain string.
+    const role = typeof agent.role === 'function' ? agent.role({}) : agent.role;
+    if (typeof role !== 'string') continue;
+    // Only the sentence that mandates them; tools merely offered are fine.
+    const demand = role.match(/Before submitting[\s\S]{0,400}/);
+    if (!demand) continue;
+    const tools = new Set(demand[0].match(MANDATED) || []);
+    if (!tools.size) continue;
+
+    const budget = typeof agent.budget === 'function' ? agent.budget({}) : agent.budget;
+    // One turn per mandated check, one to draft, one to fix, one to submit,
+    // plus two spare fix rounds. Anything less and a flagged asset - which is
+    // the normal case, not the exception - runs the pass out of turns.
+    const floor = tools.size + 5;
+    assertBudget.ok(
+      budget.maxTurns >= floor,
+      `${agent.name}: role mandates ${tools.size} tool calls (${[...tools].join(', ')}) ` +
+        `so maxTurns must be at least ${floor}, found ${budget.maxTurns}`
+    );
+    checked++;
+  }
+  assertBudget.ok(checked >= 4, `expected several agents to mandate tools, saw ${checked}`);
+  console.log(`budget tests: ok (${checked} agents)`);
+})().catch((e) => { console.error('budget tests FAILED', e); process.exit(1); });

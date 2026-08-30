@@ -54,7 +54,9 @@ export default function ResultsClient({ clientId, campaignId, initial, learnings
       <section className="block">
         <h2 className="block-title">Upload</h2>
         <div className="inline-add">
-          <select value={source} onChange={(e) => setSource(e.target.value)}>
+          {/* The options say linkedin, meta, google - none of which announces
+              what the control is choosing. */}
+          <select aria-label="Where these results came from" value={source} onChange={(e) => setSource(e.target.value)}>
             {['linkedin', 'meta', 'google', 'email', 'crm', 'manual'].map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <label className="asset-btn">

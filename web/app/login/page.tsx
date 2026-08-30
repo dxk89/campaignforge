@@ -54,6 +54,33 @@ export default function Login() {
   return (
     <main className="shell" style={{ maxWidth: 460, paddingTop: 72 }}>
       <h1>Campaign Forge</h1>
+      <p className="login-tagline">Brief in, campaign out.</p>
+
+      {/*
+        Anyone reaching this page without an account is here to find out what
+        the product does, and a bare sign-in box tells them nothing. This says
+        it in the order someone assesses it: what goes in, what comes out, and
+        the two things that make it more than a wrapper around a model.
+      */}
+      <section className="login-intro">
+        <p>
+          Give it a product brief and it returns a campaign: positioning and strategy,
+          ad copy for Meta, LinkedIn and Google, a three-email sequence, a month of
+          social posts with graphics, and a Portuguese adaptation.
+        </p>
+        <ul>
+          <li>
+            <b>Nothing over the limit reaches you.</b> Every asset is checked against the
+            platform&rsquo;s real character limits and the client&rsquo;s claim rules before
+            it is accepted. Copy that breaches one is flagged for a person, never quietly trimmed.
+          </li>
+          <li>
+            <b>Every pass is priced.</b> Tokens, cost and duration are shown per agent,
+            and a monthly ceiling refuses a run before it spends rather than after.
+          </li>
+        </ul>
+      </section>
+
       <p className="muted" style={{ marginBottom: 24 }}>Sign in to continue.</p>
       <form onSubmit={submit}>
         <label className="field" htmlFor="username"><span>Username</span>

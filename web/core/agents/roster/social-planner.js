@@ -17,7 +17,7 @@ module.exports = {
   criticKind: 'social',
   
   tools: [check_social_limits, check_compliance, render_card, ask_critic],
-  budget: { maxTurns: 6, maxOutputTokens: 12000 },
+  budget: { maxTurns: 10, maxOutputTokens: 12000 },
   schema: {
     type: 'object',
     properties: {

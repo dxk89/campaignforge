@@ -98,12 +98,12 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
       inputs = { brief, clientId, ws, context, audience, strategy: need('strategist', 'The strategy') };
       break;
     case 'social-planner':
-      inputs = { brief, clientId, ws, context, audience, brandKit, strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets') };
+      inputs = { brief, clientId, ws, context, audience, brandKit, strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The asset set') };
       break;
     case 'ops-architect':
       inputs = {
         brief, clientId, ws, context, audience,
-        strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The assets'),
+        strategy: need('strategist', 'The strategy'), assets: need('copywriter', 'The asset set'),
         landingUrl: campaign.brief.landingUrl ?? client.settings.landingUrl ?? undefined,
       };
       break;
@@ -111,7 +111,7 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
       inputs = {
         brief, clientId, ws, context, audience,
         strategy: need('strategist', 'The strategy'),
-        assets: need('copywriter', 'The assets'),
+        assets: need('copywriter', 'The asset set'),
         activation: need('ops-architect', 'The activation plan'),
       };
       break;
@@ -119,7 +119,7 @@ export async function buildInputs(ws: string, clientId: string, campaignId: stri
       // Portuguese is adapted from the *edited* English, not from what the
       // model first wrote. That is the whole point of the editable layer.
       const { composeAssets } = await import('./assets');
-      const english = await composeAssets(ws, clientId, campaignId, 'en', need('copywriter', 'The assets'));
+      const english = await composeAssets(ws, clientId, campaignId, 'en', need('copywriter', 'The asset set'));
       inputs = { brief, clientId, ws, context, assets: english, glossary: (context as any)?.glossary ?? client.voice.glossary ?? [] };
       break;
     }

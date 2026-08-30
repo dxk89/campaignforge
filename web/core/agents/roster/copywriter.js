@@ -17,7 +17,7 @@ module.exports = {
   criticKind: 'assets',
   
   tools: [check_limits, check_compliance, ask_critic],
-  budget: { maxTurns: 6, maxOutputTokens: 7000 },
+  budget: { maxTurns: 10, maxOutputTokens: 7000 },
   schema: {
     type: 'object',
     properties: {

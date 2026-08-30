@@ -19,6 +19,14 @@
   --teal-soft: #e3eff1;
 
   --ember: #e4570f;
+  /* The same ember, darkened until it passes WCAG AA as text. #e4570f reaches
+     only 3.42:1 on the panel background, and it is the colour every error
+     message, violation flag and cost figure uses - the text that most needs
+     reading. Chosen to clear 4.5:1 on all three backgrounds it lands on: the
+     panel, white, and the tinted --ember-soft a violation flag sits on.
+     Non-text use (borders, fills, the brand mark) keeps --ember, which clears
+     the 3:1 those require. */
+  --ember-text: #b8420a;
   --ember-soft: #fdece2;
   --amber: #8a5a00;
   --amber-soft: #fff3d1;
@@ -105,7 +113,7 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .nav-links a:hover { color: var(--ink); }
 .nav-links form { display: inline; }
 .signout { border: 0; background: none; color: var(--muted); font-size: 14px; font-weight: 500; padding: 0; }
-.signout:hover { color: var(--ember); }
+.signout:hover { color: var(--ember-text); }
 .dropzone {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 16px 12px;
@@ -120,7 +128,7 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .dropzone-brief { margin-bottom: 14px; padding: 12px; }
 .brief-status { margin: -8px 0 14px; padding: 8px 10px; border-radius: 4px; font-size: 12.5px; background: var(--teal-soft); color: var(--teal-ink); }
-.brief-status.error { background: var(--ember-soft); color: var(--ember); }
+.brief-status.error { background: var(--ember-soft); color: var(--ember-text); }
 .brief-status .cost { font-family: var(--mono); font-size: 11px; opacity: 0.8; }
 .dropzone strong { color: var(--teal-ink); }
 .dropzone-types { font-family: var(--mono); font-size: 11px; color: var(--muted); }
@@ -131,7 +139,7 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .dropzone-types { font-family: var(--mono); font-size: 11px; color: var(--muted); }
 .dropzone-brief { margin-bottom: 12px; }
 .brief-status { margin: -6px 0 12px; padding: 8px 10px; border-radius: 4px; font-size: 12.5px; background: var(--teal-soft); color: var(--teal-ink); }
-.brief-status.error { background: var(--ember-soft); color: var(--ember); }
+.brief-status.error { background: var(--ember-soft); color: var(--ember-text); }
 .paste summary { cursor: pointer; font-size: 13px; color: var(--teal-ink); font-weight: 500; }
 .paste[open] summary { margin-bottom: 8px; }
 .paste input, .paste textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; margin-bottom: 6px; }
@@ -150,16 +158,16 @@ code { font-family: var(--mono); font-size: 0.92em; background: var(--panel-2); 
 .af-tag.approved { background: var(--ok-soft); color: var(--ok); }
 .asset-field input, .asset-field textarea { width: 100%; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 4px; background: var(--panel); font-size: 13.5px; line-height: 1.5; resize: vertical; }
 .asset-field input:focus, .asset-field textarea:focus { border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px var(--teal-soft); }
-.asset-field.over input, .asset-field.over textarea { border-color: var(--ember); }
+.asset-field.over input, .asset-field.over textarea { border-color: var(--ember-text); }
 .af-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 .af-foot .count { margin-top: 0; }
 .af-flag { font-size: 11.5px; padding: 1px 6px; border-radius: 3px; }
-.af-flag.violation { background: var(--ember-soft); color: var(--ember); }
+.af-flag.violation { background: var(--ember-soft); color: var(--ember-text); }
 .af-flag.warning { background: var(--amber-soft); color: var(--amber); }
 .af-actions { margin-left: auto; display: flex; gap: 4px; }
 .af-ask { display: flex; gap: 6px; margin-top: 6px; }
 .af-ask input { flex: 1; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; }
-.af-error { color: var(--ember); font-size: 12px; margin: 4px 0 0; }
+.af-error { color: var(--ember-text); font-size: 12px; margin: 4px 0 0; }
 .af-diff { margin-top: 4px; font-size: 12px; color: var(--muted); }
 .af-diff summary { cursor: pointer; }
 .approval-bar { display: flex; align-items: center; gap: 12px; padding: 10px 14px; margin: 12px 16px 0; border-radius: 4px; background: var(--panel-2); font-size: 13px; }
@@ -320,7 +328,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   border: 0; background: none; color: var(--muted);
   font-size: 15px; line-height: 1; padding: 0 4px; border-radius: 4px;
 }
-.source-remove:hover { color: var(--ember); }
+.source-remove:hover { color: var(--ember-text); }
 
 /* ---------- Header brand ---------- */
 .brand { display: flex; flex-direction: column; gap: 1px; }
@@ -359,7 +367,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"], .tabs button.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: 600; }
-.tab-flag { margin-left: 6px; font-size: 11px; color: var(--ember); }
+.tab-flag { margin-left: 6px; font-size: 11px; color: var(--ember-text); }
 .tab-panel { min-height: 180px; }
 
 /* ---------- Tables and key/value ---------- */
@@ -387,7 +395,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 }
 .source-name { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .source-chars { color: var(--muted); font-size: 12px; font-family: var(--mono); flex: 0 0 auto; }
-.source-error { color: var(--ember); font-size: 12.5px; margin-top: 6px; }
+.source-error { color: var(--ember-text); font-size: 12.5px; margin-top: 6px; }
 .site-hint, .site-scan { font-size: 12.5px; color: var(--muted); }
 
 /* ---------- States ---------- */
@@ -400,7 +408,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .stale { color: var(--amber); font-size: 12px; }
 .edited { color: var(--teal); font-size: 11.5px; font-weight: 600; }
 .problems, .issues { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.problems li, .issues li { font-size: 12.5px; color: var(--ember); padding-left: 14px; position: relative; }
+.problems li, .issues li { font-size: 12.5px; color: var(--ember-text); padding-left: 14px; position: relative; }
 .problems li::before, .issues li::before { content: "!"; position: absolute; left: 0; font-weight: 700; }
 .check { color: var(--ok); }
 .note, .snote, .mini-copy { font-size: 12.5px; color: var(--muted); }
@@ -424,7 +432,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 
 /* ---------- Economics ---------- */
 .economics { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; font-size: 13px; padding: 12px 18px; border-top: 1px solid var(--line-soft); background: var(--panel-2); }
-.econ-cost { font-family: var(--mono); font-weight: 600; color: var(--ember); font-size: 15px; }
+.econ-cost { font-family: var(--mono); font-weight: 600; color: var(--ember-text); font-size: 15px; }
 .econ-passes, .econ-totals { color: var(--muted); font-size: 12.5px; font-family: var(--mono); }
 
 /* ---------- Social posts ---------- */
@@ -491,7 +499,7 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   color: var(--muted);
   font-size: 13px;
 }
-.thumb > button:hover { color: var(--ember); border-color: var(--ember); }
+.thumb > button:hover { color: var(--ember-text); border-color: var(--ember-text); }
 
 .gfx, .gfx-tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 /* A generated image is evidence to judge, not the page. Cap its height so a
@@ -700,3 +708,30 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   line-height: 1.45;
   color: var(--amber);
 }
+
+/* ---------- Sign-in page ---------------------------------------------------
+   The sign-in page is the first thing a reviewer sees, and for anyone without
+   an account it is the only thing they see. It has to say what the product
+   does before it asks them for anything.
+   -------------------------------------------------------------------------- */
+.login-tagline {
+  margin: 2px 0 18px;
+  font-family: var(--display);
+  font-stretch: 87.5%;
+  font-size: 15px;
+  color: var(--teal);
+}
+.login-intro {
+  margin-bottom: 26px;
+  padding: 15px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--teal);
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.login-intro p { margin: 0 0 10px; color: var(--muted); }
+.login-intro ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 7px; }
+.login-intro li { color: var(--muted); }
+.login-intro b { color: var(--ink); font-weight: 600; }
