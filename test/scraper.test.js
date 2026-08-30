@@ -124,7 +124,10 @@ const { extractPalette, extractFonts } = require('../web/core/scraper.js');
   const fs = require('fs');
   const path = require('path');
   const ui = fs.readFileSync(path.join(__dirname, '..', 'web', 'app', 'clients', '[id]', 'campaigns', '[cid]', 'workbench.tsx'), 'utf8');
-  const offered = [...ui.matchAll(/\['([a-z]+)', '[^']+'\],/g)].map((m) => m[1]);
+  // Only the social list. The file also declares the ad channels, and meta
+  // and google are not social channels.
+  const block = ui.split('SOCIAL_CHANNEL_OPTIONS')[1].split('];')[0];
+  const offered = [...block.matchAll(/\['([a-z]+)', '[^']+'\]/g)].map((m) => m[1]);
   for (const c of offered) {
     assertCh.ok(limits.SOCIAL_CHANNELS[c], `the brief offers "${c}" but core/limits.js has no such channel`);
   }
@@ -132,3 +135,62 @@ const { extractPalette, extractFonts } = require('../web/core/scraper.js');
 
   console.log(`social channel tests: ok (${offered.length} channels)`);
 })().catch((e) => { console.error('social channel tests FAILED', e); process.exit(1); });
+
+/**
+ * Ad channels, the deadline, and the send-to-platform links.
+ *
+ * The copy pass timed out on production at exactly 300,178ms, the platform's
+ * function ceiling: it was killed mid-run, so nothing was written and the
+ * spend was not even recorded. Turns were never the binding constraint. Time
+ * is, and the two answers are to stop before the platform does, and to write
+ * fewer assets when the campaign does not need them.
+ */
+(async () => {
+  const a = require('assert');
+  const fs = require('fs');
+  const path = require('path');
+  const limits = require('../web/core/limits');
+  const cw = require('../web/core/agents/roster/copywriter');
+  const assets = require('../web/core/prompts/assets');
+
+  // Unchanged by default: a campaign that does not choose still gets all four.
+  a.deepEqual(limits.adChannelsFor(), ['meta', 'linkedin', 'google', 'email'], 'default is every channel');
+  a.deepEqual(limits.adChannelsFor([]), ['meta', 'linkedin', 'google', 'email'], 'an empty choice is not no channels');
+
+  // The schema stops demanding what the campaign is not running. Without this
+  // the model must return all four whatever the prompt says, because the
+  // submit tool rejects the call.
+  a.equal(typeof cw.schema, 'function', 'the output shape depends on the brief');
+  a.deepEqual(cw.schema({}).required, ['meta', 'linkedin', 'google', 'email']);
+  a.deepEqual(cw.schema({ brief: { adChannels: ['linkedin', 'email'] } }).required, ['linkedin', 'email'],
+    'only the chosen channels are required');
+
+  // And the prompt asks for less work, which is where the time is saved.
+  const two = assets.systemPrompt({ channels: ['linkedin', 'email'] });
+  a.ok(/Counts: 3 linkedin variants, 3 emails\./.test(two), 'counts follow the choice');
+  a.ok(/runs LinkedIn and Email only/.test(two), 'and it is told not to write the rest');
+  a.ok(!/8 google headlines/.test(two.match(/Counts:[^\n]*/)[0]), 'no counts for an unused channel');
+
+  // A missing chosen channel is still a problem; a missing unchosen one is not.
+  const missing = cw.validate({ linkedin: [] }, { brief: { adChannels: ['linkedin', 'email'] }, rules: {} });
+  a.ok(missing.some((p) => /missing email/.test(p)), 'a channel the campaign runs must be written');
+  a.ok(!missing.some((p) => /missing meta/.test(p)), 'one it does not run is not missing');
+
+  // The loop must stop before the platform kills it.
+  const runtime = fs.readFileSync(path.join(__dirname, '..', 'web', 'core', 'agents', 'runtime.js'), 'utf8');
+  a.ok(/WALL_CLOCK_MS/.test(runtime), 'the runtime has a wall-clock deadline');
+  const deadline = Number((runtime.match(/AGENT_DEADLINE_MS \|\| (\d+)/) || [])[1]);
+  const route = fs.readFileSync(path.join(__dirname, '..', 'web', 'app', 'api', 'clients', '[id]', 'campaigns', '[cid]', 'run', '[agent]', 'route.ts'), 'utf8');
+  const maxDuration = Number((route.match(/maxDuration = (\d+)/) || [])[1]) * 1000;
+  a.ok(deadline > 0 && maxDuration > 0, 'both limits are readable');
+  a.ok(deadline < maxDuration, `the agent deadline (${deadline}ms) must be under the function limit (${maxDuration}ms)`);
+  a.ok(maxDuration - deadline >= 30000, 'leave at least 30s to finish the turn in flight and write the version');
+
+  // The send links open a composer; they never post on someone's behalf.
+  const panels = fs.readFileSync(path.join(__dirname, '..', 'web', 'components', 'panels.tsx'), 'utf8');
+  a.ok(/intent\/post\?text=/.test(panels), 'X opens its composer with the text');
+  a.ok(/shareActive=true/.test(panels), 'LinkedIn opens its composer with the text');
+  a.ok(!/access_token|Bearer |\/v\d+\/me\/feed/.test(panels), 'nothing here posts through an API');
+
+  console.log('ad channel and deadline tests: ok');
+})().catch((e) => { console.error('ad channel and deadline tests FAILED', e); process.exit(1); });

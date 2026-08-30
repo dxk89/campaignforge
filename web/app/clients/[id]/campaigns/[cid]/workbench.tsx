@@ -198,7 +198,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               {tab === 'linkedin' && <EditableChannel assets={editing.assets} channel="linkedin" title="LinkedIn" ctx={editing} />}
               {tab === 'google' && <EditableChannel assets={editing.assets} channel="google" title="Google RSA" ctx={editing} />}
               {tab === 'email' && <EditableChannel assets={editing.assets} channel="email" title="Email" ctx={editing} />}
-              {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} />}
+              {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} landingUrl={brief.landingUrl} />}
               {tab === 'landing' && <LandingPanel landing={outputs['landing-writer']} />}
               {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}
@@ -279,6 +279,10 @@ const SOCIAL_CHANNEL_OPTIONS: [string, string][] = [
   ['pinterest', 'Pinterest'],
 ];
 const DEFAULT_SOCIAL = ['linkedin', 'x', 'instagram'];
+const AD_CHANNEL_OPTIONS: [string, string][] = [
+  ['meta', 'Meta'], ['linkedin', 'LinkedIn'], ['google', 'Google'], ['email', 'Email'],
+];
+const DEFAULT_AD = ['meta', 'linkedin', 'google', 'email'];
 const PER_WEEK: Record<string, number> = {
   linkedin: 3, x: 3, instagram: 2, facebook: 2, tiktok: 2, threads: 3, youtube: 1, pinterest: 2,
 };
@@ -286,6 +290,7 @@ const PER_WEEK: Record<string, number> = {
 function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: any) {
   const socialChannels: string[] = (brief.socialChannels?.length ? brief.socialChannels : DEFAULT_SOCIAL);
   const socialCount = socialChannels.reduce((n, c) => n + (PER_WEEK[c] || 0) * 4, 0);
+  const adChannels: string[] = (brief.adChannels?.length ? brief.adChannels : DEFAULT_AD);
   const set = (k: string, v: any) => setBrief({ ...brief, [k]: v });
   const [parse, setParse] = useState<{ status: string; error?: boolean } | null>(null);
   const router = useRouter();
@@ -350,6 +355,28 @@ function BriefPanel({ brief, setBrief, onSave, client, clientId, campaignId }: a
             <input type="checkbox" checked={(brief.languages || []).includes('pt')}
               onChange={(e) => { set('languages', e.target.checked ? ['en', 'pt'] : ['en']); }} onBlur={onSave} /> Portuguese (pt-PT)
           </label>
+        </fieldset>
+        {/*
+          Which ad channels the copy pass writes. Unticking one is not only a
+          preference: the pass writes fewer assets, so it finishes sooner and
+          costs less, which matters because the whole run has to fit inside
+          the platform's function timeout.
+        */}
+        <fieldset className="field langs">
+          <legend>Ad channels</legend>
+          {AD_CHANNEL_OPTIONS.map(([key, label]) => (
+            <label className="check" key={key}>
+              <input
+                type="checkbox"
+                checked={adChannels.includes(key)}
+                onChange={(e) => {
+                  const next = e.target.checked ? [...adChannels, key] : adChannels.filter((c) => c !== key);
+                  set('adChannels', next.length ? next : [key]);
+                }}
+                onBlur={onSave}
+              /> {label}
+            </label>
+          ))}
         </fieldset>
         {/*
           The social channels the month is planned for. Defaulted rather than

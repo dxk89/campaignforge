@@ -88,6 +88,19 @@ const SOCIAL_CHANNELS = {
 
 const DEFAULT_SOCIAL_CHANNELS = ['linkedin', 'x', 'instagram'];
 
+/**
+ * The paid and owned channels the copy pass writes for. Order matters: it is
+ * the order the assets appear in, and the order the writer works through.
+ */
+const AD_CHANNELS = { meta: 'Meta', linkedin: 'LinkedIn', google: 'Google', email: 'Email' };
+const DEFAULT_AD_CHANNELS = Object.keys(AD_CHANNELS);
+
+/** The ad channels this campaign runs, defaulting to all of them. */
+function adChannelsFor(list) {
+  const chosen = (list || []).filter((c) => AD_CHANNELS[c]);
+  return chosen.length ? chosen : DEFAULT_AD_CHANNELS;
+}
+
 // The shape validateSocial has always read, derived so there is one catalogue.
 const SOCIAL_LIMITS = Object.fromEntries(
   Object.entries(SOCIAL_CHANNELS).map(([k, c]) => [k, { text: c.text, hashtags: c.hashtags }])
@@ -214,4 +227,4 @@ function validateAssets(assets, language) {
   return issues;
 }
 
-module.exports = { LIMITS, SOCIAL_LIMITS, SOCIAL_CHANNELS, DEFAULT_SOCIAL_CHANNELS, socialChannelsFor, socialPlan, limitsForPrompt, socialLimitsForPrompt, validateAssets, validateSocial, wordCount };
+module.exports = { LIMITS, SOCIAL_LIMITS, SOCIAL_CHANNELS, AD_CHANNELS, DEFAULT_AD_CHANNELS, adChannelsFor, DEFAULT_SOCIAL_CHANNELS, socialChannelsFor, socialPlan, limitsForPrompt, socialLimitsForPrompt, validateAssets, validateSocial, wordCount };

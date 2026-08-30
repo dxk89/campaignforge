@@ -27,6 +27,21 @@ const { mockCall } = require('../mock');
 
 const DEFAULT_BUDGET = { maxTurns: 5, maxOutputTokens: 4096, maxSearches: 0 };
 
+/**
+ * How long a pass may run before it stops itself.
+ *
+ * The platform kills a function at 300 seconds, and it kills it dead: the
+ * route never returns, so nothing is written and the pass is not even
+ * recorded as having spent anything. A copywriter run cost real money and
+ * left no ledger entry, which is the worst of both - no output and no record
+ * of the cost.
+ *
+ * So the loop stops itself first. The margin covers the turn already in
+ * flight plus writing the version and the ledger entry. A pass that runs out
+ * of time keeps whatever it has already validated and says why.
+ */
+const WALL_CLOCK_MS = Number(process.env.AGENT_DEADLINE_MS || 240000);
+
 /** Summarise a value for the trace without storing whole documents. */
 function brief(v, n = 160) {
   const s = typeof v === 'string' ? v : JSON.stringify(v);
@@ -60,7 +75,10 @@ async function run(agent, packet, opts = {}) {
   const submitTool = {
     name: 'submit',
     description: `Submit your final output. Call this exactly once, when your output satisfies every rule in your instructions. If validation fails you will get the errors back; fix them and submit again.`,
-    input_schema: agent.schema,
+    // Resolved like the role: an agent whose output shape depends on the
+    // brief - the copy pass writes only the channels the campaign runs -
+    // gets the packet to decide with.
+    input_schema: typeof agent.schema === 'function' ? agent.schema(packet) : agent.schema,
   };
   const tools = [
     ...(agent.tools || []).map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema })),
@@ -73,7 +91,17 @@ async function run(agent, packet, opts = {}) {
   let best = null;
   let bestProblems = ['no output submitted'];
 
+  const deadline = started + (opts.deadlineMs || WALL_CLOCK_MS);
   for (let turn = 1; turn <= budget.maxTurns; turn++) {
+    // Checked before starting a turn, not after: a turn takes tens of
+    // seconds, so beginning one at 239s is what causes the kill.
+    if (Date.now() >= deadline) {
+      trace.push({ turn, note: 'stopped: out of time' });
+      bestProblems = best
+        ? [...bestProblems, 'ran out of time before a clean submit; this is the last draft it validated']
+        : [`ran out of time after ${turn - 1} turns without submitting`];
+      break;
+    }
     const res = await anthropic.messages.create({
       model,
       max_tokens: budget.maxOutputTokens,

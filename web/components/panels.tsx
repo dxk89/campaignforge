@@ -5,6 +5,37 @@ import { Card, Line, CopyButton, LIMITS } from './Counter';
 import { fmtInt, wordCount } from './format';
 import { download } from './exports';
 
+/**
+ * Hand a post to the platform with its text already in the composer.
+ *
+ * Deliberately not an API integration. Posting on someone's behalf needs an
+ * OAuth app per platform, a stored token per account, and a review state to
+ * track afterwards, none of which belongs in a demonstration. The approval
+ * unit here is the month rather than the post, so a button that published
+ * silently would be the wrong shape even with the tokens. This opens the
+ * platform's own composer with the text already in it; a person still presses
+ * post, which is the step that should stay human.
+ *
+ * Instagram, TikTok and YouTube have no composer to open. They keep the copy
+ * button and the image download, which is the same handoff a scheduler makes.
+ */
+function socialIntent(channel: string, text: string, landingUrl?: string): string | null {
+  const t = encodeURIComponent(text);
+  const u = encodeURIComponent(landingUrl || '');
+  if (channel === 'x') return `https://x.com/intent/post?text=${t}`;
+  if (channel === 'linkedin') return `https://www.linkedin.com/feed/?shareActive=true&text=${t}`;
+  if (channel === 'threads') return `https://www.threads.net/intent/post?text=${t}`;
+  if (channel === 'facebook') return landingUrl ? `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}` : null;
+  if (channel === 'pinterest') return landingUrl ? `https://pinterest.com/pin/create/button/?url=${u}&description=${t}` : null;
+  return null;
+}
+
+const CHANNEL_LABEL: Record<string, string> = {
+  linkedin: 'LinkedIn', x: 'X', instagram: 'Instagram', facebook: 'Facebook',
+  tiktok: 'TikTok', threads: 'Threads', youtube: 'YouTube', pinterest: 'Pinterest',
+};
+
+
 const list = (arr?: any[]) => (arr?.length ? <ul>{arr.map((t, i) => <li key={i}>{typeof t === 'string' ? t : JSON.stringify(t)}</li>)}</ul> : <p>—</p>);
 const tags = (arr?: string[], cls = '') => (arr?.length ? <div className="tag-list">{arr.map((t, i) => <span key={i} className={`tag ${cls}`}>{t}</span>)}</div> : <p>—</p>);
 
@@ -136,8 +167,8 @@ export function EmailPanel({ assets }: { assets: any }) {
 
 const IMAGE_COST_EUR = 0.058; // gemini image at 1K, EUR; see core/pricing.js
 
-export function SocialPanel({ social, clientId, campaignId, imagesAvailable, logoRef }:
-  { social: any; clientId?: string; campaignId?: string; imagesAvailable?: boolean; logoRef?: string | null }) {
+export function SocialPanel({ social, clientId, campaignId, imagesAvailable, logoRef, landingUrl }:
+  { social: any; clientId?: string; campaignId?: string; imagesAvailable?: boolean; logoRef?: string | null; landingUrl?: string }) {
   const [imgs, setImgs] = useState<Record<string, string>>({});
   const [view, setView] = useState<Record<string, 'card' | 'photo'>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -226,6 +257,16 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
                   <div className="post-foot">
                     <span className={`count ${len > max ? 'over' : ''}`}>{len}/{max}</span>
                     <CopyButton text={[p.text, tagList.join(' ')].filter(Boolean).join('\n\n')} />
+                    {(() => {
+                      const body = [p.text, tagList.join(' ')].filter(Boolean).join('\n\n');
+                      const href = socialIntent(p.channel, body, landingUrl);
+                      if (!href) return <span className="send-none">no composer for {CHANNEL_LABEL[p.channel] || p.channel}: copy and paste</span>;
+                      return (
+                        <a className="send-to" href={href} target="_blank" rel="noopener noreferrer">
+                          Send to {CHANNEL_LABEL[p.channel] || p.channel}
+                        </a>
+                      );
+                    })()}
                   </div>
                 </div>
                 {p.graphic?.svg ? (

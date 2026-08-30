@@ -735,3 +735,22 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .login-intro ul { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 7px; }
 .login-intro li { color: var(--muted); }
 .login-intro b { color: var(--ink); font-weight: 600; }
+
+/* ---------- Send to platform ----------------------------------------------
+   Opens the platform's own composer with the post already in it. Styled as a
+   quiet action rather than a primary button: the campaign is approved as a
+   month, and one post going out is a step inside that, not the goal.
+   -------------------------------------------------------------------------- */
+.send-to {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal);
+  text-decoration: none;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.send-to:hover { border-color: var(--teal); background: var(--teal-soft); }
+.send-none { margin-left: auto; font-size: 11.5px; color: var(--muted); font-style: italic; }

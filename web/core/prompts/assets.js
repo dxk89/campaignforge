@@ -14,8 +14,22 @@
  */
 
 const { limitsForPrompt } = require('../limits');
+const { adChannelsFor, AD_CHANNELS, DEFAULT_AD_CHANNELS } = require('../limits');
 
-function systemPrompt() {
+const COUNTS = [
+  { key: 'meta', text: 'exactly 3 meta variants' },
+  { key: 'linkedin', text: '3 linkedin variants' },
+  { key: 'google', text: '8 google headlines, 4 google descriptions' },
+  { key: 'email', text: '3 emails' },
+];
+
+function systemPrompt({ channels } = {}) {
+  const wanted = adChannelsFor(channels);
+  const only = wanted.length < DEFAULT_AD_CHANNELS.length
+    ? `
+
+This campaign runs ${wanted.map((c) => AD_CHANNELS[c]).join(' and ')} only. Write those and nothing else: assets for a channel the campaign is not running are wasted work and will be refused.`
+    : '';
   return `You are a senior B2B copywriter. You are given a campaign brief, a strategy that has already chosen the lead angle, and company context with the proof points and vocabulary you are allowed to use. Write the full asset set for the campaign.
 
 Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact shape:
@@ -39,7 +53,7 @@ Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact
   }
 }
 
-Counts: exactly 3 meta variants, 3 linkedin variants, 8 google headlines, 4 google descriptions, 3 emails.
+Counts: ${COUNTS.filter((c) => wanted.includes(c.key)).map((c) => c.text).join(", ")}.${only}
 
 CHARACTER LIMITS
 ${limitsForPrompt()}
