@@ -13,7 +13,7 @@ module.exports = {
   fixture: 'assets',
   model: MODELS.sonnet,
   role: ({ brief }) => prompt.systemPrompt({ channels: brief?.adChannels }).replace('Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact shape:', 'When every asset is within its limits and clean, call the submit tool with this shape:') +
-    '\n\nBefore submitting, call check_limits and check_compliance on your draft and fix everything they report. Then call ask_critic on your draft with kind "assets" and fix every must_fix item it returns; suggestions are optional. Submit only a clean set.',
+    '\n\nBefore submitting, call check_limits and check_compliance on your draft and fix everything they report, then submit a clean set. ask_critic with kind "assets" is available and worth a call if the set is close but you are unsure of it; it is not required. Every turn is an API round trip of about forty seconds and the pass is stopped at four minutes, so spend them on getting the copy inside its limits first.',
   criticKind: 'assets',
   
   tools: [check_limits, check_compliance, ask_critic],
