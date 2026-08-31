@@ -1,7 +1,7 @@
 const { MODELS } = require('../../pricing');
 const prompt = require('../../prompts/assets');
 const { contextBlock, buildRules } = require('../packets');
-const { validateAssets, adChannelsFor } = require('../../limits');
+const { validateAssets, adChannelsFor, DEFAULT_AD_CHANNELS } = require('../../limits');
 const { checkCompliance } = require('../tools/compliance');
 const { check_limits, check_compliance, ask_critic } = require('../tools');
 
@@ -43,6 +43,12 @@ module.exports = {
     const flags = checkCompliance(o, { ...packet.rules, language: 'en' });
     for (const f of flags) if (f.severity === 'violation' && (f.rule !== 'claim' || packet.rules.claimSeverity === 'violation')) p.push(`${f.path}: ${f.detail}`);
     if (missing.length) p.push(`missing ${missing.join(', ')}: the campaign runs ${wanted.join(', ')}`);
+    // And extras are not a bonus. A live run asked for LinkedIn and email and
+    // got Google as well: the schema requires only the chosen keys but does
+    // not forbid the others, so nothing stopped it writing work nobody asked
+    // for and paying for the tokens.
+    const extra = DEFAULT_AD_CHANNELS.filter((c) => o[c] && !wanted.includes(c));
+    if (extra.length) p.push(`remove ${extra.join(', ')}: this campaign runs ${wanted.join(', ')} only`);
     return p;
   },
 };

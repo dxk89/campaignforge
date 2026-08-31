@@ -176,6 +176,14 @@ const { extractPalette, extractFonts } = require('../web/core/scraper.js');
   a.ok(missing.some((p) => /missing email/.test(p)), 'a channel the campaign runs must be written');
   a.ok(!missing.some((p) => /missing meta/.test(p)), 'one it does not run is not missing');
 
+  // Extras cost tokens and nobody asked for them. A live run requested
+  // LinkedIn and email and returned Google as well.
+  const extra = cw.validate(
+    { linkedin: [], email: { emails: [], branch_note: '' }, google: { headlines: [], descriptions: [] } },
+    { brief: { adChannels: ['linkedin', 'email'] }, rules: {} }
+  );
+  a.ok(extra.some((p) => /remove google/.test(p)), 'a channel the campaign does not run is refused, not accepted as a bonus');
+
   // The loop must stop before the platform kills it.
   const runtime = fs.readFileSync(path.join(__dirname, '..', 'web', 'core', 'agents', 'runtime.js'), 'utf8');
   a.ok(/WALL_CLOCK_MS/.test(runtime), 'the runtime has a wall-clock deadline');
@@ -184,7 +192,15 @@ const { extractPalette, extractFonts } = require('../web/core/scraper.js');
   const maxDuration = Number((route.match(/maxDuration = (\d+)/) || [])[1]) * 1000;
   a.ok(deadline > 0 && maxDuration > 0, 'both limits are readable');
   a.ok(deadline < maxDuration, `the agent deadline (${deadline}ms) must be under the function limit (${maxDuration}ms)`);
-  a.ok(maxDuration - deadline >= 30000, 'leave at least 30s to finish the turn in flight and write the version');
+  a.ok(maxDuration - deadline >= 10000, 'leave room to write the version and the ledger entry');
+
+  // A fixed margin is not enough on its own: the social planner started a
+  // turn inside a 240s deadline and was killed 65s later, because its turns
+  // are far longer than the copy pass's. The loop must project the next turn
+  // from the longest one it has measured.
+  a.ok(/longestTurnMs/.test(runtime), 'the loop measures how long a turn takes');
+  a.ok(/projected > deadline/.test(runtime), 'and refuses to start one that would not finish');
+  a.ok(/FIRST_TURN_ESTIMATE_MS/.test(runtime), 'with a pessimistic estimate before it has timed one');
 
   // The send links open a composer; they never post on someone's behalf.
   const panels = fs.readFileSync(path.join(__dirname, '..', 'web', 'components', 'panels.tsx'), 'utf8');

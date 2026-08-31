@@ -28,7 +28,7 @@ const { mockCall } = require('../mock');
 const DEFAULT_BUDGET = { maxTurns: 5, maxOutputTokens: 4096, maxSearches: 0 };
 
 /**
- * How long a pass may run before it stops itself.
+ * The hard stop, just under the platform's function limit.
  *
  * The platform kills a function at 300 seconds, and it kills it dead: the
  * route never returns, so nothing is written and the pass is not even
@@ -36,11 +36,18 @@ const DEFAULT_BUDGET = { maxTurns: 5, maxOutputTokens: 4096, maxSearches: 0 };
  * left no ledger entry, which is the worst of both - no output and no record
  * of the cost.
  *
- * So the loop stops itself first. The margin covers the turn already in
- * flight plus writing the version and the ledger entry. A pass that runs out
- * of time keeps whatever it has already validated and says why.
+ * So the loop stops itself first. A fixed margin is not enough on its own,
+ * because turn length varies four-fold between agents: the copy pass takes
+ * about forty seconds a turn and the social planner, which emits up to 12,000
+ * output tokens, takes far longer. The social planner began a turn inside a
+ * 240s deadline and was killed anyway sixty-five seconds later.
+ *
+ * So the loop projects instead of assuming. It measures each turn and refuses
+ * to start another unless the longest one seen so far would also fit. That
+ * adapts to whichever agent is running rather than to a number someone
+ * guessed. A pass that stops keeps whatever it last validated and says why.
  */
-const WALL_CLOCK_MS = Number(process.env.AGENT_DEADLINE_MS || 240000);
+const WALL_CLOCK_MS = Number(process.env.AGENT_DEADLINE_MS || 285000);
 
 /** Summarise a value for the trace without storing whole documents. */
 function brief(v, n = 160) {
@@ -92,16 +99,23 @@ async function run(agent, packet, opts = {}) {
   let bestProblems = ['no output submitted'];
 
   const deadline = started + (opts.deadlineMs || WALL_CLOCK_MS);
+  // Before any turn has been timed, assume a slow one rather than a fast one:
+  // guessing low is what starts a turn that cannot finish.
+  const FIRST_TURN_ESTIMATE_MS = 90000;
+  let longestTurnMs = 0;
   for (let turn = 1; turn <= budget.maxTurns; turn++) {
-    // Checked before starting a turn, not after: a turn takes tens of
-    // seconds, so beginning one at 239s is what causes the kill.
-    if (Date.now() >= deadline) {
-      trace.push({ turn, note: 'stopped: out of time' });
+    // Would another turn finish in time? Judged on the longest turn seen so
+    // far rather than on the clock alone, because it is starting a turn too
+    // late - not running slightly over - that gets the function killed.
+    const projected = Date.now() + (longestTurnMs || FIRST_TURN_ESTIMATE_MS);
+    if (projected > deadline) {
+      trace.push({ turn, note: 'stopped: another turn would not finish in time' });
       bestProblems = best
         ? [...bestProblems, 'ran out of time before a clean submit; this is the last draft it validated']
         : [`ran out of time after ${turn - 1} turns without submitting`];
       break;
     }
+    const turnStarted = Date.now();
     const res = await anthropic.messages.create({
       model,
       max_tokens: budget.maxOutputTokens,
@@ -116,6 +130,7 @@ async function run(agent, packet, opts = {}) {
       trace.push({ turn, note: 'provider returned no content' });
       break;
     }
+    longestTurnMs = Math.max(longestTurnMs, Date.now() - turnStarted);
     usage.calls++;
     usage.input += res.usage?.input_tokens || 0;
     usage.output += res.usage?.output_tokens || 0;
