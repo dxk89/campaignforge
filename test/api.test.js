@@ -129,6 +129,26 @@ const post = (p, body) => api(p, { method: 'POST', headers: { 'content-type': 'a
   assert.equal(again.brief.productName, 'My Own Name', 'a filled field survives a second parse');
   console.log('  filled fields are not overwritten');
 
+  // Copy checks: the same verdicts, without running an agent.
+  const chk = await post('/api/check', { text: 'A robust, seamless platform.' });
+  assert.equal(chk.status, 200, 'check route answers');
+  assert.equal(chk.data.verdict, 'violations', 'slop is refused');
+  assert.ok(chk.data.flags.every((f) => f.why), 'every flag says why');
+  assert.equal(chk.data.ranWithoutClientRules, true, 'says it ran without client rules');
+
+  const cleanCopy = await post('/api/check', { text: 'Close the month four days faster.', channel: 'linkedin' });
+  assert.equal(cleanCopy.data.verdict, 'clean', 'good copy is clean');
+  assert.equal(cleanCopy.data.channel, 'linkedin');
+
+  // A client on its own contributes what it knows, and says the rest did not run.
+  const withClient = await post('/api/check', { text: 'Hello there.', clientId });
+  assert.equal(withClient.status, 200, 'a client without a campaign is allowed');
+  assert.equal(withClient.data.ranWithoutClientRules, false, 'and its own rules count as client rules');
+
+  const empty = await post('/api/check', {});
+  assert.equal(empty.status, 400, 'no text is a bad request');
+  console.log('  copy check route:', chk.data.flags.length, 'flags');
+
   console.log('api tests: ok');
   stop();
   process.exit(0);
