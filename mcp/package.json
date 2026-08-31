@@ -1,0 +1,9 @@
+{
+  "name": "campaign-forge-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Campaign Forge's copy checks as MCP tools",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }
+}

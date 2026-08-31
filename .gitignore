@@ -13,3 +13,4 @@ web/tsconfig.tsbuildinfo
 .vercel
 .env*
 .next/
+mcp/node_modules/
