@@ -52,7 +52,8 @@ Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact
     ],
     "funnel": [ { "stage": "name", "definition": "exact rule for counting someone at this stage" } ],
     "reporting_cadence": "what is reviewed, how often, by whom",
-    "data_quality": ["specific checks that keep the numbers trustworthy across systems: UTM discipline, dedupe rules, field mapping, attribution window"]
+    "data_quality": ["specific checks that keep the numbers trustworthy across systems: UTM discipline, dedupe rules, field mapping, attribution window"],
+    "incrementality": { "method": "holdout | geo split | switchback | none possible, and why", "design": "who is held out or which regions, for how long, and the smallest effect this could detect", "caveat": "one sentence on what the platform's own reported conversions will overstate and by roughly how much" }
   },
   "experiments": [
     { "channel": "meta | linkedin | google | email", "hypothesis": "what we believe and why", "variants": "which variants test it, e.g. 'variant 1 vs variant 3'", "primary_metric": "one metric", "decision_rule": "what result changes what decision, including the minimum sample" }
@@ -60,6 +61,7 @@ Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact
 }
 
 Rules:
+- Every KPI in the tree is reported by a platform that is also being asked to prove its own worth, so the plan needs one measurement that does not come from the platform. Say how a lift would be established - a holdout audience, a geo split, a switchback - and what it would take to detect the effect. If the budget or audience is genuinely too small, say "none possible" and say why; a plan that admits it cannot measure lift is more useful than one that reports platform-attributed conversions as if they were incremental.
 - The lifecycle must use the three emails in the asset set by number and must branch at least once on a behaviour signal. The asset set's branch_note is the starting point; make it a real workflow.
 - Every step id must be unique. Branch yes/no must point at existing step ids. The workflow must terminate: every path reaches an exit or handoff.
 - Lead score points and threshold must be consistent: it should be possible, but not trivial, to cross the threshold.
@@ -113,6 +115,11 @@ function validateActivation(a) {
   if (score.length && Number(a.handoff.threshold) > max) problems.push(`lead score threshold ${a.handoff.threshold} exceeds maximum possible ${max}`);
   const stages = (a?.measurement?.kpi_tree || []).map((k) => String(k.stage || '').toLowerCase());
   if (stages.length && !stages.some((s) => s.includes('pipeline') || s.includes('revenue'))) problems.push('KPI tree stops before pipeline or revenue');
+  // Platform-reported conversions are marked, not measured. A plan without a
+  // way of establishing lift - or an explicit statement that there is none -
+  // reports the ad platform's own homework as the result.
+  const inc = a?.measurement?.incrementality;
+  if (!inc || !inc.method) problems.push('measurement has no incrementality method; say how lift would be established, or say none is possible and why');
   return problems;
 }
 

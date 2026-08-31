@@ -317,6 +317,11 @@ FIXTURES.activation = {
       'Dedupe on work email before scoring; personal domains routed out',
       '30-day first-touch attribution for trials, 90-day any-touch for opportunities',
     ],
+    incrementality: {
+      method: 'geo split',
+      design: 'Hold out three comparable metros from paid delivery for six weeks and compare trial rate per thousand target accounts against the served metros. At current volume this detects a lift of about 20% or larger; anything smaller will not separate from noise.',
+      caveat: 'Platform-reported conversions count people who would have signed up anyway, and on a brand this small the overstatement is usually the larger part of the number.',
+    },
   },
   experiments: [
     { channel: 'linkedin', hypothesis: 'A time-saved number beats a positioning line for this audience', variants: 'variant 1 (4 days faster) vs variant 3 (works with your ledger)', primary_metric: 'Trials created per 1,000 impressions', decision_rule: 'After 500 clicks per variant, keep the winner if the gap is over 20%; otherwise keep both' },
