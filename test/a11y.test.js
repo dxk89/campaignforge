@@ -74,8 +74,11 @@ const AA = 4.5;
 
   // The distinction the palette rests on: --ember stays for fills, so it must
   // not quietly become a text colour again.
+  // Anchored on the property, not on the substring: border-left-color and
+  // background-color both contain "color:" and are non-text uses, which need
+  // 3:1 rather than 4.5 and are allowed to keep --ember.
   assert.ok(
-    !/color:\s*var\(--ember\)/.test(css),
+    !/(^|[;{]|\s)color:\s*var\(--ember\)/m.test(css),
     'use --ember-text for text; --ember is for borders and fills, and fails AA as text'
   );
 
