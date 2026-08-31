@@ -16,7 +16,7 @@ module.exports = {
   // describe the channels this campaign actually chose. The orchestrator
   // resolves it with the run's inputs, as it does for brand-analyst.
   role: ({ brief }) => prompt.systemPrompt({ channels: brief?.socialChannels }).replace('Return ONLY a JSON object, no prose, no markdown, no code fences:', 'When every post is within its limit and clean, call the submit tool with this shape:') +
-    '\n\nBefore submitting, call check_social_limits on your posts and check_compliance on the calendar, and fix everything they report. You may call render_card to confirm a graphic fits its template. Then call ask_critic with kind "social" on your point-of-view posts and fix every must_fix item.',
+    '\n\nBefore submitting, call check_social_limits on your posts and check_compliance on the calendar, and fix everything they report, then submit. render_card and ask_critic (kind "social") are available if you are unsure of a graphic or of the point-of-view posts; neither is required. A turn here is an API round trip of about ninety seconds and the pass is stopped short of five minutes, so there is room for roughly three: draft, fix, submit.',
   criticKind: 'social',
   
   tools: [check_social_limits, check_compliance, render_card, ask_critic],
