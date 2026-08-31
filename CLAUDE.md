@@ -132,6 +132,8 @@ web/                         The product. Next.js 16, App Router
     claude.js                the SDK client; throws at load if no key and no MOCK_CLAUDE
     pricing.js limits.js utm.js graphics.js scraper.js images.js sources.js
     brief.js verdicts.js mock.js
+    check.js                 checkCopy(text, opts): every deterministic verdict over
+                             one string. Backs the clinic, /api/check and the MCP server
   server/db.ts               typed data layer, Firestore or in-memory
   server/inputs.ts           buildInputs + staleAgents + DEPENDS. Read before touching runs
   server/auth.ts             sessions: owner via ADMIN_USERNAME/ADMIN_PASSWORD,
@@ -145,7 +147,12 @@ web/                         The product. Next.js 16, App Router
   components/                panels, counters, tabs, editors
   types/archiver.d.ts        local declaration; do not install @types/archiver
 
-lib/                         thin shims re-exporting web/core, for legacy/ and tests
+mcp/                         a local stdio MCP server exposing the copy checks and the
+                             site scan. Outside web/ on purpose: Vercel builds from the
+                             web root directory and this is a process you run yourself
+lib/                         thin shims re-exporting web/core, for legacy/ and tests.
+                             The @core/* alias maps HERE, not to web/core, so a new core
+                             module needs a one-line shim or it fails only in the build
 legacy/                      the prototype Express app and vanilla front end. Still runs;
                              kept because it exercises the runtime through a second client
 knowledge/                   per-agent expertise packs and worked examples. 47 files

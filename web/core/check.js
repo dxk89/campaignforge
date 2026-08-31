@@ -25,11 +25,11 @@ const WHY = {
   'pt-br': 'Brazilian Portuguese in copy marked as European Portuguese.',
   'ai-word': 'Vocabulary that marks text as machine-written.',
   'ai-phrase': 'A stock phrase that marks text as machine-written.',
-  'em-dash': 'House style: no em dashes.',
-  'negative-parallelism': 'A stock shape that reads as machine-written.',
-  'copula-avoidance': 'Says "serves as" where "is" would do.',
-  'false-range': 'A range whose ends are not on a scale.',
-  'curly-quote': 'A typographic quote a form field will not render.',
+  'em-dash': 'House style. Use a comma, a semicolon, brackets, or two sentences.',
+  'negative-parallelism': 'Say the second half on its own; the construction usually hides a weaker claim.',
+  'copula-avoidance': 'Write "is". It is shorter and it commits to something.',
+  'false-range': 'List them or pick one. The reader looks for a relationship that is not there.',
+  'curly-quote': 'Use the straight version; most ad platform fields will not render this one.',
   'decorative-emoji': 'Decoration standing in for a point.',
 };
 

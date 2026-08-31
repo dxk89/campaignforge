@@ -24,6 +24,21 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
 5. **Economics.** Tokens in and out per pass, web searches, cost in EUR at dated rates, generation time.
 6. **Export.** Copy any asset. Export everything as JSON, or as CSV with one row per field.
 
+## Checking copy the tool did not write
+
+The same checks the campaign passes run, over anything you paste: platform
+character limits, the client's avoid terms and approved claims, and a
+catalogue of the patterns that mark text as machine-written.
+
+- **In the app**, under Check copy.
+- **From Claude**, through the MCP server in [`mcp/`](mcp/README.md), which
+  runs locally and needs no account. `check_copy` makes no network calls at
+  all.
+
+It reports and you decide. Nothing is rewritten and nothing is stored. The
+rules, and what to do about each one, are in
+[`docs/COPY-CHECKS.md`](docs/COPY-CHECKS.md).
+
 ## Run it locally
 
 ```bash
