@@ -4,7 +4,7 @@ import { createClient, listClients } from '@/server/db';
 const { scanSite } = require('@core/scraper');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 export async function GET() {
   return guarded(async (session) => {

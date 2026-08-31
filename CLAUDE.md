@@ -238,6 +238,13 @@ Each of these cost someone time to discover.
   `FIRESTORE_EMULATOR_HOST`, which the emulator sets and production never
   does. Remove that branch and `npm run test:emulator` cannot get past its
   first line, which is how the Firestore path went unproven for four phases.
+- **Function timeout is 800 seconds, which needs Vercel Pro.** Fluid compute
+  caps at 300 on Hobby and 800 on Pro. A campaign pass is minutes long: the
+  copy pass runs about 200 seconds and the social planner takes 80 to 90 a
+  turn, so 300 was not enough and passes were killed mid-run, losing both the
+  output and the record of what they had spent. On a Hobby project set
+  `AGENT_DEADLINE_MS` to about 285000 and expect the social planner not to
+  finish; the runtime reads that variable rather than assuming.
 - **`vercel.json` lives in `web/`, not the repo root, and takes no comments.**
   Vercel reads it from the Root Directory, so a copy at the repo root is
   never seen and the 300-second function timeout is silently lost, which

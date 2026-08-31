@@ -6,7 +6,7 @@ import { explode, fieldsOfAssets, fieldsOfSocial, listAssets } from '@/server/as
 const orchestrator = require('@core/agents/orchestrator');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /**
  * Run one agent. Inputs are assembled server-side from stored artifacts, the

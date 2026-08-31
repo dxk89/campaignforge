@@ -30,6 +30,11 @@ const DEFAULT_BUDGET = { maxTurns: 5, maxOutputTokens: 4096, maxSearches: 0 };
 /**
  * The hard stop, just under the platform's function limit.
  *
+ * 800 seconds is the Fluid compute maximum on Vercel Pro, and this sits 20
+ * seconds under it to leave room to write the version and the ledger entry.
+ * A Hobby project caps at 300, so set AGENT_DEADLINE_MS to about 285000
+ * there; the loop reads it rather than assuming.
+ *
  * The platform kills a function at 300 seconds, and it kills it dead: the
  * route never returns, so nothing is written and the pass is not even
  * recorded as having spent anything. A copywriter run cost real money and
@@ -47,7 +52,7 @@ const DEFAULT_BUDGET = { maxTurns: 5, maxOutputTokens: 4096, maxSearches: 0 };
  * adapts to whichever agent is running rather than to a number someone
  * guessed. A pass that stops keeps whatever it last validated and says why.
  */
-const WALL_CLOCK_MS = Number(process.env.AGENT_DEADLINE_MS || 285000);
+const WALL_CLOCK_MS = Number(process.env.AGENT_DEADLINE_MS || 780000);
 
 /** Summarise a value for the trace without storing whole documents. */
 function brief(v, n = 160) {

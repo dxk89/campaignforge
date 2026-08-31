@@ -6,7 +6,7 @@ import { rulesFor } from '@/server/inputs';
 const orchestrator = require('@core/agents/orchestrator');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /**
  * The editor reads the whole approved set at once, looking for what per-asset

@@ -3,7 +3,7 @@ import { getClient, updateClient } from '@/server/db';
 import { putFile } from '@/server/storage';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /** Logo and artwork upload. The logo goes on every card; artwork steers images. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {

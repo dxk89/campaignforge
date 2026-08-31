@@ -5,7 +5,7 @@ import { listResults, addLearnings } from '@/server/resultsStore';
 const orchestrator = require('@core/agents/orchestrator');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /** Turn the latest results and their verdicts into proposed learnings. */
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {

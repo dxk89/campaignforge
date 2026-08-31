@@ -5,7 +5,7 @@ import { putFile } from '@/server/storage';
 const { extractFile, extractUrl, fromPaste } = require('@core/sources');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

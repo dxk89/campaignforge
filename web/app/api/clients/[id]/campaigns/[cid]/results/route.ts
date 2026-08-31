@@ -8,7 +8,7 @@ import { attachPerformance } from '@/server/exemplars';
 const { trackingPlan } = require('@core/utm');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
   const { id, cid } = await params;

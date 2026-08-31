@@ -6,7 +6,7 @@ const { extractFile } = require('@core/sources');
 const orchestrator = require('@core/agents/orchestrator');
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /**
  * Read a briefing document into the campaign's brief fields.

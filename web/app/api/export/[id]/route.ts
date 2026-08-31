@@ -8,7 +8,7 @@ import { default as archiver } from 'archiver';
 import { PassThrough } from 'stream';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 800;
 
 /**
  * Export everything for one client as a zip: every document as JSON plus the
