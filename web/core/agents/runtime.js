@@ -70,7 +70,7 @@ async function run(agent, packet, opts = {}) {
   const started = Date.now();
   const budget = { ...DEFAULT_BUDGET, ...(agent.budget || {}), ...(opts.budget || {}) };
   const model = opts.model || agent.model || MODELS.sonnet;
-  const usage = { input: 0, output: 0, webSearches: 0, calls: 0 };
+  const usage = { input: 0, output: 0, webSearches: 0, calls: 0, cacheWrite: 0, cacheRead: 0 };
   const trace = [];
 
   // ---- Mock: fixture at the agent level, still run through the validator so
@@ -99,7 +99,10 @@ async function run(agent, packet, opts = {}) {
   if (budget.maxSearches > 0) tools.push({ type: 'web_search_20250305', name: 'web_search', max_uses: budget.maxSearches });
   const byName = Object.fromEntries((agent.tools || []).map((t) => [t.name, t]));
 
-  const messages = [{ role: 'user', content: packet.user }];
+  // Marked for caching for the same reason as the role. The breakpoint sits on
+  // the first message so everything the conversation adds afterwards stays
+  // outside it and the prefix keeps matching.
+  const messages = [{ role: 'user', content: [{ type: 'text', text: packet.user, cache_control: { type: 'ephemeral' } }] }];
   let best = null;
   let bestProblems = ['no output submitted'];
 
@@ -125,7 +128,11 @@ async function run(agent, packet, opts = {}) {
       model,
       max_tokens: budget.maxOutputTokens,
       temperature: agent.temperature ?? 0.4,
-      system: agent.role,
+      // The role is identical on every turn of a pass and a pass takes four to
+      // six, so it is written to the cache once and read thereafter. The
+      // packet below gets the same treatment; those two are the bulk of the
+      // input, and re-sending them at full price was most of the input bill.
+      system: [{ type: 'text', text: agent.role, cache_control: { type: 'ephemeral' } }],
       tools,
       messages,
     });
@@ -138,6 +145,8 @@ async function run(agent, packet, opts = {}) {
     longestTurnMs = Math.max(longestTurnMs, Date.now() - turnStarted);
     usage.calls++;
     usage.input += res.usage?.input_tokens || 0;
+    usage.cacheWrite += res.usage?.cache_creation_input_tokens || 0;
+    usage.cacheRead += res.usage?.cache_read_input_tokens || 0;
     usage.output += res.usage?.output_tokens || 0;
     usage.webSearches += res.usage?.server_tool_use?.web_search_requests || 0;
 
@@ -197,7 +206,7 @@ function finish(usage, started, model) {
     ...usage,
     ms: Date.now() - started,
     model,
-    costEur: Number(costEur(usage.input, usage.output, usage.webSearches, model).toFixed(4)),
+    costEur: Number(costEur(usage.input, usage.output, usage.webSearches, model, { write: usage.cacheWrite, read: usage.cacheRead }).toFixed(4)),
   };
 }
 

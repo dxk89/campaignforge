@@ -17,10 +17,15 @@
  *   at USD 60 per million). Reference images in: about USD 0.001 each,
  *   ignored here as rounding.
  *
- * Prompt caching is not used. The research pass distils sources into a short
- * context block, so the shared prefix across later passes is small and the
- * cache write premium would cost more than it saves at this volume.
- * ARCHITECTURE.md covers where caching would apply in production.
+ * Prompt caching, checked 31 Aug 2026: a write costs 1.25x the input rate and
+ * a read costs 0.1x.
+ *
+ * This was originally left out on the grounds that the prefix shared BETWEEN
+ * passes is small, which is still true. It missed the case that matters:
+ * WITHIN a pass, the role and the packet are identical on every turn and a
+ * pass takes four to six turns. A live copy pass sent 84,853 input tokens
+ * across six calls to write one set of assets, most of it the same context
+ * over and over. That prefix is written once and read thereafter.
  */
 
 const USD_PER_MILLION_INPUT = 3.0;
@@ -54,11 +59,22 @@ function imageCostEur(images) {
  * Cost in EUR. Returns a number, not a string, so the caller decides on
  * rounding for display.
  */
-function costEur(inputTokens, outputTokens, webSearches = 0, model = MODEL) {
+const CACHE_WRITE_MULTIPLIER = 1.25;
+const CACHE_READ_MULTIPLIER = 0.1;
+
+/**
+ * Cached tokens are counted separately by the API and priced differently, so
+ * they are passed separately here. Folding them into inputTokens would
+ * overstate every figure on the page by roughly the amount caching saves,
+ * which is the one number this project cannot afford to get wrong.
+ */
+function costEur(inputTokens, outputTokens, webSearches = 0, model = MODEL, cache = {}) {
   const r = RATES[model] || { input: USD_PER_MILLION_INPUT, output: USD_PER_MILLION_OUTPUT };
   const usd =
     (inputTokens / 1_000_000) * r.input +
     (outputTokens / 1_000_000) * r.output +
+    ((cache.write || 0) / 1_000_000) * r.input * CACHE_WRITE_MULTIPLIER +
+    ((cache.read || 0) / 1_000_000) * r.input * CACHE_READ_MULTIPLIER +
     webSearches * USD_PER_WEB_SEARCH;
   return usd * USD_TO_EUR;
 }

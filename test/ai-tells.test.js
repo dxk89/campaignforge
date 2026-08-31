@@ -73,3 +73,42 @@ const has = (list, rule, term) =>
 
   console.log('ai-tell tests: ok');
 })().catch((e) => { console.error('ai-tell tests FAILED', e); process.exit(1); });
+
+/**
+ * Prompt caching and what it costs.
+ *
+ * A pass takes four to six turns and re-sent the same role and packet on
+ * every one of them: a live copy pass spent 84,853 input tokens writing one
+ * set of assets. The prefix is written to the cache once and read after that.
+ *
+ * The pricing half matters as much as the caching half. Cached tokens are
+ * counted separately by the API and priced differently, so folding them into
+ * the input count would overstate every figure on the page by about the
+ * amount caching saves.
+ */
+(async () => {
+  const c = require('assert');
+  const fs = require('fs');
+  const path = require('path');
+  const { costEur } = require('../web/core/pricing');
+
+  // A read is a tenth of the input rate, a write is a quarter more than it.
+  const base = costEur(10000, 0);
+  c.ok(Math.abs(costEur(0, 0, 0, undefined, { read: 10000 }) - base * 0.1) < 1e-9, 'a cache read is 0.1x input');
+  c.ok(Math.abs(costEur(0, 0, 0, undefined, { write: 10000 }) - base * 1.25) < 1e-9, 'a cache write is 1.25x input');
+  c.equal(costEur(10000, 0, 0, undefined, {}), base, 'no cache tokens changes nothing');
+
+  // The shape a real pass takes: one write, then reads on the later turns.
+  const uncached = costEur(60000, 20000);
+  const cached = costEur(12000, 20000, 0, undefined, { write: 10000, read: 38000 });
+  c.ok(cached < uncached, 'caching a repeated prefix costs less than re-sending it');
+
+  const runtime = fs.readFileSync(path.join(__dirname, '..', 'web', 'core', 'agents', 'runtime.js'), 'utf8');
+  c.ok(/system: \[\{ type: 'text', text: agent\.role, cache_control/.test(runtime), 'the role is cached');
+  c.ok(/cache_creation_input_tokens/.test(runtime) && /cache_read_input_tokens/.test(runtime),
+    'both cache counters are read from the response');
+  c.ok(/write: usage\.cacheWrite, read: usage\.cacheRead/.test(runtime),
+    'and they reach the price, rather than being counted as ordinary input');
+
+  console.log('caching tests: ok');
+})().catch((e) => { console.error('caching tests FAILED', e); process.exit(1); });
