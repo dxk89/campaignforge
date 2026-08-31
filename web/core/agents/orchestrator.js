@@ -37,6 +37,14 @@ async function runAgent(name, inputs = {}, opts = {}) {
   // the failure appears solely in a Firestore-backed deployment. This is the
   // single place that builds a packet from inputs, so it is the one place
   // that can guarantee this instead of leaving it to per-agent discipline.
+  // A pass that must emit one enormous document re-emits all of it on every
+  // fix round. The social planner wrote 28 posts per call and spent 23,224
+  // output tokens across four calls to correct a handful of captions, because
+  // a single over-limit line costs a whole month of regeneration. An agent
+  // that declares chunks is run once per chunk instead: each call is small
+  // enough to be quick, and a fix round re-emits only its own chunk.
+  if (agent.chunks) return runChunked(agent, name, inputs, memory, opts);
+
   const packet = { ...agent.packet({ ...inputs, memory }), ws: inputs.ws };
   // A stored prompt version overrides the code default; which one was used is
   // recorded on the result so a campaign can be traced to its wording.
@@ -46,6 +54,61 @@ async function runAgent(name, inputs = {}, opts = {}) {
   result.promptVersion = promptVersion;
 
   console.log(`[${name}] ${result.usage.input} in / ${result.usage.output} out, ${result.usage.calls || 1} call(s), ${result.usage.ms} ms, €${result.usage.costEur}${result.complete ? '' : ' INCOMPLETE: ' + result.problems.join('; ')}`);
+  return result;
+}
+
+/**
+ * Run an agent once per chunk and merge the results into one pass.
+ *
+ * The pass still looks like a single pass to everything downstream: one
+ * version, one ledger entry, one set of problems. What changes is that the
+ * model is asked for a seventh of the work at a time, so a correction costs a
+ * seventh of the tokens. Chunks run in sequence rather than in parallel
+ * because they share the campaign's spend ceiling and a burst of concurrent
+ * calls is exactly what a rate limit punishes.
+ */
+async function runChunked(agent, name, inputs, memory, opts) {
+  // A fixture is a whole campaign, not a chunk of one, so mock mode runs a
+  // single pass and returns it as the pass's output. Chunking four fixtures
+  // together would produce four months of posts and prove nothing.
+  const chunks = process.env.MOCK_CLAUDE === '1' ? [agent.chunks(inputs)[0]] : agent.chunks(inputs);
+  const outputs = [];
+  const usage = { input: 0, output: 0, webSearches: 0, calls: 0, ms: 0, costEur: 0 };
+  const trace = [];
+  const problems = [];
+  let promptVersion = null;
+  let model;
+
+  for (const chunk of chunks) {
+    const scoped = { ...inputs, chunk };
+    const packet = { ...agent.packet({ ...scoped, memory }), ws: inputs.ws };
+    const roleFor = await promptStore.roleFor(name, resolve(agent.role, scoped), inputs.ws);
+    promptVersion = roleFor.promptVersion;
+    const resolved = { ...agent, role: roleFor.role, budget: resolve(agent.budget, scoped) };
+    // The ledger is written once for the whole pass, so the per-chunk hook is
+    // deliberately not forwarded: four entries for one pass would double-count
+    // it in every total on the page.
+    const r = await run(resolved, packet, { budget: opts.budget });
+
+    if (r.output) outputs.push(r.output);
+    for (const k of ['input', 'output', 'webSearches', 'calls', 'ms']) usage[k] += r.usage[k] || 0;
+    usage.costEur += r.usage.costEur || 0;
+    model = r.usage.model || model;
+    trace.push(...(r.trace || []).map((t) => ({ ...t, chunk: chunk.label || chunk.week })));
+    if (!r.complete) problems.push(...(r.problems || []).map((x) => `${chunk.label || 'chunk ' + chunk.week}: ${x}`));
+  }
+
+  usage.costEur = Number(usage.costEur.toFixed(4));
+  usage.model = model;
+  const merged = outputs.length ? (chunks.length === 1 ? outputs[0] : agent.merge(outputs, inputs)) : null;
+  const result = {
+    output: problems.length && !merged ? null : merged,
+    usage, trace, problems,
+    complete: problems.length === 0 && Boolean(merged),
+    promptVersion,
+  };
+  opts.ledger?.({ agent: name, ...usage });
+  console.log(`[${name}] ${chunks.length} chunks, ${usage.input} in / ${usage.output} out, ${usage.calls} call(s), €${usage.costEur}${result.complete ? '' : ' INCOMPLETE: ' + problems.join('; ')}`);
   return result;
 }
 
