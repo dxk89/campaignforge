@@ -15,6 +15,7 @@ export default async function Nav() {
       {session && (
         <nav className="nav-links">
           <Link href="/clients">Clients</Link>
+          <Link href="/check">Check copy</Link>
           <Link href="/ledger">Ledger</Link>
           <Link href="/settings">Settings</Link>
           <SignOut username={session.username} />

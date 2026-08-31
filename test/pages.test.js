@@ -150,6 +150,13 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.ok(stored.images[0].storageRef.startsWith('users/'), 'stored image has a streamable ref');
   console.log('  image state ok |', stored.images.length, 'stored');
 
+  // The clinic renders, and says what it is before asking for anything.
+  const clinic = await html('/check');
+  assert.equal(clinic.status, 200, 'the clinic page renders');
+  assert.ok(/Check copy/.test(clinic.body), 'and says what it is');
+  assert.ok(/nothing is saved/.test(clinic.body), 'and that it keeps nothing');
+  console.log('  clinic page: ok');
+
   console.log('page tests: ok');
   stop(); process.exit(0);
 })().catch((e) => { console.error('page tests FAILED', e); stop(); process.exit(1); });
