@@ -15,17 +15,9 @@ module.exports = {
   // A function of the brief, so the cadence, the post count and the limits
   // describe the channels this campaign actually chose. The orchestrator
   // resolves it with the run's inputs, as it does for brand-analyst.
-  role: ({ brief, chunk }) => prompt.systemPrompt({ channels: brief?.socialChannels, week: chunk?.week }).replace('Return ONLY a JSON object, no prose, no markdown, no code fences:', 'When every post is within its limit and clean, call the submit tool with this shape:') +
+  role: ({ brief }) => prompt.systemPrompt({ channels: brief?.socialChannels }).replace('Return ONLY a JSON object, no prose, no markdown, no code fences:', 'When every post is within its limit and clean, call the submit tool with this shape:') +
     '\n\nBefore submitting, call check_social_limits on your posts and check_compliance on the calendar, and fix everything they report, then submit. render_card and ask_critic (kind "social") are available if you are unsure of a graphic or of the point-of-view posts; neither is required. A turn here is an API round trip of about ninety seconds and the pass is stopped short of five minutes, so there is room for roughly three: draft, fix, submit.',
   criticKind: 'social',
-  // A week per call. Four short calls beat one long one: the model emits a
-  // seventh of the calendar at a time, so a fix round costs a week rather
-  // than a month, and the pass stops being the one that cannot finish.
-  chunks: () => [1, 2, 3, 4].map((week) => ({ week, label: `week ${week}` })),
-  merge: (outputs) => ({
-    ...outputs[0],
-    posts: outputs.flatMap((o) => o.posts || []).sort((a, b) => a.day - b.day),
-  }),
   
   tools: [check_social_limits, check_compliance, render_card, ask_critic],
   budget: { maxTurns: 10, maxOutputTokens: 12000 },
