@@ -10,6 +10,8 @@ import { read as readTelemetry } from '@/server/telemetry';
 import Ceiling from './ceiling';
 import DemoAccounts from '@/components/DemoAccounts';
 
+const { INTEGRATIONS } = require('@core/integrations');
+
 const images = require('@core/images');
 const { MOCK } = require('@core/claude');
 
@@ -67,6 +69,28 @@ export default async function Settings() {
       </section>
 
       {session.kind === 'owner' && <DemoAccounts />}
+
+      {/*
+        Where a campaign can go once it is written. Anything not ready says
+        what is in the way: "coming soon" with no reason is the sort of thing
+        that is still there two years later.
+      */}
+      <section className="block" id="integrations">
+        <h2 className="block-title">Where campaigns can go</h2>
+        <ul className="integrations">
+          {INTEGRATIONS.map((i: any) => (
+            <li key={i.name} className={i.status}>
+              <div className="int-head">
+                <b>{i.name}</b>
+                <span className={`int-status ${i.status}`}>{i.status === 'ready' ? 'Available' : 'Not yet'}</span>
+              </div>
+              <p className="int-what">{i.what}</p>
+              {i.blocker && <p className="int-blocker">{i.blocker}</p>}
+              <p className="muted">{i.detail}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       <section className="block">
         <h2 className="block-title">Prompts</h2>

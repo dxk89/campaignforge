@@ -157,6 +157,13 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.ok(/nothing is saved/.test(clinic.body), 'and that it keeps nothing');
   console.log('  clinic page: ok');
 
+  // The integration list renders, and a blocked one shows its blocker rather
+  // than the word soon on its own.
+  const settingsPage = await html('/settings');
+  assert.ok(/Where campaigns can go/.test(settingsPage.body), 'settings lists the destinations');
+  assert.ok(/Marketing Hub Professional/.test(settingsPage.body), 'and names what blocks HubSpot');
+  console.log('  integration list: ok');
+
   console.log('page tests: ok');
   stop(); process.exit(0);
 })().catch((e) => { console.error('page tests FAILED', e); stop(); process.exit(1); });

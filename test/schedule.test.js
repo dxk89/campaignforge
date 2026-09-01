@@ -88,3 +88,42 @@ const cal = (posts) => ({ posts });
 
   console.log('schedule tests: ok');
 })().catch((e) => { console.error('schedule tests FAILED', e); process.exit(1); });
+
+/**
+ * The integration status list.
+ *
+ * "Coming soon" with no reason is the sort of thing that is still there two
+ * years later. Anything not ready has to name what is in the way, so the
+ * section reads as a record of decisions rather than a promise.
+ */
+(async () => {
+  const a = require('assert');
+  const fs = require('fs');
+  const path = require('path');
+  const { INTEGRATIONS } = require('../web/core/integrations');
+
+  a.ok(INTEGRATIONS.length >= 4, 'the destinations worth naming are named');
+
+  for (const i of INTEGRATIONS) {
+    a.ok(i.name && i.what, `${i.name}: says what it is and what it would do`);
+    a.ok(['ready', 'blocked'].includes(i.status), `${i.name}: has a known status`);
+    a.ok(i.detail && i.detail.length > 40, `${i.name}: explains itself`);
+    if (i.status === 'blocked') {
+      a.ok(i.blocker && i.blocker.length > 10,
+        `${i.name}: is not available and must say what blocks it, not just that it is coming`);
+    } else {
+      a.ok(!i.blocker, `${i.name}: is available, so it should not carry a blocker`);
+    }
+  }
+
+  // The two ready ones must be things that actually exist in the code, or the
+  // list is advertising rather than reporting.
+  const ready = INTEGRATIONS.filter((i) => i.status === 'ready').map((i) => i.name);
+  a.ok(ready.includes('Scheduler import'), 'the scheduler export is listed as available');
+  a.ok(fs.existsSync(path.join(__dirname, '..', 'web', 'core', 'schedule.js')),
+    'and the module behind it exists');
+  const panels = fs.readFileSync(path.join(__dirname, '..', 'web', 'components', 'panels.tsx'), 'utf8');
+  a.ok(/socialIntent/.test(panels), 'the composer links are listed as available and exist');
+
+  console.log('integration status tests: ok');
+})().catch((e) => { console.error('integration status tests FAILED', e); process.exit(1); });
