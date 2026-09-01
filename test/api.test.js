@@ -149,6 +149,18 @@ const post = (p, body) => api(p, { method: 'POST', headers: { 'content-type': 'a
   assert.equal(empty.status, 400, 'no text is a bad request');
   console.log('  copy check route:', chk.data.flags.length, 'flags');
 
+  // The schedule handoff: real dates, in a shape an importer accepts.
+  const noDate = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/schedule`);
+  assert.equal(noDate.status, 400, 'a schedule without a start date is refused');
+
+  const sched = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/schedule?start=2026-09-07&format=hootsuite`);
+  assert.equal(sched.status, 200, 'the schedule route answers');
+  assert.ok(/text\/csv/.test(sched.headers.get('content-type') || ''), 'and returns CSV, not JSON');
+  const schedBody = await sched.text();
+  assert.ok(/^09\/07\/2026 /.test(schedBody), `Hootsuite wants the date first, got: ${schedBody.slice(0, 30)}`);
+  assert.ok(!/^when,/.test(schedBody), 'and no header row');
+  console.log('  schedule export:', schedBody.split('\n').length, 'rows');
+
   console.log('api tests: ok');
   stop();
   process.exit(0);

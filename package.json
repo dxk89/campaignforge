@@ -8,7 +8,7 @@
     "start": "node legacy/server.js",
     "dev": "node --watch server.js",
     "verify": "cd web && npm run build && cd .. && npm test",
-    "test": "node test/session.test.js && node test/runtime.test.js && node test/db.test.js && node test/scraper.test.js && node test/a11y.test.js && node test/ai-tells.test.js && node test/check.test.js && node test/mcp.test.js && node test/export.test.js && node test/api.test.js && node test/isolation.test.js && node test/phase2.test.js && node test/phase3.test.js && node test/phase4.test.js && node test/pages.test.js && node test/frontend.test.js",
+    "test": "node test/session.test.js && node test/runtime.test.js && node test/db.test.js && node test/scraper.test.js && node test/a11y.test.js && node test/ai-tells.test.js && node test/check.test.js && node test/schedule.test.js && node test/mcp.test.js && node test/export.test.js && node test/api.test.js && node test/isolation.test.js && node test/phase2.test.js && node test/phase3.test.js && node test/phase4.test.js && node test/pages.test.js && node test/frontend.test.js",
     "web": "cd web && npm run dev",
     "web:build": "cd web && npm run build",
     "legacy": "node legacy/server.js",

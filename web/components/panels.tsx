@@ -173,6 +173,14 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
   const [view, setView] = useState<Record<string, 'card' | 'photo'>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [bulk, setBulk] = useState<string | null>(null);
+  // The plan holds day numbers, so a start date is asked for rather than
+  // guessed. Defaulted to the next Monday, because a B2B month that begins
+  // mid-week wastes its first days.
+  const [start, setStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
   const keyOf = (p: any) => `${p.day}-${p.channel}`;
 
@@ -231,6 +239,23 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
         ) : (
           <span>Image generation is off: add GEMINI_API_KEY to the server to turn the visual briefs below into pictures. The typographic cards work without it.</span>
         )}
+      </div>
+      {/*
+        Handing the month to a scheduler. The date is the only thing the plan
+        cannot know, so it is the only thing asked for.
+      */}
+      <div className="social-bar schedule-bar">
+        <label htmlFor="sched-start">Start the month on</label>
+        <input id="sched-start" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
+        <a
+          className="btn-secondary"
+          href={`/api/clients/${clientId}/campaigns/${campaignId}/schedule?start=${start}&format=hootsuite`}
+        >Hootsuite CSV</a>
+        <a
+          className="btn-secondary"
+          href={`/api/clients/${clientId}/campaigns/${campaignId}/schedule?start=${start}`}
+        >Schedule CSV</a>
+        <span className="muted">Weekend posts move to the Monday after.</span>
       </div>
       <div className="pillars">
         {(social.pillars || []).map((pl: any, i: number) => <div key={i}><b>{pl.name}</b>{pl.theme}</div>)}
