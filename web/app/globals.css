@@ -821,3 +821,32 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .int-what { margin: 5px 0 0; font-size: 13.5px; }
 .int-blocker { margin: 5px 0 0; font-size: 13px; font-weight: 600; color: var(--amber); }
 .integrations .muted { font-size: 12.5px; margin: 5px 0 0; }
+
+/* ---------- Lifecycle diagram ----------------------------------------------
+   Drawn from the same steps the list beneath it reads, so the two cannot
+   disagree. The source stays available because it renders anywhere Mermaid
+   does, which is most of the reason for using Mermaid at all.
+   -------------------------------------------------------------------------- */
+.flow-diagram { margin: 0 0 18px; display: flex; flex-direction: column; gap: 8px; }
+.flow-diagram__svg {
+  overflow-x: auto;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.flow-diagram__svg svg { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+.flow-diagram figcaption { font-size: 12.5px; }
+.flow-actions { display: flex; gap: 12px; }
+.flow-source {
+  margin: 0;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}

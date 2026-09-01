@@ -200,7 +200,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               {tab === 'email' && <EditableChannel assets={editing.assets} channel="email" title="Email" ctx={editing} />}
               {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} landingUrl={brief.landingUrl} />}
               {tab === 'landing' && <LandingPanel landing={outputs['landing-writer']} />}
-              {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} />}
+              {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} emails={outputs.copywriter?.email?.emails} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}
               {tab === 'measurement' && <MeasurementPanel activation={outputs['ops-architect']} tracking={tracking} />}
             </div>

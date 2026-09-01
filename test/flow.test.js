@@ -1,0 +1,89 @@
+/**
+ * Drawing the lifecycle.
+ *
+ * The activation pass already returns a graph, so this renders it rather than
+ * inferring it, and the same lifecycle must always produce the same picture.
+ * The cases here are the ones that make a diagram wrong rather than ugly: a
+ * branch pointing at a step that does not exist, a subject line containing a
+ * character Mermaid treats as syntax, and a step list in an order the reader
+ * would not expect.
+ */
+const assert = require('assert');
+const { lifecycleToMermaid } = require('../web/core/flow');
+
+const lifecycle = {
+  entry: 'Submits the early access form',
+  steps: [
+    { id: 's1', type: 'email', email: 1 },
+    { id: 's2', type: 'wait', days: 3 },
+    { id: 's3', type: 'branch', signal: 'clicked the chart link in email 1', yes: 's4', no: 's5' },
+    { id: 's4', type: 'handoff' },
+    { id: 's5', type: 'email', email: 2 },
+    { id: 's6', type: 'exit' },
+  ],
+  exit_rules: ['replied', 'booked a call', 'unsubscribed'],
+};
+
+(async () => {
+  const emails = [{ subject: 'Close the month four days faster' }, { subject: 'What your ledger cannot see' }];
+  const m = lifecycleToMermaid(lifecycle, { emails });
+
+  assert.ok(m.startsWith('flowchart TD'), 'it is a Mermaid flowchart');
+
+  // Entry is a node, and it leads into the first step.
+  assert.ok(/entry\(\["Submits the early access form"\]\)/.test(m), 'the entry event is drawn');
+  assert.ok(/entry --> s1/.test(m), 'and leads into the first step');
+
+  // The email node carries its subject, so the diagram is readable without
+  // cross-referencing the email tab.
+  assert.ok(/s1\["Email 1: Close the month four days faster"\]/.test(m), 'emails are labelled with their subject');
+
+  // Shape carries meaning: a branch is a decision, an exit is an ending.
+  assert.ok(/s3\{"clicked the chart link in email 1"\}/.test(m), 'a branch is a diamond');
+  assert.ok(/s6\(\["Exit"\]\)/.test(m), 'an exit is a stadium');
+  assert.ok(/s2\[\/"Wait 3 days"\/\]/.test(m), 'a wait says how long');
+
+  // Branch edges are labelled, and the rest fall through in order.
+  assert.ok(/s3 -->\|yes\| s4/.test(m), 'the yes branch is labelled');
+  assert.ok(/s3 -->\|no\| s5/.test(m), 'and the no branch');
+  assert.ok(/s1 --> s2/.test(m), 'ordinary steps fall through to the next');
+  assert.ok(!/s3 --> s4$/m.test(m), 'a branch does not also fall through');
+  assert.ok(!/s6 -->/.test(m), 'and an exit leads nowhere');
+
+  // A branch pointing at a step that does not exist must not draw an edge to
+  // nowhere: Mermaid would invent an unlabelled node and the reader would
+  // have no idea what it was.
+  const broken = lifecycleToMermaid({
+    entry: 'x',
+    steps: [{ id: 'a', type: 'branch', signal: 'signal', yes: 'ghost', no: 'a' }],
+  });
+  assert.ok(!/ghost/.test(broken), 'an edge to a step that does not exist is dropped');
+  assert.ok(/a -->\|no\| a/.test(broken), 'and the one that does exist survives');
+
+  // Mermaid treats brackets and quotes as syntax, so a subject containing them
+  // has to be cleaned or the whole diagram fails to parse.
+  const risky = lifecycleToMermaid(
+    { entry: 'x', steps: [{ id: 's1', type: 'email', email: 1 }] },
+    { emails: [{ subject: 'Read this [now] "really"' }] }
+  );
+  const riskyLine = risky.split('\n').find((l) => l.includes('s1[')) || '';
+  const inside = (riskyLine.match(/\["(.*)"\]/) || [])[1] || '';
+  assert.ok(inside.length > 0, 'the node has a label');
+  assert.ok(!/[\[\]"]/.test(inside),
+    `brackets and quotes inside a label are removed, got: ${inside}`);
+  assert.ok(/Read this now really/.test(risky), 'and the words survive');
+
+  // Exit rules apply everywhere, so they are stated rather than drawn from
+  // every node. An edge from each step to one exit makes the picture useless.
+  assert.ok(/Anyone who: replied; booked a call; unsubscribed/.test(m), 'exit rules are stated');
+  assert.equal((m.match(/--> leaves/g) || []).length, 1, 'and drawn once, not from every step');
+
+  // Deterministic: the same lifecycle gives the same diagram.
+  assert.equal(lifecycleToMermaid(lifecycle, { emails }), m, 'the same input gives the same output');
+
+  // Nothing to draw is not a crash.
+  assert.ok(lifecycleToMermaid(null).startsWith('flowchart TD'), 'an absent lifecycle still returns a diagram');
+  assert.ok(lifecycleToMermaid({ steps: [] }).includes('entry'), 'and an empty one keeps its entry node');
+
+  console.log('flow tests: ok');
+})().catch((e) => { console.error('flow tests FAILED', e); process.exit(1); });

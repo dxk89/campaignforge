@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { Card, Line, CopyButton, LIMITS } from './Counter';
 import { fmtInt, wordCount } from './format';
 import { download } from './exports';
+import FlowDiagram from './FlowDiagram';
+
+const { lifecycleToMermaid } = require('@core/flow');
 
 /**
  * Hand a post to the platform with its text already in the composer.
@@ -357,12 +360,18 @@ async function downloadGraphic(post: any, image: string | undefined, view: strin
   }
 }
 
-export function LifecyclePanel({ activation, problems }: { activation: any; problems?: string[] }) {
+export function LifecyclePanel({ activation, problems, emails }: { activation: any; problems?: string[]; emails?: any[] }) {
   const lc = activation?.lifecycle;
   if (!lc) return <p className="muted">No lifecycle yet.</p>;
+  // Drawn from the same steps the list below reads, so the two cannot
+  // disagree: the diagram is a rendering of the plan, not a second copy of it.
+  const diagram = lifecycleToMermaid(lc, { emails });
   return (
     <div className="prose">
       {problems?.length ? <div className="problems"><strong>Structural checks flagged {problems.length}:</strong> {problems.join('; ')}</div> : null}
+      <section><h3>The flow</h3>
+        <FlowDiagram source={diagram} caption="Every step, in order, with both ways out of each branch." />
+      </section>
       <section><h3>Enrolment</h3><p>{lc.entry}</p></section>
       <section><h3>Workflow</h3><div className="flow">
         {(lc.steps || []).map((st: any) => {
