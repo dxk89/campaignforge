@@ -36,12 +36,28 @@ export function useAssets(clientId: string, campaignId: string, language: string
     return data.asset;
   }, [clientId, campaignId, load]);
 
-  const regenerate = useCallback(async (assetId: string, constraint: string) => {
-    await fetch(`/api/clients/${clientId}/campaigns/${campaignId}/regenerate`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ scope: 'asset', target: assetId, constraint }),
-    });
-    load();
+  /**
+   * A rewrite is a live model call, and it fails for reasons a person can act
+   * on: the rewrite came back over the limit (422), or the month's ceiling
+   * refused the spend (402). This used to fire the request and ignore the
+   * response, so a failure looked exactly like nothing happening. It returns
+   * the message now and the field shows it.
+   */
+  const regenerate = useCallback(async (assetId: string, constraint: string): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/clients/${clientId}/campaigns/${campaignId}/regenerate`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ scope: 'asset', target: assetId, constraint }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        return body?.error || `The rewrite failed (${res.status}).`;
+      }
+      await load();
+      return null;
+    } catch {
+      return 'The rewrite could not be sent. Check your connection and try again.';
+    }
   }, [clientId, campaignId, load]);
 
   return { assets, approval, loading, patch, regenerate, reload: load };
@@ -100,7 +116,7 @@ const labels: Record<string, string> = {
 
 export function EditableChannel({ assets, channel, title, ctx }: {
   assets: Asset[]; channel: string; title: string;
-  ctx: { patch: (id: string, b: any) => Promise<Asset | null>; regenerate: (id: string, c: string) => Promise<void> };
+  ctx: { patch: (id: string, b: any) => Promise<Asset | null>; regenerate: (id: string, c: string) => Promise<string | null> };
 }) {
   const groups = byUnit(assets, channel);
   if (!groups.length) return <p className="muted">Nothing generated for this channel yet.</p>;

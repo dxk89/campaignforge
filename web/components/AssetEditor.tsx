@@ -18,18 +18,28 @@ export type Asset = {
 export function AssetField({ asset, label, limit, multiline, onPatch, onRegenerate }: {
   asset: Asset; label: string; limit?: { max: number; hard: boolean }; multiline?: boolean;
   onPatch: (patch: any) => Promise<Asset | null>;
-  onRegenerate: (constraint: string) => Promise<void>;
+  onRegenerate: (constraint: string) => Promise<string | null>;
 }) {
   const [text, setText] = useState(asset.text);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [constraint, setConstraint] = useState('');
+  const [rewriting, setRewriting] = useState(false);
 
   const len = text.length;
   const over = limit && len > limit.max;
   const violations = asset.flags?.filter((f) => f.severity === 'violation') || [];
   const warnings = asset.flags?.filter((f) => f.severity === 'warning') || [];
+
+  async function rewrite() {
+    setRewriting(true);
+    setError(null);
+    const failure = await onRegenerate(constraint);
+    setRewriting(false);
+    if (failure) setError(failure);
+    else setAsking(false);
+  }
 
   async function save() {
     if (text === asset.text) return;
@@ -61,12 +71,19 @@ export function AssetField({ asset, label, limit, multiline, onPatch, onRegenera
         <input value={text} onChange={(e) => setText(e.target.value)} onBlur={save} disabled={saving} />
       )}
 
+      {/*
+        A rewrite takes tens of seconds, because it is a model call. Without a
+        busy state the button looks broken: you press it, nothing changes, and
+        the natural conclusion is that it does not work.
+      */}
       <div className="af-foot">
         {limit && <span className={`count ${over ? (limit.hard ? 'over' : 'warn') : ''}`}>{len}/{limit.max}</span>}
         {violations.map((f, i) => <span key={i} className="af-flag violation">{f.rule}: {f.detail}</span>)}
         {warnings.map((f, i) => <span key={i} className="af-flag warning">{f.rule}: {f.detail}</span>)}
         <span className="af-actions">
-          <button type="button" className="mini-copy" onClick={() => setAsking((a) => !a)}>Rewrite</button>
+          <button type="button" className="mini-copy" onClick={() => setAsking((a) => !a)} disabled={rewriting}>
+            {rewriting ? 'Rewriting…' : 'Rewrite'}
+          </button>
           {asset.status === 'approved'
             ? <button type="button" className="mini-copy" onClick={() => setStatus('draft')}>Unapprove</button>
             : <button type="button" className="mini-copy" onClick={() => setStatus('approved')} disabled={violations.length > 0}
@@ -77,8 +94,11 @@ export function AssetField({ asset, label, limit, multiline, onPatch, onRegenera
       {asking && (
         <div className="af-ask">
           <input value={constraint} onChange={(e) => setConstraint(e.target.value)} placeholder="shorter · more direct · lead with the number"
-            onKeyDown={(e) => { if (e.key === 'Enter') { setAsking(false); onRegenerate(constraint); } }} />
-          <button type="button" className="btn-secondary" onClick={() => { setAsking(false); onRegenerate(constraint); }}>Rewrite</button>
+            disabled={rewriting}
+            onKeyDown={(e) => { if (e.key === 'Enter') rewrite(); }} />
+          <button type="button" className="btn-secondary" onClick={rewrite} disabled={rewriting}>
+            {rewriting ? 'Rewriting…' : 'Rewrite'}
+          </button>
         </div>
       )}
       {error && <p className="af-error">{error}</p>}

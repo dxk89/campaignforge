@@ -164,6 +164,23 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.ok(/Marketing Hub Professional/.test(settingsPage.body), 'and names what blocks HubSpot');
   console.log('  integration list: ok');
 
+  // Rewrite is a model call taking tens of seconds and it can fail in ways a
+  // person can act on: over the limit (422), or the ceiling refused the spend
+  // (402). It used to fire the request and ignore the response, so both
+  // looked exactly like the button not working. Asserted at the source,
+  // because the failure is in what the handler does with a response rather
+  // than in anything the page renders.
+  const fsx = require('fs');
+  const pathx = require('path');
+  const panelsSrc = fsx.readFileSync(pathx.join(__dirname, '..', 'web', 'components', 'EditablePanels.tsx'), 'utf8');
+  const editorSrc = fsx.readFileSync(pathx.join(__dirname, '..', 'web', 'components', 'AssetEditor.tsx'), 'utf8');
+  assert.ok(/if \(!res\.ok\)/.test(panelsSrc), 'regenerate checks whether the request succeeded');
+  assert.ok(/body\?\.error/.test(panelsSrc), 'and returns what the server said went wrong');
+  assert.ok(/setRewriting\(true\)/.test(editorSrc), 'the field shows it is working');
+  assert.ok(/Rewriting/.test(editorSrc), 'and says so on the button');
+  assert.ok(/if \(failure\) setError\(failure\)/.test(editorSrc), 'and shows the failure rather than swallowing it');
+  console.log('  rewrite reports success and failure: ok');
+
   console.log('page tests: ok');
   stop(); process.exit(0);
 })().catch((e) => { console.error('page tests FAILED', e); stop(); process.exit(1); });
