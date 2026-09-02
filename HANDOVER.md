@@ -20,7 +20,46 @@ A campaign operating system for **one marketer running several clients**. Point 
 
 ## 2. The state of the repository
 
-19 commits, 83 source files, five test suites, all green.
+97 commits, 28 test suites, all green. Deployed at
+campaignforge-one.vercel.app on Vercel Pro, with Firestore and Cloudflare R2.
+
+### Where this was left, 2 September 2026
+
+Everything below is committed and pushed. Nothing is half-finished.
+
+**Working and verified on production:** the full campaign chain end to end;
+the copy checks as a page, an API route and an MCP server; the scheduler
+handoff; the lifecycle diagram; the monthly spend ceiling at EUR 25.
+
+**Known gaps, in the order I would take them:**
+
+1. **No hard-failure route in the lifecycle.** Bounced, invalid address,
+   spam complaint. In a real email programme these are a meaningful share of
+   what happens and nothing models them. Smaller than the entry-routes change
+   now that `entries` and the reachability check exist.
+2. **Daily use is unproven.** The clinic and the MCP server work, but nothing
+   has been through a week of real copy. That is the next thing worth doing
+   and it cannot be done by writing more code.
+3. **Nothing executes to a platform.** See the status list in Settings, which
+   names what blocks each destination. HubSpot needs Marketing Hub
+   Professional; the portal here is free, so there is nothing worth pushing.
+   LinkedIn needs Community Management API review, which is weeks and can be
+   refused.
+4. **`docs/superpowers/specs/2026-08-31-copy-checks-design.md`** has a
+   Project 2 for platform execution that was deliberately not started.
+
+**Two things only the owner can do:** flip `ADMIN_PASSWORD` and
+`R2_SECRET_ACCESS_KEY` to Sensitive in Vercel, where they are currently
+readable from the dashboard; and start the LinkedIn API review if that route
+is wanted, since the clock runs outside this repository.
+
+**What real runs cost, measured rather than estimated:** brand-analyst about
+EUR 0.10, strategist EUR 0.04 to 0.06, copywriter EUR 0.36 to 0.47, social
+planner EUR 0.48. A full chain is under EUR 1.20. Two lessons are baked into
+the code: passes are minutes long, so the function timeout is 800 seconds and
+needs Vercel Pro; and the loop stops itself before the platform kills it,
+because a killed function loses the output and the record of the spend
+together.
 
 ```
 CLAUDE.md               Read this second. Invariants, layout, conventions, commands
