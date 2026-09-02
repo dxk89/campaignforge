@@ -7,6 +7,7 @@ import { download } from './exports';
 import FlowDiagram from './FlowDiagram';
 
 const { lifecycleToMermaid } = require('@core/flow');
+const { entriesOf } = require('@core/lifecycle');
 
 /**
  * Hand a post to the platform with its text already in the composer.
@@ -372,7 +373,15 @@ export function LifecyclePanel({ activation, problems, emails }: { activation: a
       <section><h3>The flow</h3>
         <FlowDiagram source={diagram} caption="Every step, in order, with both ways out of each branch." />
       </section>
-      <section><h3>Enrolment</h3><p>{lc.entry}</p></section>
+      <section><h3>Ways in</h3>
+        {entriesOf(lc).length ? (
+          <ul className="entries">
+            {entriesOf(lc).map((e: any) => (
+              <li key={e.id}><b>{e.event}</b>{e.note ? <span className="muted"> {e.note}</span> : null}</li>
+            ))}
+          </ul>
+        ) : <p className="muted">No entry route recorded.</p>}
+      </section>
       <section><h3>Workflow</h3><div className="flow">
         {(lc.steps || []).map((st: any) => {
           const main = st.type === 'email' ? `Send email ${st.email}`

@@ -850,3 +850,9 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
   overflow-x: auto;
   white-space: pre;
 }
+
+/* Ways in. Listed rather than run together, because two audiences in one
+   sentence is what the single entry string used to produce. */
+.entries { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.entries li { padding-left: 14px; position: relative; font-size: 14px; }
+.entries li::before { content: '→'; position: absolute; left: 0; color: var(--teal); }

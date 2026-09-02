@@ -87,3 +87,72 @@ const lifecycle = {
 
   console.log('flow tests: ok');
 })().catch((e) => { console.error('flow tests FAILED', e); process.exit(1); });
+
+/**
+ * Entry routes, and steps nothing reaches.
+ *
+ * A lifecycle used to have one `entry` string, and the model routinely wrote
+ * two routes into it: "submits the trial form, or clicks a paid ad and
+ * leaves". Those are different audiences wanting different first emails, and
+ * the structure could not say so, so the difference survived only as prose
+ * that nothing checked.
+ */
+(async () => {
+  const a = require('assert');
+  const { entriesOf, reachableSteps } = require('../web/core/lifecycle');
+  const { lifecycleToMermaid } = require('../web/core/flow');
+  const { validateActivation } = require('../web/core/prompts/activation');
+
+  const two = {
+    entries: [
+      { id: 'trial', event: 'Submits the trial form', first: 's1' },
+      { id: 'retarget', event: 'Clicks a paid ad and leaves', first: 's3' },
+    ],
+    steps: [
+      { id: 's1', type: 'email', email: 1 },
+      { id: 's2', type: 'exit' },
+      { id: 's3', type: 'email', email: 2 },
+      { id: 's4', type: 'exit' },
+    ],
+  };
+
+  // Each route is its own node, into its own first step.
+  const m = lifecycleToMermaid(two);
+  a.ok(/trial\(\["Submits the trial form"\]\)/.test(m), 'the first route is drawn');
+  a.ok(/retarget\(\["Clicks a paid ad and leaves"\]\)/.test(m), 'and so is the second');
+  a.ok(/trial --> s1/.test(m), 'each route enters where it starts');
+  a.ok(/retarget --> s3/.test(m), 'rather than both at the top');
+
+  // Campaigns generated before the change still read. Their single string
+  // becomes one route beginning at the first step.
+  const old = { entry: 'Fills the form', steps: [{ id: 's1', type: 'email', email: 1 }] };
+  const [only] = entriesOf(old);
+  a.equal(only.event, 'Fills the form', 'the old single entry is still read');
+  a.equal(only.first, 's1', 'and starts at the first step');
+  a.ok(/entry --> s1/.test(lifecycleToMermaid(old)), 'and still draws');
+
+  // Reachability. Rewiring one branch is enough to orphan something upstream
+  // without anything else looking wrong.
+  a.deepEqual([...reachableSteps(two)].sort(), ['s1', 's2', 's3', 's4'], 'both routes reach their steps');
+  const orphaned = {
+    entries: [{ id: 'e1', event: 'x', first: 's1' }],
+    steps: [{ id: 's1', type: 'exit' }, { id: 's9', type: 'email', email: 1 }],
+  };
+  a.ok(!reachableSteps(orphaned).has('s9'), 's9 is not reachable');
+  a.ok(validateActivation({ lifecycle: orphaned }).some((p) => /no route reaches s9/.test(p)),
+    'and the gate says so');
+
+  // An entry starting at a step that does not exist is refused, the same way
+  // a branch pointing at one is.
+  a.ok(
+    validateActivation({ lifecycle: { entries: [{ id: 'e1', event: 'x', first: 'ghost' }], steps: [{ id: 's1', type: 'exit' }] } })
+      .some((p) => /entry e1 starts at unknown step ghost/.test(p)),
+    'an entry into nowhere is refused'
+  );
+
+  // And a lifecycle with steps but no way in at all.
+  a.ok(validateActivation({ lifecycle: { steps: [{ id: 's1', type: 'exit' }] } })
+    .some((p) => /no entry route/.test(p)), 'a lifecycle nobody can enter is refused');
+
+  console.log('entry route tests: ok');
+})().catch((e) => { console.error('entry route tests FAILED', e); process.exit(1); });

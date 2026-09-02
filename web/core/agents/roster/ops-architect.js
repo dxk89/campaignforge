@@ -14,7 +14,7 @@ module.exports = {
   schema: {
     type: 'object',
     properties: {
-      lifecycle: { type: 'object', properties: { entry: { type: 'string' }, steps: { type: 'array' }, signals_used: { type: 'array' }, exit_rules: { type: 'array' } }, required: ['entry', 'steps', 'signals_used', 'exit_rules'] },
+      lifecycle: { type: 'object', properties: { entries: { type: 'array' }, steps: { type: 'array' }, signals_used: { type: 'array' }, exit_rules: { type: 'array' } }, required: ['entries', 'steps', 'signals_used', 'exit_rules'] },
       handoff: { type: 'object', properties: { mql_definition: { type: 'array' }, lead_score: { type: 'array' }, threshold: { type: 'number' }, sla: { type: 'string' }, bdr_sop: { type: 'array' }, talk_track: { type: 'object' }, disqualifiers: { type: 'array' } }, required: ['mql_definition', 'lead_score', 'threshold', 'sla', 'bdr_sop', 'talk_track', 'disqualifiers'] },
       measurement: { type: 'object', properties: { kpi_tree: { type: 'array' }, funnel: { type: 'array' }, reporting_cadence: { type: 'string' }, data_quality: { type: 'array' }, incrementality: { type: 'object' } }, required: ['kpi_tree', 'funnel', 'reporting_cadence', 'data_quality', 'incrementality'] },
       experiments: { type: 'array' },

@@ -13,6 +13,8 @@
  * paste into a document is half a diagram.
  */
 
+const { entriesOf } = require('./lifecycle');
+
 /** Mermaid node labels are delimited, so the delimiters have to go. */
 function label(text, max = 68) {
   const s = String(text == null ? '' : text)
@@ -55,16 +57,24 @@ function lifecycleToMermaid(lifecycle, opts = {}) {
   const emails = opts.emails || [];
   const lines = ['flowchart TD'];
 
-  const entry = label(lifecycle?.entry || 'Enrols');
-  lines.push(`  entry(["${entry}"])`);
+  // A campaign can be entered more than one way, and the routes usually want
+  // different first emails: someone who filled in the trial form is not
+  // someone who bounced off a paid ad. Each route is drawn as its own node
+  // into its own first step.
+  const entries = entriesOf(lifecycle);
+  const known = new Set(steps.map((s) => s.id));
+
+  if (entries.length) {
+    for (const e of entries) lines.push(`  ${e.id}(["${label(e.event)}"])`);
+  } else {
+    lines.push('  entry(["Enrols"])');
+  }
 
   for (const s of steps) lines.push(node(s, emails));
 
-  // Edges. A branch names its two ways out; everything else falls through to
-  // whatever comes next in the list, which is what "steps" means.
-  const ids = steps.map((s) => s.id);
-  const known = new Set(ids);
-  if (ids.length) lines.push(`  entry --> ${ids[0]}`);
+  for (const e of entries) {
+    if (e.first && known.has(e.first)) lines.push(`  ${e.id} --> ${e.first}`);
+  }
 
   steps.forEach((s, i) => {
     if (s.type === 'branch') {

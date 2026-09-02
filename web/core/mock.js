@@ -251,7 +251,15 @@ const FIXTURES = {
 
 FIXTURES.activation = {
   lifecycle: {
-    entry: 'Submits the trial form, or clicks a paid ad and leaves without starting a trial (retargeting list)',
+    // Two routes, deliberately. Someone who filled in the trial form has
+    // raised a hand; someone who bounced off a paid ad has not, and starting
+    // them both on email 1 wastes the second audience. The single entry
+    // string this replaced had both of these written into one sentence,
+    // which is exactly the problem the list solves.
+    entries: [
+      { id: 'trial', event: 'Submits the trial form', first: 's1', note: 'Has asked for the product; start with the angle' },
+      { id: 'retarget', event: 'Clicks a paid ad and leaves without starting a trial', first: 's3', note: 'Has not asked for anything, so open with the proof rather than the pitch' },
+    ],
     steps: [
       { id: 's1', type: 'email', email: 1, note: 'Introduce the four-days-back angle the day after entry' },
       { id: 's2', type: 'wait', days: 3 },

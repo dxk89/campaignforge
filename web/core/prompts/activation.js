@@ -16,6 +16,8 @@
  * anything that must be the same every time.
  */
 
+const { entriesOf, reachableSteps } = require('../lifecycle');
+
 function systemPrompt() {
   return `You are a B2B marketing operations lead. You are given a campaign brief, the chosen strategy, the finished asset set and the company context. Design the operating layer for the campaign.
 
@@ -23,7 +25,9 @@ Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact
 
 {
   "lifecycle": {
-    "entry": "the event that enrols someone: e.g. 'submits early access form' or 'clicks a paid ad and does not convert'",
+    "entries": [
+      { "id": "short id", "event": "one event that enrols someone, e.g. 'submits the trial form'", "first": "the step id this route begins at", "note": "why this audience starts here rather than at the top" }
+    ],
     "steps": [
       { "id": "s1", "type": "email", "email": 1, "note": "why this email here" },
       { "id": "s2", "type": "wait", "days": 3 },
@@ -61,6 +65,8 @@ Return ONLY a JSON object, no prose, no markdown, no code fences. Use this exact
 }
 
 Rules:
+- List every way in separately. Someone who filled in the trial form and someone who bounced off a paid ad are different audiences and usually want a different first email, so give each its own entry with its own first step. One route is fine if there genuinely is one; two routes written into one sentence is not.
+- Every step must be reachable from an entry. A step nothing arrives at will never run.
 - Every KPI in the tree is reported by a platform that is also being asked to prove its own worth, so the plan needs one measurement that does not come from the platform. Say how a lift would be established - a holdout audience, a geo split, a switchback - and what it would take to detect the effect. If the budget or audience is genuinely too small, say "none possible" and say why; a plan that admits it cannot measure lift is more useful than one that reports platform-attributed conversions as if they were incremental.
 - The lifecycle must use the three emails in the asset set by number and must branch at least once on a behaviour signal. The asset set's branch_note is the starting point; make it a real workflow.
 - Every step id must be unique. Branch yes/no must point at existing step ids. The workflow must terminate: every path reaches an exit or handoff.
@@ -110,6 +116,27 @@ function validateActivation(a) {
     if (s.type === 'email' && ![1, 2, 3].includes(Number(s.email))) problems.push(`step ${s.id} references email ${s.email}`);
   }
   if (steps.length && !steps.some((s) => s.type === 'exit' || s.type === 'handoff')) problems.push('workflow has no exit or handoff');
+
+  // Entry routes. A campaign is usually entered more than one way, and each
+  // route needs its own start: two audiences described in one sentence cannot
+  // be given different first emails.
+  const entries = entriesOf(a?.lifecycle);
+  if (steps.length && !entries.length) problems.push('lifecycle has no entry route');
+  const entryIds = new Set();
+  for (const e of entries) {
+    if (entryIds.has(e.id)) problems.push(`duplicate entry id ${e.id}`);
+    entryIds.add(e.id);
+    if (!e.event) problems.push(`entry ${e.id} does not say what enrols someone`);
+    if (e.first && !ids.has(e.first)) problems.push(`entry ${e.id} starts at unknown step ${e.first}`);
+  }
+
+  // A step nothing arrives at will never run, and rewiring one branch is
+  // enough to orphan something upstream without anything else looking wrong.
+  if (steps.length && entries.length) {
+    const reached = reachableSteps(a.lifecycle);
+    const orphans = steps.map((s) => s.id).filter((id) => id && !reached.has(id));
+    if (orphans.length) problems.push(`no route reaches ${orphans.join(', ')}`);
+  }
   const score = a?.handoff?.lead_score || [];
   const max = score.reduce((n, r) => n + (Number(r.points) || 0), 0);
   if (score.length && Number(a.handoff.threshold) > max) problems.push(`lead score threshold ${a.handoff.threshold} exceeds maximum possible ${max}`);
