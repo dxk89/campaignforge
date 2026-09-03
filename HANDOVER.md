@@ -20,10 +20,10 @@ A campaign operating system for **one marketer running several clients**. Point 
 
 ## 2. The state of the repository
 
-97 commits, 28 test suites, all green. Deployed at
+101 commits, 28 test suites, all green. Deployed at
 campaignforge-one.vercel.app on Vercel Pro, with Firestore and Cloudflare R2.
 
-### Where this was left, 2 September 2026
+### Where this was left, 3 September 2026
 
 Everything below is committed and pushed. Nothing is half-finished.
 
@@ -31,21 +31,35 @@ Everything below is committed and pushed. Nothing is half-finished.
 the copy checks as a page, an API route and an MCP server; the scheduler
 handoff; the lifecycle diagram; the monthly spend ceiling at EUR 25.
 
+**Sign-in is two passwords and no usernames.** ADMIN_PASSWORD is the owner's,
+ACCESS_PASSWORD is what a reviewer is given, and both reach the same
+workspace. Per-visitor accounts were removed deliberately: they put an account
+system in front of a tool whose point is what happens after you are inside.
+The cost is that everyone signed in shares one library, which is why clients
+can now be renamed, deleted, and locked. A locked client cannot be deleted by
+anyone, admin included, until it is unlocked; only an admin can change the
+lock. /api/health reports `reviewerAccess` so a deployment can be checked
+without holding the password.
+
 **Known gaps, in the order I would take them:**
 
-1. **No hard-failure route in the lifecycle.** Bounced, invalid address,
+1. **The library has not been curated.** It holds the IntelliNews client,
+   still named after its scraped page title, and campaigns whose copywriter
+   passes failed during debugging. Everyone with the access password sees
+   them. Rename, delete the failed campaigns, keep the complete one, lock it.
+2. **No hard-failure route in the lifecycle.** Bounced, invalid address,
    spam complaint. In a real email programme these are a meaningful share of
    what happens and nothing models them. Smaller than the entry-routes change
    now that `entries` and the reachability check exist.
-2. **Daily use is unproven.** The clinic and the MCP server work, but nothing
+3. **Daily use is unproven.** The clinic and the MCP server work, but nothing
    has been through a week of real copy. That is the next thing worth doing
    and it cannot be done by writing more code.
-3. **Nothing executes to a platform.** See the status list in Settings, which
+4. **Nothing executes to a platform.** See the status list in Settings, which
    names what blocks each destination. HubSpot needs Marketing Hub
    Professional; the portal here is free, so there is nothing worth pushing.
    LinkedIn needs Community Management API review, which is weeks and can be
    refused.
-4. **`docs/superpowers/specs/2026-08-31-copy-checks-design.md`** has a
+5. **`docs/superpowers/specs/2026-08-31-copy-checks-design.md`** has a
    Project 2 for platform execution that was deliberately not started.
 
 **Two things only the owner can do:** flip `ADMIN_PASSWORD` and
