@@ -5,19 +5,18 @@ import { getSettings, saveSettings } from '@/server/spend';
 
 export const runtime = 'nodejs';
 
-// GET stays session-only (not owner-only): the ceiling value is a number, not
-// a control, and a demo account seeing today's cap does not let it change
-// anything. PATCH is the half that matters, because Task 8 made the ceiling
-// global (system/spend/global) rather than per-workspace: a write from any
-// session now disables spend protection for every workspace, including the
-// owner's, not just the caller's own.
+// GET stays session-only, not admin-only: the ceiling is a number rather than
+// a control, and a reviewer seeing today's cap cannot change anything with it.
+// PATCH is the half that matters. The ceiling is one document shared by
+// everything, so a write from any session disables spend protection for
+// everyone, which is exactly what the access password must not reach.
 export async function GET() {
   return guarded(async () => getSettings());
 }
 
 // requireOwner() runs before the body is parsed, same pattern as
-// app/api/admin/accounts/route.ts, so a demo account gets 401/403 from the
-// route itself rather than relying on the Settings panel not being rendered.
+// route itself, so a reviewer gets a 403 rather than relying on the Settings
+// panel not being rendered for them.
 export async function PATCH(req: Request) {
   try {
     await requireOwner();

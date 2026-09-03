@@ -136,8 +136,9 @@ web/                         The product. Next.js 16, App Router
                              one string. Backs the clinic, /api/check and the MCP server
   server/db.ts               typed data layer, Firestore or in-memory
   server/inputs.ts           buildInputs + staleAgents + DEPENDS. Read before touching runs
-  server/auth.ts             sessions: owner via ADMIN_USERNAME/ADMIN_PASSWORD,
-                             demo accounts via Firestore, each with its own workspace
+  server/auth.ts             sessions: two passwords, no usernames. ADMIN_PASSWORD is
+                             the owner's, ACCESS_PASSWORD is the reviewer's, and both
+                             share one workspace. Only admin may change the ceiling
   server/spend.ts            the monthly ceiling; refuses a run before it spends
   server/telemetry.ts assets.ts exemplars.ts results.ts resultsStore.ts storage.ts
   app/api/                   29 routes: agent runs, clients, campaigns, sources, claims,

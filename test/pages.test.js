@@ -97,7 +97,10 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.equal(set.status, 200);
   assert.ok(set.body.includes('Data handling'), 'settings shows the data-handling statement');
   assert.ok(set.body.includes('In memory'), 'settings is honest about the store');
-  assert.ok(set.body.includes('Demo accounts'), 'settings shows the demo accounts panel for the owner');
+  // The demo-accounts panel went with the account system. What Settings must
+  // still show an admin is the thing only an admin may change.
+  assert.ok(set.body.includes('Monthly ceiling'), 'settings shows the spend ceiling to an admin');
+  assert.ok(!set.body.includes('Demo accounts'), 'and no longer offers accounts to manage');
   console.log('  settings page ok');
 
   // nav and root redirect (task 11)

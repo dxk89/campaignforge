@@ -18,7 +18,7 @@ export default async function Nav() {
           <Link href="/check">Check copy</Link>
           <Link href="/ledger">Ledger</Link>
           <Link href="/settings">Settings</Link>
-          <SignOut username={session.username} />
+          <SignOut username={session.admin ? 'Admin' : 'Reviewer'} />
         </nav>
       )}
     </header>

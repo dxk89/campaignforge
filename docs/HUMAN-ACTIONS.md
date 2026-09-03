@@ -77,7 +77,7 @@ Settings → Environment Variables, all environments, then redeploy.
 | `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens |
 | `R2_SECRET_ACCESS_KEY` | shown once at token creation |
 | `R2_BUCKET` | your bucket name |
-| `ADMIN_USERNAME` | the owner's sign-in username |
+| `ACCESS_PASSWORD` | the password you give to reviewers |
 | `ADMIN_PASSWORD` | the owner's sign-in password |
 | `SESSION_SECRET` | at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
@@ -91,8 +91,8 @@ Settings → Environment Variables, all environments, then redeploy.
 
 In this order. Each step depends on the one before.
 
-1. `https://your-app.vercel.app/api/health` → `{"ok":true,"mock":false,"auth":true,...}`. `auth:false` means `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing; `mock:true` means `MOCK_CLAUDE` is set.
-2. Sign in as the owner with `ADMIN_USERNAME`/`ADMIN_PASSWORD`. **Then try a wrong password and confirm it is refused.** That is the only test of the credential check that matters.
+1. `https://your-app.vercel.app/api/health` → `{"ok":true,"mock":false,"auth":true,...}`. `auth:false` means neither `ADMIN_PASSWORD` nor `ACCESS_PASSWORD` is set; `mock:true` means `MOCK_CLAUDE` is set.
+2. Sign in with `ADMIN_PASSWORD`. **Then try a wrong password and confirm it is refused.** That is the only test of the credential check that matters.
 3. **New client** with a real company URL. Within ten seconds you should see their palette, fonts and page count. An empty palette means the site is client-rendered, which is reported rather than hidden.
 4. Open the client: sources listed with character counts.
 5. **New campaign**, fill the three text fields, **Generate campaign**. Roughly €2–3 with research on, two to four minutes.

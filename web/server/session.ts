@@ -17,9 +17,9 @@ const scryptAsync = promisify(scrypt);
 const KEYLEN = 64;
 
 export type Session = {
-  kind: 'owner' | 'account';
   workspaceId: string;
-  username: string;
+  /** True only for the admin password. Governs settings, prompts, spend. */
+  admin: boolean;
 };
 
 function secret(): Uint8Array {
@@ -52,14 +52,30 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /** The owner's credentials live in the environment, not the store. */
-export function checkAdmin(username: string, password: string): boolean {
-  const u = process.env.ADMIN_USERNAME;
-  const p = process.env.ADMIN_PASSWORD;
-  if (!u || !p) return false;
-  return safeEqual(username, u) && safeEqual(password, p);
+/**
+ * Two passwords, no usernames.
+ *
+ * ADMIN_PASSWORD is the owner's and governs anything that changes the
+ * deployment for everyone: the monthly spend ceiling and the stored prompts.
+ * ACCESS_PASSWORD is what a reviewer is given, and reaches the tool itself.
+ *
+ * No usernames, because a username everyone shares is a field that proves
+ * nothing and one more thing to explain to someone you have sent a link to.
+ *
+ * Compared in constant time, and the admin check runs first so that setting
+ * both variables to the same value degrades to admin rather than to a
+ * silently weaker session.
+ */
+export function checkPassword(password: string): 'admin' | 'user' | null {
+  const admin = process.env.ADMIN_PASSWORD;
+  const user = process.env.ACCESS_PASSWORD;
+  if (admin && safeEqual(password, admin)) return 'admin';
+  if (user && safeEqual(password, user)) return 'user';
+  return null;
 }
 
-export const adminConfigured = () => Boolean(process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD);
+/** Somebody can sign in. Without either, the deployment is unreachable. */
+export const accessConfigured = () => Boolean(process.env.ADMIN_PASSWORD || process.env.ACCESS_PASSWORD);
 
 export async function signSession(s: Session): Promise<string> {
   return new SignJWT({ ...s })
@@ -72,11 +88,9 @@ export async function signSession(s: Session): Promise<string> {
 export async function verifySession(token: string): Promise<Session | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
-    const { kind, workspaceId, username } = payload as Record<string, unknown>;
-    if (kind !== 'owner' && kind !== 'account') return null;
+    const { workspaceId, admin } = payload as Record<string, unknown>;
     if (typeof workspaceId !== 'string' || !workspaceId) return null;
-    if (typeof username !== 'string' || !username) return null;
-    return { kind, workspaceId, username };
+    return { workspaceId, admin: admin === true };
   } catch {
     return null;
   }

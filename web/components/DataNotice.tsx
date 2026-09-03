@@ -39,7 +39,8 @@ export default function DataNotice({ variant = 'full' }: Props) {
         </li>
         <li>
           <b>What is stored.</b> Text and files are held in Firestore and Cloudflare R2 in
-          the EU, under your account only. Other accounts cannot read them.
+          the EU. Everyone signed in shares one workspace, so treat anything you add as
+          visible to the others trying the tool.
         </li>
         <li>
           <b>Please do not upload personal data.</b> No customer lists, no CVs, no contact

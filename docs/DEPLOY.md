@@ -62,7 +62,7 @@ The script copies `firestore.rules` into `.rules-build/`, which is gitignored.
 | `R2_ACCESS_KEY_ID` | R2 → Manage API Tokens | Same |
 | `R2_SECRET_ACCESS_KEY` | shown once when the token is created | Same |
 | `R2_BUCKET` | the bucket name you created | Same |
-| `ADMIN_USERNAME` | the owner's sign-in username | Owner sign-in is refused |
+| `ACCESS_PASSWORD` | the password given to reviewers | Only the admin password works |
 | `ADMIN_PASSWORD` | the owner's sign-in password | Owner sign-in is refused |
 | `SESSION_SECRET` | at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | The app throws at startup rather than run with a weak or missing secret |
 | `GEMINI_API_KEY` | optional | Image generation is off; cards still work |
@@ -84,8 +84,8 @@ monthly ceiling, or the spend cap is silently off until you do.
 ## 4. Verify, in order
 
 1. `https://your-app.vercel.app/api/health` → expect `{"ok":true,"mock":false,"images":true|false,"auth":true,"stack":"next"}`.
-   `auth:false` means `ADMIN_USERNAME` or `ADMIN_PASSWORD` is missing. `mock:true` means `MOCK_CLAUDE` is set.
-2. Open the app. Sign in as the owner with `ADMIN_USERNAME`/`ADMIN_PASSWORD`. A wrong password must be refused; try one.
+   `auth:false` means neither `ADMIN_PASSWORD` nor `ACCESS_PASSWORD` is set. `mock:true` means `MOCK_CLAUDE` is set.
+2. Open the app. Sign in with `ADMIN_PASSWORD`. A wrong password must be refused; try one. Then sign in with `ACCESS_PASSWORD` and confirm Settings will not let you change the ceiling.
 3. **Clients → New client**, paste a real company URL. Within about ten seconds you should see their palette, fonts and page count. If the palette is empty, the site is probably client-rendered; that is expected and reported.
 4. Open the client, check the sources list has pages with character counts.
 5. **New campaign**, fill the three text fields, press **Generate campaign**. Watch the stepper. First run costs roughly €2–3 with online research on.
@@ -106,7 +106,7 @@ Set `MOCK_CLAUDE=1` in Vercel and redeploy. The app keeps working and returns fi
 | Symptom | Cause |
 |---|---|
 | Build fails on Vercel | Root Directory is not `web` |
-| Sign-in refused for the owner | `ADMIN_USERNAME`/`ADMIN_PASSWORD` missing or wrong |
+| Sign-in refused | `ADMIN_PASSWORD` missing or wrong |
 | Signed in but every page is empty | `FIREBASE_SERVICE_ACCOUNT` missing, or you are looking at the wrong workspace |
 | Data vanishes on redeploy | `FIREBASE_SERVICE_ACCOUNT` missing; you are on the in-memory store |
 | Agent runs fail immediately | `ANTHROPIC_API_KEY` missing or invalid |

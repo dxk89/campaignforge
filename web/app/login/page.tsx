@@ -34,7 +34,7 @@ export default function Login() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ username: form.get('username'), password: form.get('password') }),
+        body: JSON.stringify({ password: form.get('password') }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sign-in failed');
@@ -83,10 +83,8 @@ export default function Login() {
 
       <p className="muted" style={{ marginBottom: 24 }}>Sign in to continue.</p>
       <form onSubmit={submit}>
-        <label className="field" htmlFor="username"><span>Username</span>
-          <input id="username" name="username" autoComplete="username" required autoFocus /></label>
         <label className="field" htmlFor="password"><span>Password</span>
-          <input id="password" name="password" type="password" autoComplete="current-password" required /></label>
+          <input id="password" name="password" type="password" autoComplete="current-password" required autoFocus /></label>
         <button className="btn-primary" type="submit" disabled={busy} style={{ marginTop: 20 }}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>

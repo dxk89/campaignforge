@@ -1,15 +1,13 @@
 /**
  * Sign in and sign out.
  *
- * POST checks the owner's env-configured credentials first, then falls back
- * to demo accounts in the store, and is throttled by IP before either check
- * runs so a locked-out attacker cannot keep guessing. DELETE and PUT both
+ * POST checks the two passwords from the environment, throttled by IP before
+ * either check runs so a locked-out attacker cannot keep guessing. DELETE and PUT both
  * clear the session cookie; PUT additionally redirects, for callers that
  * cannot run client-side JavaScript to read a JSON response.
  */
 import { NextResponse } from 'next/server';
-import { checkAdmin, signSession } from '@/server/session';
-import { authenticate } from '@/server/accounts';
+import { checkPassword, signSession } from '@/server/session';
 import { isLocked, recordFailure, clearFailures } from '@/server/throttle';
 import { SESSION_COOKIE } from '@/server/auth';
 
@@ -44,23 +42,20 @@ export async function POST(req: Request) {
   if (await isLocked(ip)) {
     return NextResponse.json({ error: 'Too many attempts. Try again in fifteen minutes.' }, { status: 429 });
   }
-  const { username, password } = await req.json().catch(() => ({}));
-  if (!username || !password) {
-    return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+  const { password } = await req.json().catch(() => ({}));
+  if (!password) {
+    return NextResponse.json({ error: 'A password is required' }, { status: 400 });
   }
 
-  const session = checkAdmin(username, password)
-    ? { kind: 'owner' as const, workspaceId: 'owner', username }
-    : await authenticate(username, password);
-
-  if (!session) {
+  const role = checkPassword(password);
+  if (!role) {
     await recordFailure(ip);
-    return NextResponse.json({ error: 'Those details were not recognised' }, { status: 401 });
+    return NextResponse.json({ error: 'That password was not recognised' }, { status: 401 });
   }
 
   await clearFailures(ip);
-  const res = NextResponse.json({ ok: true, kind: session.kind, username: session.username });
-  res.cookies.set(SESSION_COOKIE, await signSession(session), {
+  const res = NextResponse.json({ ok: true, admin: role === 'admin' });
+  res.cookies.set(SESSION_COOKIE, await signSession({ workspaceId: 'owner', admin: role === 'admin' }), {
     httpOnly: true, secure: true, sameSite: 'lax', maxAge: SEVEN_DAYS, path: '/',
   });
   return res;

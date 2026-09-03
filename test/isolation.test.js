@@ -1,25 +1,26 @@
 /**
- * Isolation contract tests: real sign-in, not mock auth.
+ * Sign-in contract tests: the real login route, not mock auth.
  *
- * Every other suite runs under MOCK_AUTH=1, which makes every session the
- * owner. That is fine for exercising the agent runtime, but it means none of
- * those suites can tell a genuine per-workspace boundary from a broken one:
- * every assertion in them would pass whether or not workspaces actually
- * isolate data. This suite is the one place that runs the real login route,
- * the real JWT session, and the real per-workspace store, so that the claim
- * "one demo account cannot see another's data" is actually tested rather than
- * assumed.
+ * Every other suite runs under MOCK_AUTH=1, which makes every session an
+ * admin. That is fine for exercising the agent runtime, but it means none of
+ * those suites can tell a working sign-in from a broken one: every assertion
+ * in them would pass whether or not the login route, the signed cookie and
+ * the proxy gate did anything at all. This suite is the one place that runs
+ * them for real.
  *
- * ADMIN_USERNAME, ADMIN_PASSWORD and SESSION_SECRET are set in the child
- * environment and MOCK_AUTH is left unset, so server/auth.ts takes the real
- * cookie-verification path (currentSession -> verifySession -> workspaceActive)
- * instead of the mock shortcut that always returns the owner.
+ * It used to prove that two demo accounts could not see each other's data.
+ * That system was removed in favour of two passwords and no usernames, which
+ * is a smaller thing to explain to someone sent a link. What replaces the
+ * isolation claim is the privilege claim: a reviewer can use the tool and
+ * cannot change what applies to everyone. The workspace parameter is still
+ * threaded through the data layer, and db.test.js still checks that two
+ * workspaces do not see each other, so the boundary itself remains tested.
  *
  * The throttle in server/throttle.ts keys failed logins by caller IP, and
  * startNext gives every request from this suite the same address (there is no
  * x-forwarded-for under a plain `next start`). That means the eleven-failure
  * lockout test shares a bucket with every earlier login in this file. The
- * lockout assertion therefore runs LAST, after every other sign-in this suite
+ * lockout assertion therefore runs LAST, after every sign-in this suite
  * needs has already succeeded, so it cannot lock out its own setup.
  */
 const assert = require('assert');
@@ -31,15 +32,15 @@ const base = `http://localhost:${PORT}`;
 const env = {
   ...process.env,
   MOCK_CLAUDE: '1',
-  ADMIN_USERNAME: 'owner-admin',
   ADMIN_PASSWORD: 'owner-super-secret-password',
+  ACCESS_PASSWORD: 'reviewer-shared-password',
   SESSION_SECRET: 'a'.repeat(48),
   PORT: String(PORT),
 };
 delete env.MOCK_AUTH;
 // This suite must run entirely in memory. A developer with a store configured
-// would otherwise have alice/bob written to it, and the throttle record left
-// behind locks the next run out for fifteen minutes.
+// would otherwise have this suite's throttle record written to it, and that
+// record locks the next run out for fifteen minutes.
 delete env.FIREBASE_SERVICE_ACCOUNT;
 delete env.FIRESTORE_EMULATOR_HOST;
 
@@ -72,7 +73,7 @@ async function api(path, { method = 'GET', body, cookie } = {}) {
   return { status: res.status, data, res };
 }
 
-const login = (username, password) => api('/api/auth/login', { method: 'POST', body: { username, password } });
+const login = (password) => api('/api/auth/login', { method: 'POST', body: { password } });
 
 (async () => {
   for (let i = 0; i < 40; i++) {
@@ -92,97 +93,67 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
   assert.ok((noCookieRes.headers.get('location') || '').includes('/login'), 'redirected to /login');
   console.log('  no cookie: redirected to /login (' + noCookieRes.status + ')');
 
-  // 1. Owner logs in with real credentials and gets a session cookie.
-  const ownerLogin = await login('owner-admin', 'owner-super-secret-password');
-  assert.equal(ownerLogin.status, 200, JSON.stringify(ownerLogin.data));
-  const ownerCookie = cookieFrom(ownerLogin.res);
-  assert.ok(ownerCookie, 'login sets a cf_session cookie');
-  console.log('  owner login: 200 + cf_session cookie');
+  // 1. The admin password signs in and is marked as admin.
+  const adminLogin = await login('owner-super-secret-password');
+  assert.equal(adminLogin.status, 200, JSON.stringify(adminLogin.data));
+  assert.equal(adminLogin.data.admin, true, 'the admin password gives an admin session');
+  const adminCookie = cookieFrom(adminLogin.res);
+  assert.ok(adminCookie, 'login sets a cf_session cookie');
+  console.log('  admin signed in');
 
-  // 2. Owner creates a demo account for alice.
-  const madeAlice = await api('/api/admin/accounts', { method: 'POST', body: { username: 'alice' }, cookie: ownerCookie });
-  assert.equal(madeAlice.status, 201, JSON.stringify(madeAlice.data));
-  assert.ok(madeAlice.data.password, 'a generated password is returned');
-  const aliceId = madeAlice.data.account.id;
-  console.log('  alice account created:', madeAlice.data.account.username);
+  // 2. The access password signs in too, and is not admin.
+  const userLogin = await login('reviewer-shared-password');
+  assert.equal(userLogin.status, 200, JSON.stringify(userLogin.data));
+  assert.equal(userLogin.data.admin, false, 'the access password does not give an admin session');
+  const userCookie = cookieFrom(userLogin.res);
+  assert.ok(userCookie, 'a reviewer gets a cookie too');
+  console.log('  reviewer signed in');
 
-  // 3. Alice signs in with that password and creates a client.
-  const aliceLogin = await login('alice', madeAlice.data.password);
-  assert.equal(aliceLogin.status, 200, JSON.stringify(aliceLogin.data));
-  const aliceCookie = cookieFrom(aliceLogin.res);
-  assert.ok(aliceCookie, 'alice login sets a cookie');
-  const aliceClient = await api('/api/clients', { method: 'POST', body: { name: "Alice's Client" }, cookie: aliceCookie });
-  assert.equal(aliceClient.status, 200, JSON.stringify(aliceClient.data));
-  const aliceClientId = aliceClient.data.client.clientId;
-  assert.ok(aliceClientId);
-  console.log('  alice client created:', aliceClientId);
+  // 3. A reviewer can actually use the tool. A password that signs in and
+  // then cannot do anything would be worse than no password.
+  const made = await api('/api/clients', { method: 'POST', body: { name: 'Reviewer Co', website: 'https://example.com' }, cookie: userCookie });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const clientId = (made.data.client || made.data).clientId;
+  assert.ok(clientId, 'a reviewer can create a client');
+  const listed = await api('/api/clients', { cookie: userCookie });
+  assert.equal(listed.status, 200);
+  assert.ok((listed.data.clients || listed.data).some((c) => c.clientId === clientId), 'and see it afterwards');
+  console.log('  reviewer can use the tool');
 
-  // Owner creates bob the same way, bob signs in, bob creates a client.
-  const madeBob = await api('/api/admin/accounts', { method: 'POST', body: { username: 'bob' }, cookie: ownerCookie });
-  assert.equal(madeBob.status, 201, JSON.stringify(madeBob.data));
-  const bobLogin = await login('bob', madeBob.data.password);
-  assert.equal(bobLogin.status, 200, JSON.stringify(bobLogin.data));
-  const bobCookie = cookieFrom(bobLogin.res);
-  assert.ok(bobCookie, 'bob login sets a cookie');
-  const bobClient = await api('/api/clients', { method: 'POST', body: { name: "Bob's Client" }, cookie: bobCookie });
-  assert.equal(bobClient.status, 200, JSON.stringify(bobClient.data));
-  const bobClientId = bobClient.data.client.clientId;
-  assert.ok(bobClientId);
-  console.log('  bob client created:', bobClientId);
+  // 4. Both passwords reach the same workspace. This is the deliberate cost
+  // of dropping per-visitor accounts, and it is asserted rather than assumed
+  // so that nobody later reads the sign-in code and expects isolation.
+  const adminSees = await api('/api/clients', { cookie: adminCookie });
+  assert.ok((adminSees.data.clients || adminSees.data).some((c) => c.clientId === clientId),
+    'admin and reviewer share one workspace, by design');
+  console.log('  one shared workspace, as designed');
 
-  // 4. The isolation assertion the whole change exists to satisfy: bob's
-  // client list contains bob's client, by id, and does not contain alice's.
-  const bobList = await api('/api/clients', { cookie: bobCookie });
-  assert.equal(bobList.status, 200, JSON.stringify(bobList.data));
-  const bobIds = bobList.data.clients.map((c) => c.clientId);
-  assert.ok(bobIds.includes(bobClientId), 'bob sees his own client: ' + bobIds.join(','));
-  assert.ok(!bobIds.includes(aliceClientId), 'bob must not see alice\'s client: ' + bobIds.join(','));
-  console.log('  workspace isolation: bob sees only', bobIds.join(','));
+  // 5. The privilege boundary that replaces isolation. The spend ceiling is a
+  // single document shared by everything, so a write to it changes the cap
+  // for everyone. A reviewer must not be able to raise it.
+  const userPatch = await api('/api/settings', { method: 'PATCH', body: { monthlyCeilingEur: null }, cookie: userCookie });
+  assert.equal(userPatch.status, 403, JSON.stringify(userPatch.data));
+  const adminPatch = await api('/api/settings', { method: 'PATCH', body: { monthlyCeilingEur: 25 }, cookie: adminCookie });
+  assert.equal(adminPatch.status, 200, JSON.stringify(adminPatch.data));
+  console.log('  reviewer cannot change the ceiling, admin can');
 
-  // 4b. The by-id route is the classic insecure-direct-object-reference shape:
-  // a list route can filter correctly while a by-id route trusts the URL.
-  // Bob must not be able to fetch alice's client just by knowing its id.
-  const direct = await api(`/api/clients/${aliceClientId}`, { cookie: bobCookie });
-  assert.ok(direct.status === 404 || direct.status === 403, `bob cannot fetch alice's client by id, got ${direct.status}`);
-  console.log('  by-id IDOR check: bob fetching alice\'s client id gets', direct.status);
-
-  // 5. Admin routes refuse a non-owner account on every verb.
-  const bobListAccounts = await api('/api/admin/accounts', { cookie: bobCookie });
-  assert.equal(bobListAccounts.status, 403, JSON.stringify(bobListAccounts.data));
-  const bobCreateAccount = await api('/api/admin/accounts', { method: 'POST', body: { username: 'carol' }, cookie: bobCookie });
-  assert.equal(bobCreateAccount.status, 403, JSON.stringify(bobCreateAccount.data));
-  const bobDeleteAccount = await api(`/api/admin/accounts/${aliceId}`, { method: 'DELETE', cookie: bobCookie });
-  assert.equal(bobDeleteAccount.status, 403, JSON.stringify(bobDeleteAccount.data));
-  console.log('  admin routes refuse a non-owner on GET, POST and DELETE');
-
-  // 5b. The spend ceiling moved to a single document shared by every
-  // workspace (system/spend/global), so a write to it is no longer scoped to
-  // the caller's own workspace: it changes the cap for everyone, including
-  // the owner. A demo account must not be able to touch it.
-  const bobPatchCeiling = await api('/api/settings', { method: 'PATCH', body: { monthlyCeilingEur: null }, cookie: bobCookie });
-  assert.equal(bobPatchCeiling.status, 403, JSON.stringify(bobPatchCeiling.data));
-  console.log('  demo account cannot PATCH /api/settings (global ceiling):', bobPatchCeiling.status);
-
-  // 6. Revoke alice as admin; her still-unexpired cookie must be refused on
-  // the very next request, not merely once the seven-day token expires.
-  const revoked = await api(`/api/admin/accounts/${aliceId}`, { method: 'DELETE', cookie: ownerCookie });
-  assert.equal(revoked.status, 200, JSON.stringify(revoked.data));
-  const afterRevoke = await api('/api/clients', { cookie: aliceCookie });
-  assert.equal(afterRevoke.status, 401, JSON.stringify(afterRevoke.data));
-  console.log('  revoked account refused immediately:', afterRevoke.status);
+  // 6. A cookie that is present but not valid is refused by the route, which
+  // is a different gate from the proxy's cookie-presence check above.
+  const tampered = await api('/api/clients', { cookie: `${userCookie.slice(0, -3)}aaa` });
+  assert.equal(tampered.status, 401, JSON.stringify(tampered.data));
+  console.log('  tampered cookie refused:', tampered.status);
 
   // 7. Eleven failed logins from the same caller return 429. This runs last:
   // startNext gives this suite one IP for every request, so the throttle
   // bucket is already shared with every login above. Running it earlier would
-  // lock out the admin and demo-account logins the rest of the suite depends
-  // on (see header comment).
+  // lock out the sign-ins the rest of the suite depends on (see header).
   // The first ten are asserted individually so a regressed threshold (say
   // MAX_FAILURES accidentally set to 1) cannot pass by only checking the
   // eventual lock: each of these must genuinely be a rejected-credentials
   // 401, not a lock that arrived early.
   const statuses = [];
   for (let i = 0; i < 11; i++) {
-    const attempt = await login('owner-admin', 'definitely-wrong-password');
+    const attempt = await login('definitely-wrong-password');
     statuses.push(attempt.status);
   }
   for (let i = 0; i < 10; i++) {
@@ -191,7 +162,7 @@ const login = (username, password) => api('/api/auth/login', { method: 'POST', b
   assert.equal(statuses[10], 429, 'the eleventh failed login is throttled');
   console.log('  attempts 1-10: 401 each, attempt 11: 429');
 
-  console.log('isolation tests: ok');
+  console.log('sign-in tests: ok');
   stop();
   process.exit(0);
-})().catch((e) => { console.error('isolation tests FAILED', e); stop(); process.exit(1); });
+})().catch((e) => { console.error('sign-in tests FAILED', e); stop(); process.exit(1); });

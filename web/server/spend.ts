@@ -8,11 +8,12 @@
  * Unlike the rest of server/, the settings document here is deliberately
  * GLOBAL rather than namespaced by workspace. Every other in-memory store in
  * this codebase is keyed by ws on purpose, so a workspace-shaped signature
- * here would look like the obviously-correct choice. It is not: demo
- * accounts each get their own workspace, and a per-workspace ceiling would
- * hand every new account a fresh allowance, bounding nothing. One ceiling,
- * evaluated against spend summed across every workspace, is what actually
- * caps the damage of a leaked credential.
+ * here would look like the obviously-correct choice. It is not. It was
+ * written when each visitor had their own workspace, where a per-workspace
+ * ceiling would have handed every new one a fresh allowance and bounded
+ * nothing. Sign-in is one shared workspace now, so the argument is weaker,
+ * but the conclusion is the same and the global form survives a return to
+ * per-visitor workspaces without changing.
  */
 import { listLedger, ledgerTotals, listLedgerAllWorkspaces } from './db';
 import { db as fsdb, storeEnabled } from './firebase';

@@ -8,7 +8,6 @@ import { listClients } from '@/server/db';
 import { getSettings } from '@/server/spend';
 import { read as readTelemetry } from '@/server/telemetry';
 import Ceiling from './ceiling';
-import DemoAccounts from '@/components/DemoAccounts';
 
 const { INTEGRATIONS } = require('@core/integrations');
 
@@ -42,7 +41,7 @@ export default async function Settings() {
       <section className="block">
         <h2 className="block-title">Status</h2>
         <dl className="kv">
-          <div><dt>Signed in</dt><dd>{session.username}</dd></div>
+          <div><dt>Signed in</dt><dd>{session.admin ? 'Admin' : 'Reviewer'}</dd></div>
           <div><dt>Store</dt><dd>{storeEnabled ? 'Firebase' : 'In memory (no FIREBASE_SERVICE_ACCOUNT); nothing survives a restart'}</dd></div>
           <div><dt>Model calls</dt><dd>{MOCK ? 'Mock fixtures (MOCK_CLAUDE=1)' : 'Live'}</dd></div>
           <div><dt>Images</dt><dd>{images.available() ? 'Available' : 'Off (no GEMINI_API_KEY)'}</dd></div>
@@ -50,7 +49,7 @@ export default async function Settings() {
         <p className="muted" style={{ marginTop: 8 }}><Link href="/ledger">View the ledger →</Link></p>
       </section>
 
-      {session.kind === 'owner' && (
+      {session.admin && (
         <section className="block">
           <h2 className="block-title">Monthly ceiling</h2>
           <p className="muted">The ledger shows spend after the fact. This refuses before it.</p>
@@ -67,8 +66,6 @@ export default async function Settings() {
           </tbody></table>
         ) : <p className="muted">Nothing recorded yet.</p>}
       </section>
-
-      {session.kind === 'owner' && <DemoAccounts />}
 
       {/*
         Where a campaign can go once it is written. Anything not ready says
