@@ -137,13 +137,47 @@ const login = (password) => api('/api/auth/login', { method: 'POST', body: { pas
   assert.equal(adminPatch.status, 200, JSON.stringify(adminPatch.data));
   console.log('  reviewer cannot change the ceiling, admin can');
 
-  // 6. A cookie that is present but not valid is refused by the route, which
+  // 6. The lock. It is what protects a curated client from being deleted by
+  // someone sent the access password, so it is only worth anything if the
+  // server enforces it rather than the button being hidden.
+  const lockAsUser = await api(`/api/clients/${clientId}`, { method: 'PATCH', body: { locked: true }, cookie: userCookie });
+  assert.equal(lockAsUser.status, 403, 'a reviewer cannot lock or unlock');
+
+  const locked = await api(`/api/clients/${clientId}`, { method: 'PATCH', body: { locked: true }, cookie: adminCookie });
+  assert.equal(locked.status, 200, JSON.stringify(locked.data));
+  assert.equal(locked.data.client.locked, true, 'an admin can lock');
+
+  // Locked refuses everyone, the admin included. Unlocking is a separate,
+  // deliberate act, because the person most likely to delete the demonstration
+  // campaign by accident is the person who made it.
+  const userDelete = await api(`/api/clients/${clientId}`, { method: 'DELETE', cookie: userCookie });
+  assert.equal(userDelete.status, 409, 'a locked client is not deletable by a reviewer');
+  const adminDelete = await api(`/api/clients/${clientId}`, { method: 'DELETE', cookie: adminCookie });
+  assert.equal(adminDelete.status, 409, 'nor by an admin while it is locked');
+  console.log('  locked client refuses deletion, admin included');
+
+  // Unlocked, it goes, and everything under it goes with it.
+  const camp = await api(`/api/clients/${clientId}/campaigns`, {
+    method: 'POST', cookie: userCookie,
+    body: { brief: { productName: 'P', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', languages: ['en'] } },
+  });
+  assert.equal(camp.status, 200, JSON.stringify(camp.data));
+  await api(`/api/clients/${clientId}`, { method: 'PATCH', body: { locked: false }, cookie: adminCookie });
+  const gone = await api(`/api/clients/${clientId}`, { method: 'DELETE', cookie: userCookie });
+  assert.equal(gone.status, 200, JSON.stringify(gone.data));
+  const after = await api(`/api/clients/${clientId}`, { cookie: adminCookie });
+  assert.equal(after.status, 404, 'the client is gone');
+  const orphan = await api(`/api/clients/${clientId}/campaigns/${(camp.data.campaign || camp.data).campaignId}`, { cookie: adminCookie });
+  assert.ok(orphan.status === 404 || orphan.status === 403, `its campaign went with it, got ${orphan.status}`);
+  console.log('  unlocked client deletes, and takes its campaigns with it');
+
+  // 7. A cookie that is present but not valid is refused by the route, which
   // is a different gate from the proxy's cookie-presence check above.
   const tampered = await api('/api/clients', { cookie: `${userCookie.slice(0, -3)}aaa` });
   assert.equal(tampered.status, 401, JSON.stringify(tampered.data));
   console.log('  tampered cookie refused:', tampered.status);
 
-  // 7. Eleven failed logins from the same caller return 429. This runs last:
+  // 8. Eleven failed logins from the same caller return 429. This runs last:
   // startNext gives this suite one IP for every request, so the throttle
   // bucket is already shared with every login above. Running it earlier would
   // lock out the sign-ins the rest of the suite depends on (see header).

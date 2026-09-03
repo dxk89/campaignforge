@@ -1,5 +1,5 @@
 import { guarded, bad } from '@/server/respond';
-import { getCampaign, updateCampaign, currentOutputs, listLedger, ledgerTotals } from '@/server/db';
+import { getCampaign, updateCampaign, currentOutputs, listLedger, ledgerTotals, getClient, deleteCampaign } from '@/server/db';
 import { staleAgents } from '@/server/inputs';
 
 export const runtime = 'nodejs';
@@ -36,5 +36,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const campaign = await updateCampaign(session.workspaceId, id, cid, clean);
     if (!campaign) throw bad('Campaign not found', 404);
     return { campaign };
+  });
+}
+
+/**
+ * Remove one campaign and everything it generated.
+ *
+ * The lock lives on the client rather than the campaign, so locking the
+ * client protects its campaigns too. One flag on the thing a person actually
+ * curates is easier to reason about than a flag on every campaign under it.
+ */
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string; cid: string }> }) {
+  const { id, cid } = await params;
+  return guarded(async (session) => {
+    const ws = session.workspaceId;
+    const [client, campaign] = await Promise.all([getClient(ws, id), getCampaign(ws, id, cid)]);
+    if (!client) throw bad('Client not found', 404);
+    if (!campaign) throw bad('Campaign not found', 404);
+    if (client.locked) throw bad('This client is locked, so its campaigns cannot be deleted. Unlock it first.', 409);
+    await deleteCampaign(ws, id, cid);
+    return { deleted: cid };
   });
 }

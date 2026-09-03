@@ -4,14 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Claims from './claims';
 
-type Props = { client: any; sources: any[]; campaigns: any[] };
+type Props = { client: any; sources: any[]; campaigns: any[]; admin?: boolean };
 
 /**
  * The client library: brand kit, editable voice rules, sources, campaigns.
  * Voice rules are editable because the research pass proposes them and a
  * person decides. Everything here persists.
  */
-export default function Library({ client, sources, campaigns }: Props) {
+export default function Library({ client, sources, campaigns, admin }: Props) {
   const router = useRouter();
   const [voice, setVoice] = useState(client.voice);
   const [saved, setSaved] = useState<string | null>(null);
@@ -20,6 +20,8 @@ export default function Library({ client, sources, campaigns }: Props) {
   const [pasteLabel, setPasteLabel] = useState('');
   const [pasteText, setPasteText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(client.name);
+  const [locked, setLocked] = useState(Boolean(client.locked));
   const kit = client.brandKit || {};
   const accents: string[] = kit.palette?.accents || [];
   const [editing, setEditing] = useState(false);
@@ -128,8 +130,77 @@ export default function Library({ client, sources, campaigns }: Props) {
     router.refresh();
   }
 
+  /** Rename, lock, delete. Everything that decides what a visitor finds here. */
+  async function patchClient(body: any, onOk?: () => void) {
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/clients/${client.clientId}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setError(d?.error || 'Could not save that');
+      return;
+    }
+    onOk?.();
+    router.refresh();
+  }
+
+  async function removeCampaign(campaignId: string, label: string) {
+    if (!confirm(`Delete the ${label} campaign and everything it generated? This cannot be undone.`)) return;
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/clients/${client.clientId}/campaigns/${campaignId}`, { method: 'DELETE' });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setError(d?.error || 'Could not delete that campaign');
+      return;
+    }
+    router.refresh();
+  }
+
+  async function removeClient() {
+    if (!confirm(`Delete ${client.name} and every campaign, asset and source under it? This cannot be undone.`)) return;
+    setBusy(true); setError(null);
+    const res = await fetch(`/api/clients/${client.clientId}`, { method: 'DELETE' });
+    setBusy(false);
+    if (!res.ok) {
+      const d = await res.json().catch(() => null);
+      setError(d?.error || 'Could not delete that');
+      return;
+    }
+    router.push('/clients');
+  }
+
   return (
     <div className="library">
+      <section className="block">
+        <h2 className="block-title">This client</h2>
+        <label className="field" htmlFor="client-name"><span>Name</span>
+          <input id="client-name" value={name} onChange={(e) => setName(e.target.value)}
+            onBlur={() => name.trim() && name !== client.name && patchClient({ name: name.trim() })} /></label>
+        <p className="muted" style={{ marginTop: -4 }}>
+          A scanned site is named after its page title, which is rarely what you would call it.
+        </p>
+
+        <div className="client-admin">
+          {admin ? (
+            <label className="check">
+              <input type="checkbox" checked={locked} disabled={busy}
+                onChange={(e) => { setLocked(e.target.checked); patchClient({ locked: e.target.checked }); }} />
+              <span>Locked. Nobody can delete this client or its campaigns, including you, until it is unlocked.</span>
+            </label>
+          ) : locked ? (
+            <p className="muted">Locked by the owner, so it cannot be deleted.</p>
+          ) : null}
+
+          <button type="button" className="btn-danger" onClick={removeClient} disabled={busy || locked}
+            title={locked ? 'Unlock it first' : 'Delete this client and everything under it'}>
+            Delete this client
+          </button>
+        </div>
+      </section>
+
       <section className="block">
         <h2 className="block-title">Brand kit</h2>
         {kit.palette?.uncertain && !editing ? (
@@ -286,6 +357,11 @@ export default function Library({ client, sources, campaigns }: Props) {
               <a href={`/clients/${client.clientId}/campaigns/${c.campaignId}`}>{c.brief.productName}</a>
               <span className="muted">{c.brief.objective.replace(/_/g, ' ')}</span>
               <span className="mono muted">{c.status}</span>
+              {/* A failed or abandoned run is worth removing before anyone
+                  else looks. The lock on the client covers its campaigns. */}
+              <button type="button" className="link" disabled={busy || locked}
+                title={locked ? 'This client is locked' : 'Delete this campaign'}
+                onClick={() => removeCampaign(c.campaignId, c.brief.productName)}>remove</button>
             </li>
           ))}
         </ul>

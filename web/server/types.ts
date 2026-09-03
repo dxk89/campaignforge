@@ -36,6 +36,14 @@ export type Client = {
   updatedAt: string;
   brandKit: BrandKit;
   voice: Voice;
+  /**
+   * Protects a curated client from deletion. Set and cleared by an admin
+   * only; it blocks deletion for everyone, including the admin, who must
+   * unlock first. That friction is the point: the thing most worth locking
+   * is the demonstration campaign, and the person most likely to delete it by
+   * accident is its owner.
+   */
+  locked?: boolean;
   settings: ClientSettings;
 };
 

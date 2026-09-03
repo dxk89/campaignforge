@@ -171,6 +171,34 @@ const storage = require('../web/.test-build/storage.js');
   assert.ok((await storage.getFile('ws_a', refA)).buffer.toString() === 'A', 'own workspace can read its file');
   assert.equal(await storage.getFile('ws_b', refA), null, 'another workspace cannot read it');
 
+  // Deleting a client takes everything under it, and leaves the ledger alone.
+  // The ledger records money that was actually spent and the monthly ceiling
+  // counts against it, so removing entries because the campaign is gone would
+  // quietly raise the cap.
+  const doomed = await db.createClient(ws, { name: 'Doomed', website: 'https://example.com', brandKit: {}, voice: {} });
+  const doomedCampaign = await db.createCampaign(ws, doomed.clientId, {
+    brief: { productName: 'P', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', languages: ['en'] },
+  });
+  await db.addSource(ws, doomed.clientId, { name: 'a note', kind: 'text', text: 'hello', chars: 5 });
+  await db.addLedger(ws, { clientId: doomed.clientId, campaignId: doomedCampaign.campaignId, agent: 'copywriter', model: 'test', input: 10, output: 10, webSearches: 0, images: 0, costEur: 0.25 });
+
+  const ledgerBefore = (await db.listLedger(ws)).length;
+  await db.deleteClient(ws, doomed.clientId);
+
+  assert.equal(await db.getClient(ws, doomed.clientId), null, 'the client is gone');
+  assert.equal(await db.getCampaign(ws, doomed.clientId, doomedCampaign.campaignId), null, 'and its campaigns');
+  assert.deepEqual(await db.listSources(ws, doomed.clientId), [], 'and its sources');
+  assert.equal((await db.listLedger(ws)).length, ledgerBefore, 'but the ledger keeps what was spent');
+
+  // Deleting one campaign leaves the client and its other campaigns.
+  const kept = await db.createClient(ws, { name: 'Kept', website: 'https://example.com', brandKit: {}, voice: {} });
+  const one = await db.createCampaign(ws, kept.clientId, { brief: { productName: 'one', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', languages: ['en'] } });
+  const two = await db.createCampaign(ws, kept.clientId, { brief: { productName: 'two', productDescription: 'd', targetAudience: 'a', objective: 'trial_signups', languages: ['en'] } });
+  await db.deleteCampaign(ws, kept.clientId, one.campaignId);
+  assert.equal(await db.getCampaign(ws, kept.clientId, one.campaignId), null, 'the campaign is gone');
+  assert.ok(await db.getCampaign(ws, kept.clientId, two.campaignId), 'its sibling survives');
+  assert.ok(await db.getClient(ws, kept.clientId), 'and so does the client');
+
   console.log('db tests: ok');
 })().catch((e) => { console.error('db tests FAILED', e); process.exit(1); });
 

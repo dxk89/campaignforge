@@ -19,7 +19,7 @@ export default async function ClientPage({ params }: { params: Promise<{ id: str
       <p className="muted"><Link href="/clients">← Clients</Link></p>
       <h1>{client.name}</h1>
       <p className="muted">{client.domain || 'No website recorded'}</p>
-      <Library client={JSON.parse(JSON.stringify(client))} sources={JSON.parse(JSON.stringify(sources))} campaigns={JSON.parse(JSON.stringify(campaigns))} />
+      <Library client={JSON.parse(JSON.stringify(client))} sources={JSON.parse(JSON.stringify(sources))} campaigns={JSON.parse(JSON.stringify(campaigns))} admin={session.admin} />
     </main>
   );
 }

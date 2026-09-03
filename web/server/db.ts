@@ -317,6 +317,40 @@ async function touch(ws: string, clientId: string) {
 }
 
 /** Test-only: clear the in-memory store between cases. */
+/**
+ * Remove a client and everything under it.
+ *
+ * Everything client-scoped lives under users/<ws>/clients/<id>, campaigns,
+ * versions, images, sources, claims, assets, exemplars, results and
+ * learnings, so one recursive delete reaches all of it.
+ *
+ * The ledger is deliberately not touched. It records money that was actually
+ * spent, and the monthly ceiling counts against it; deleting the record
+ * because the campaign is gone would quietly raise the cap.
+ */
+export async function deleteClient(ws: string, clientId: string): Promise<void> {
+  if (storeEnabled) {
+    await fsdb().recursiveDelete(fsdb().doc(`${root(ws)}/clients/${clientId}`));
+  } else {
+    clientsOf(ws).delete(clientId);
+    // The in-memory sub-collections are a flat map keyed by path, so the
+    // client's own entries are the ones prefixed with it.
+    const prefix = memKey(ws, clientId) + '/';
+    for (const key of [...mem.sub.keys()]) if (key.startsWith(prefix)) mem.sub.delete(key);
+  }
+}
+
+/** Remove one campaign and its versions, images, assets and results. */
+export async function deleteCampaign(ws: string, clientId: string, campaignId: string): Promise<void> {
+  if (storeEnabled) {
+    await fsdb().recursiveDelete(fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`));
+  } else {
+    memCol(memKey(ws, clientId, 'campaigns')).delete(campaignId);
+    const prefix = memKey(ws, clientId, campaignId) + '/';
+    for (const key of [...mem.sub.keys()]) if (key.startsWith(prefix)) mem.sub.delete(key);
+  }
+}
+
 export function __resetMemory() {
   mem.clients.clear();
   mem.sub.clear();
