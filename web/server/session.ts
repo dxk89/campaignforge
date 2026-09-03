@@ -77,6 +77,9 @@ export function checkPassword(password: string): 'admin' | 'user' | null {
 /** Somebody can sign in. Without either, the deployment is unreachable. */
 export const accessConfigured = () => Boolean(process.env.ADMIN_PASSWORD || process.env.ACCESS_PASSWORD);
 
+/** Reported by /api/health so a deployment can be checked without the value. */
+export const reviewerAccessConfigured = () => Boolean(process.env.ACCESS_PASSWORD);
+
 export async function signSession(s: Session): Promise<string> {
   return new SignJWT({ ...s })
     .setProtectedHeader({ alg: 'HS256' })
