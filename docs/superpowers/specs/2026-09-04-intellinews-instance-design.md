@@ -10,6 +10,12 @@ own door, its own library, its own branding, and no spend ceiling. It is not a
 second deployment and not a fork: one push deploys both, and every fix reaches
 both.
 
+It also raises the security floor for both instances. The portfolio deployment
+is a demonstration behind a password; this one holds a client's unpublished
+work, and the controls that were adequate for the first are not adequate for
+the second. Those changes are shared, not tenant-specific, because a weakness
+in the login route is a weakness at both doors.
+
 ## Why not a second deployment
 
 The obvious shape is a second Vercel project with its own domain and its own
@@ -153,6 +159,128 @@ Added to the existing suites, all offline against the in-memory store:
 6. Ledger totals for the ceiling exclude exempt workspaces, while the Ledger
    page's own totals still include them.
 7. The header renders each tenant's label.
+
+## Security
+
+The portfolio deployment is a demonstration behind a password. This instance
+holds a client's brand material, unpublished copy and briefs, so the bar
+rises. Everything below was found by reading the current code, not assumed.
+
+### The password is the whole model, so bound the guessing
+
+`server/throttle.ts` counts failures per IP: ten in fifteen minutes and that
+address is locked. Rotating addresses defeats it entirely, and a shared secret
+with no username is precisely the target that suits.
+
+A second, global counter is added beside the per-IP one. It deliberately does
+**not** lock the door. A global lockout would let anyone on the internet shut
+the owner out by failing two hundred times, trading a guessing risk for a
+denial-of-service certainty. Instead, past a high threshold (100 failures in
+the window) every attempt at every door takes a fixed two-second delay before
+the password is checked. Guessing at scale becomes uneconomic; one person with
+the right password waits two seconds.
+
+`ADMIN_PASSWORD` also gains a minimum length, refusing to boot below sixteen
+characters, exactly as `SESSION_SECRET` already refuses below thirty-two. It is
+odd that the signing key is bounded and the password guarding everything is
+not.
+
+**Operational note, and it must be checked before this deploys:** if the
+current `ADMIN_PASSWORD` is shorter than sixteen characters, adding this check
+takes production down on the next deploy. Set a longer one first. This is also
+the moment to rotate it, since it stops guarding a demo and starts guarding
+client work, and to flip it and `R2_SECRET_ACCESS_KEY` to Sensitive in Vercel
+where HANDOVER notes they are still readable from the dashboard.
+
+### Sessions can be ended
+
+The cookie is a seven-day JWT and nothing can invalidate it. A lost laptop
+means rotating `SESSION_SECRET`, which signs out every instance at once.
+
+The session gains an `epoch` claim, an integer stored per workspace at
+`system/auth/epoch/{ws}`. `verifySession` rejects a token whose epoch is below
+the stored one, so bumping it ends every session for that instance and no
+other. Settings gets a "Sign out everywhere" button for the current workspace.
+
+The stored epoch is cached in a module global for sixty seconds rather than
+read on every request. The trade is explicit: revocation takes up to a minute
+to bite, and in exchange the common path adds no Firestore read. For a
+single-operator tool that is the right side of the trade, and the number is one
+constant if it ever is not.
+
+Session lifetime moves into the tenant record: seven days for `owner`,
+unchanged; twenty-four hours for `intellinews`. Both the JWT expiry and the
+cookie `maxAge` read from it, so they cannot drift apart.
+
+### Response headers
+
+`next.config.mjs` sets none today, so the app can be framed by any site.
+An `async headers()` block adds `X-Content-Type-Options: nosniff`,
+`Referrer-Policy: no-referrer`, `Permissions-Policy` denying camera,
+microphone and geolocation, `Strict-Transport-Security` with a two-year
+max-age, and a Content-Security-Policy with `frame-ancestors 'none'`.
+
+The CSP is nonce-based: the proxy already runs on every request, so it
+generates a nonce per request and passes it through a request header for the
+layout to place on Next's scripts. `style-src` and `font-src` must admit
+`fonts.googleapis.com` and `fonts.gstatic.com`, which `layout.tsx` loads.
+
+**It ships in report-only mode first.** Next inlines bootstrap and hydration
+scripts, and a CSP written from first principles and enforced immediately is a
+white page in production. Report-only for one deploy, read what the browser
+complains about, then enforce. The plan carries both steps; the second is not
+optional and must not be left undone.
+
+### Uploads are bounded and typed
+
+`app/api/clients/[id]/sources/route.ts` accepts any file of any size and hands
+it to `pdf-parse` or `mammoth`. Both are parsers, and an unbounded parser on a
+function with an eight-hundred-second timeout is a cheap way to burn the
+account.
+
+Files are capped at ten megabytes each, and the type is checked against an
+allowlist of PDF, DOCX, plain text and Markdown -- what `lib/sources.js` can
+actually read -- by declared MIME type *and* extension, with anything else
+refused as a 415 before a parser sees a byte.
+
+Storage keys stop using the raw `file.name`. This is hygiene rather than a
+hole: R2 keys are literal strings, so `../` in a filename cannot escape the
+`users/{ws}/` prefix and the read guard in `getFile` holds. But two uploads
+called `brand.pdf` silently overwrite one another today, and the name length is
+unbounded. Names are reduced to `[A-Za-z0-9._-]`, truncated to 120 characters,
+and prefixed with a short random id.
+
+### A record of who came in
+
+`system/auth/signins` gains one document per attempt: time, tenant, outcome,
+IP and user agent, kept for ninety days. Settings shows the most recent fifty
+to an admin. It is written on success and on failure, so a run of failures
+followed by a success is visible as one story.
+
+This is the cheapest security control here and the only one that helps *after*
+something has gone wrong.
+
+### Deliberately not included
+
+A second factor on the IntelliNews door was considered and rejected for now.
+It is the strongest available control and the argument against it is honest
+rather than technical: it adds an enrolment step and a recovery code whose loss
+locks the owner out of client work. Worth revisiting if the instance is ever
+shared with anyone.
+
+### Security tests
+
+8. A global failure count past the threshold delays a sign-in without
+   refusing it, and a correct password still succeeds while delayed.
+9. Boot fails when `ADMIN_PASSWORD` is under sixteen characters.
+10. A token carrying a stale epoch is rejected; bumping one workspace's epoch
+    leaves the other's sessions valid.
+11. An `intellinews` cookie expires in twenty-four hours, an `owner` one in
+    seven days.
+12. An oversized upload is refused with 413, a disallowed type with 415, and
+    neither reaches a parser.
+13. Two uploads of the same filename produce two distinct keys.
+14. A sign-in and a failed attempt each write one audit row.
 
 ## Out of scope
 
