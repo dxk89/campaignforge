@@ -48,8 +48,11 @@ export type Tenant = {
 };
 ```
 
-Two entries: `owner` (Campaign Forge, `/login`, not admin-only, governed by the
-ceiling) and `intellinews` (admin-only, exempt). Exported helpers:
+Two entries. `owner`: label "Campaign Forge", strapline "brief in, campaign
+out", door `/login`, not admin-only, governed by the ceiling -- exactly what
+ships today. `intellinews`: label "IntelliNews Campaign Forge", strapline
+"client work", door `/intellinews-CampaignF`, admin-only, exempt from the
+ceiling. Exported helpers:
 `tenantFor(session)`, `tenantByDoor(pathname)`, and `isExempt(ws)`.
 
 Everything that needs to know which instance it is asks this module. The
@@ -79,7 +82,9 @@ recognised" message as a wrong password, and it records a throttle failure.
 A distinct message would tell a holder of the reviewer password that they had
 found a real door and guessed the wrong secret.
 
-The cookie is then signed with the tenant's id as `workspaceId`.
+The cookie is then signed with the tenant's id as `workspaceId`. The route
+also sets `cf_door` to the tenant's door path. It holds a path and no secret,
+and is read only by the proxy, to decide where an expired session lands.
 
 ### `web/server/spend.ts` (changed)
 
