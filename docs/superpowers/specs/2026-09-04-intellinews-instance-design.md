@@ -13,7 +13,7 @@ both.
 ## Why not a second deployment
 
 The obvious shape is a second Vercel project with its own domain and its own
-Firestore. It was rejected because it doubles the operational surface —- two sets
+Firestore. It was rejected because it doubles the operational surface -- two sets
 of environment variables, two places a secret can be stale, two builds to watch
 —- to separate data that `server/db.ts` already separates by workspace. The
 isolation was built in when sign-in gave every visitor their own workspace, and
