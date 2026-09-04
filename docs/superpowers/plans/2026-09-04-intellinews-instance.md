@@ -1538,7 +1538,7 @@ Create `web/server/uploads.ts`:
 /**
  * What may be uploaded, and under what name it is stored.
  *
- * The types allowed here are exactly what lib/sources.js can read. Anything
+ * The types allowed here are exactly what web/core/sources.js can read. Anything
  * else would be stored, counted as a source, and then silently contribute
  * nothing, so refusing it is more honest than accepting it.
  *
