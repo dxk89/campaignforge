@@ -18,13 +18,17 @@ export async function GET(req: Request) {
     const [me, brands] = await Promise.all([nuelink.me(), nuelink.brands()]);
     if (me.error) return { configured: true, error: me.error };
     const out: any = { configured: true, me: me.data, brands: brands.data || [] };
+    const errors: string[] = [];
+    if (brands.error) errors.push(`brands: ${brands.error}`);
     const brand = url.searchParams.get('brand');
     if (brand) {
       const [collections, channels] = await Promise.all([nuelink.collections(brand), nuelink.channels(brand)]);
       out.collections = collections.data || [];
       out.channels = channels.data || [];
-      if (collections.error || channels.error) out.error = collections.error || channels.error;
+      if (collections.error) errors.push(`collections: ${collections.error}`);
+      if (channels.error) errors.push(`channels: ${channels.error}`);
     }
+    if (errors.length) out.error = errors.join('; ');
     return out;
   });
 }

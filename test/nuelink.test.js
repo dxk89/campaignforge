@@ -104,6 +104,18 @@ async function routeTests() {
     assert.ok(deep.data.channels.length >= 3);
     console.log('  nuelink lookup ok');
 
+    // A partial failure inside the ?brand= branch must surface as `error`,
+    // not be swallowed, while whichever call did not fail still comes back.
+    // `me` and `brands` are requested first (unconditionally, via their own
+    // Promise.all) and succeed here, so `when: 'channels'` targets only the
+    // `/channels` request that follows, leaving `/collections` to succeed.
+    fake.failOnce({ status: 500, message: 'Channels down', when: 'channels' });
+    const partial = await api('/api/nuelink?brand=35946');
+    assert.equal(partial.status, 200);
+    assert.match(partial.data.error, /Channels down/, 'the failing call is surfaced');
+    assert.equal(partial.data.collections.length, 4, 'the call that did not fail still returned its data');
+    console.log('  nuelink partial failure surfaced');
+
     console.log('nuelink route tests: ok');
   } finally {
     stop();

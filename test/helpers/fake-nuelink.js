@@ -2,9 +2,12 @@
  * A stand-in for Nuelink's public API, shaped like the responses recorded
  * on 2026-09-15 (see the spec, section 3.1). It records every request so a
  * test can assert what was sent, and it can be told to fail once, either on
- * the next request or, with `when: 'post'`, only on the next request whose
- * path ends in `/posts` (Task 6 uses this to test the push route's own
- * retry/failure handling without tripping over an earlier `/brands` call).
+ * the next request, or on the next request whose path ends in a given
+ * suffix via `when` (e.g. `when: 'post'` matches `/posts`, Task 6's case for
+ * testing the push route's own retry/failure handling without tripping over
+ * an earlier `/brands` call; any other `when` string is matched as a plain
+ * path suffix, e.g. `when: 'channels'` to fail only `/brands/:id/channels`
+ * while a concurrent `/collections` call succeeds).
  */
 const http = require('http');
 
@@ -47,7 +50,8 @@ function startFakeNuelink(port) {
 
       const p = req.url.replace(/\?.*$/, '');
       const isPostsPath = /\/posts$/.test(p);
-      if (state.failNext && (!state.failNext.when || (state.failNext.when === 'post' && isPostsPath))) {
+      const whenMatches = (when) => (when === 'post' ? isPostsPath : p.endsWith(`/${when}`));
+      if (state.failNext && (!state.failNext.when || whenMatches(state.failNext.when))) {
         const f = state.failNext;
         state.failNext = null;
         return fail(res, f.status, f.message, f.headers);
