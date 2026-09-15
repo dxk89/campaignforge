@@ -43,7 +43,10 @@ async function call(method, path, { json, form } = {}, attempt = 0) {
     return { error: `Could not reach Nuelink: ${err.message}`, status: 0 };
   }
   if (res.status === 429 && attempt === 0) {
-    const wait = Math.min(30, Number(res.headers.get('retry-after')) || 1);
+    const header = res.headers.get('retry-after');
+    const parsed = header === null ? NaN : Number(header);
+    const seconds = Number.isFinite(parsed) && parsed >= 0 ? parsed : 1;
+    const wait = Math.min(30, seconds);
     await new Promise((r) => setTimeout(r, wait * 1000));
     return call(method, path, { json, form }, 1);
   }

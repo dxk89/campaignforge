@@ -44,10 +44,14 @@ async function clientTests() {
     assert.equal(bad.status, 422);
     assert.match(bad.error, /caption/i, 'the API message is passed through');
 
-    // One retry on 429, honouring Retry-After.
+    // One retry on 429, honouring Retry-After. A Retry-After of 0 must not
+    // fall back to the 1-second default (Number('0') || 1 would do that).
     fake.failOnce({ status: 429, message: 'Too many', headers: { 'retry-after': '0' } });
+    const retryStart = Date.now();
     const retried = await nuelink.brands();
+    const retryMs = Date.now() - retryStart;
     assert.equal(retried.data[0].id, 35946, 'a 429 is retried once');
+    assert.ok(retryMs < 500, `retry-after: 0 should not wait a full second (took ${retryMs}ms)`);
 
     // A 5xx is reported as a value, with the status.
     fake.failOnce({ status: 500, message: 'Server error' });
