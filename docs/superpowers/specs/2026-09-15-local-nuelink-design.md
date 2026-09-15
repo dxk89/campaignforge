@@ -4,19 +4,23 @@ Date: 2026-09-15. Status: approved in conversation, awaiting written review.
 
 ## 1. Goal
 
-Turn Campaign Forge from a hosted demo into a tool one person runs on their
-own machine. Three changes:
+Give the owner a local way of running Campaign Forge, from the same codebase
+that stays live on Vercel. Three changes:
 
-1. Strip what only existed for hosting and reviewers: sign-in, Vercel and
-   Render configuration, and the Gemini image generation, which never worked
-   well.
+1. Remove the Gemini image generation, which never worked well, from both.
 2. Connect the social calendar to Nuelink, the scheduler in use, so a planned
    month can be pushed as posts with their cards attached.
-3. Let Claude Code desktop drive the app through the existing MCP server:
-   create clients and campaigns, run passes, read output, push to Nuelink.
+3. Let Claude Code desktop drive the locally running app through the existing
+   MCP server: create clients and campaigns, run passes, read output, push
+   to Nuelink.
 
-Firestore and Cloudflare R2 stay as the store. The owner chose this over a
-local file store; the accounts already exist and the data is already there.
+One repository, one `main`, no fork. The hosted deployment keeps sign-in and
+its Vercel configuration and is deployed from the same commits. The local run
+is a way of starting the same app, not a different app.
+
+Firestore and Cloudflare R2 stay as the store in both. Locally the app is
+pointed at the same Firestore project and bucket, so the owner sees the same
+clients and campaigns on the laptop and on the hosted URL.
 
 ## 2. What is removed
 
@@ -44,46 +48,36 @@ Kept: the typographic SVG cards in `web/core/graphics.js`, the `image_prompt`
 field in the social schema (it is a visual brief a person can still use), and
 the Pexels tool entry in `07-tooling.md`, which is a separate, unbuilt idea.
 
-### 2.2 Sign-in
+### 2.2 Nothing else
 
-Delete:
+Sign-in, the proxy gate, `web/vercel.json`, `docs/DEPLOY.md`, the spend
+ceiling, `legacy/`, `evals/`: all stay. The hosted deployment needs them and
+the local run does not mind them. `render.yaml` is deleted: it describes the
+retired Express prototype and has not matched the app since Phase 1.
 
-- `web/app/login/`, `web/app/api/auth/` (login and session routes).
-- `web/server/session.ts`. The `jose` dependency goes with it.
-- The redirect logic in `web/proxy.ts`. The file stays as a no-op pass-through
-  so Next 16's expectation is met, with a comment saying why it is empty.
-- `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ACCESS_PASSWORD`, `SESSION_SECRET`,
-  `MOCK_AUTH` from `.env.example` and docs. The load-time guard in `auth.ts`
-  that refused to start with a store but no password goes too.
+## 2b. The local run
 
-Change:
+A new root script:
 
-- `web/server/auth.ts` becomes a few lines. `currentSession()` and
-  `requireSession()` always return `{ workspaceId: 'owner', admin: true }`.
-  `requireOwner()` stays as an alias so the settings and prompts routes need
-  no edit. The `Session` type moves here.
-- `MOCK_AUTH=1` in scripts, tests and docs is removed; it is now the only
-  behaviour. The test helper stops setting it.
-- The `ws` parameter stays threaded through `web/server` (it is one string
-  and removing it touches forty files for nothing).
+```
+npm run local        # MOCK_AUTH=1, real keys from web/.env, http://localhost:3000
+```
 
-### 2.3 Hosting
+It sets `MOCK_AUTH=1` and starts `next dev` on `web/`. `MOCK_AUTH` already
+makes every request the owner's session with admin rights, and `auth.ts`
+already accepts a store with no password when it is set. Everything else
+comes from `web/.env`: `ANTHROPIC_API_KEY`, `FIREBASE_SERVICE_ACCOUNT`, the
+four `R2_*` variables, and `NUELINK_API_KEY`.
 
-Delete `web/vercel.json`, `render.yaml`, `.env.local` (a Vercel CLI
-artefact), `docs/DEPLOY.md`, and section 11 of `HANDOVER.md`. Keep
-`firebase.json`, `firestore.rules` and `scripts/deploy-rules.js`: the rules
-still stop a browser reaching Firestore directly.
+`AGENT_DEADLINE_MS` is already read from the environment; the local script
+leaves it unset, so a pass is not cut short at the hosted 800 seconds.
 
-`AGENT_DEADLINE_MS` stays supported but its default becomes unlimited, since
-there is no function timeout on a laptop. The `maxDuration` exports on the
-route handlers go.
+The settings page shows which mode is running ("Local, no sign-in" or
+"Hosted"), so the owner can tell the two tabs apart.
 
-### 2.4 Left alone
-
-`legacy/`, `evals/`, `mcp/` (extended, see section 4), the spend ceiling,
-telemetry and throttle. They do not obstruct local use and the tests depend
-on some of them. Removing `legacy/` and `evals/` is a possible follow-up, not
-part of this work.
+`docs/HUMAN-ACTIONS.md` gains a "Running locally" section: copy the
+service account JSON and R2 keys from the Vercel project's environment
+variables into `web/.env`, then `npm run local`.
 
 ## 3. Nuelink
 
@@ -207,14 +201,17 @@ a minute.
 
 `NUELINK_API_KEY` (required for the feature), `NUELINK_BASE_URL` (tests
 only). Added to `.env.example` with a comment. The key is server-side only
-(invariant 9).
+(invariant 9). The hosted deployment may set the key too; nothing in the
+feature is local-only. Without it the panel says Nuelink is not configured.
 
 ## 4. Claude Code desktop
 
 Extend `mcp/server.js`. The existing two tools stay pure and offline. The new
 tools call the running app over HTTP at `CF_URL` (default
 `http://localhost:3000`) and, when it is not running, return one sentence
-saying to start it with `npm run web`.
+saying to start it with `npm run local`. They send no cookie, so they work
+only against a `MOCK_AUTH=1` instance; pointing `CF_URL` at the hosted URL
+gets a 401 and the server says so.
 
 | Tool | Calls |
 |---|---|
@@ -242,16 +239,15 @@ is opened. Document the flow in `mcp/README.md`.
   reported per post.
 - `test/mcp.test.js` (extend): the new tools' schemas match their handlers,
   and a call with the app down returns the start-the-app message.
-- `api.test.js`: a request with no cookie reaches the API; the login route
-  is gone (404).
-- Remove image and login cases from `pages`, `phase2`, `db` suites.
+- Remove the image cases from the `pages`, `phase2` and `db` suites.
 - Run `MOCK_CLAUDE=1 npm run web:build` and `npm test`; both must pass.
 
 ## 6. Docs
 
 Update `CLAUDE.md`, `HANDOVER.md`, `README.md`, `.env.example`,
-`docs/HUMAN-ACTIONS.md` (Nuelink collections), `docs/DATA-HANDLING.md` (what
-leaves for Nuelink: caption, link, card PNG). Delete `docs/DEPLOY.md`.
+`docs/HUMAN-ACTIONS.md` (Nuelink collections, running locally),
+`docs/DATA-HANDLING.md` (what leaves for Nuelink: caption, link, card PNG),
+`docs/DEPLOY.md` (Gemini variable gone, Nuelink variable optional).
 The "Do not" rule in `CLAUDE.md` against platform publishing integrations
 is amended: Nuelink is the one publishing integration, chosen by the owner.
 
@@ -259,4 +255,5 @@ is amended: Nuelink is the one publishing integration, chosen by the owner.
 
 Facebook and Bluesky (the planner does not write for them), reading post
 status back from Nuelink (the API does not list posts yet), a local file
-store, removing `legacy/` or `evals/`.
+store, removing sign-in or hosting configuration, removing `legacy/` or
+`evals/`.
