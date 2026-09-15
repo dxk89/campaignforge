@@ -142,7 +142,7 @@ An agency or a fractional marketer has never met the client's buyer and does not
 - **Localisation runs last, only when asked**, from a finished English set, with a glossary from the research pass.
 - **Limits are enforced twice.** The prompt states them; the validator checks them. The UI shows what the model got wrong.
 - **The browser drives the chain.** Each pass is its own request (`/api/pass/research`, `/strategy`, `/assets`, `/localise`), so the stepper shows real progress, a failed pass can be retried without re-running the earlier ones, and no request runs longer than one model call. `/api/generate` still runs the whole chain in one request for scripts. Intermediate JSON round-trips through the browser; the API key never does.
-- **Nothing is stored.** Sources live in the browser tab and are sent with the brief. No accounts, no database, no server state, which is what lets the same code run as a process on Render or a function on Vercel.
+- **Nothing is stored.** Sources live in the browser tab and are sent with the brief. No accounts, no database, no server state, which is what lets the same code run as a local process or a function on Vercel.
 
 ## Not included
 

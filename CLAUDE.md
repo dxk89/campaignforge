@@ -224,15 +224,16 @@ of truth for the order); this table names the original nine plus `nuelink`.
 reports `memory` and `db`, so file counts and suite counts never match; both
 appear in older notes and both are right. `mcp.test.js` now starts a built
 Next server and the fixture site (it used to assert schemas only), so it
-needs `web/.next` too, the same as the five suites above.
+needs `web/.next` too, the same as the six suites above.
 
-The five server-backed suites start Next through
-`test/helpers/next-server.js`, which spawns the CLI's JS entry point with this
-process's own node binary. Do not go back to `spawn('npx', ...)`: `npx` is
-`npx.cmd` on Windows and spawn() without a shell cannot execute a `.cmd`, so
-every one of those suites died with `ENOENT` before its first assertion. The
-helper also checks for `web/.next` up front and says which command to run,
-rather than letting a missing build surface as connection-refused errors.
+The six server-backed suites (`api`, `pages`, `phase2`, `phase3`, `phase4`
+and `mcp`) start Next through `test/helpers/next-server.js`, which spawns the
+CLI's JS entry point with this process's own node binary. Do not go back to
+`spawn('npx', ...)`: `npx` is `npx.cmd` on Windows and spawn() without a
+shell cannot execute a `.cmd`, so every one of those suites died with
+`ENOENT` before its first assertion. The helper also checks for `web/.next`
+up front and says which command to run, rather than letting a missing build
+surface as connection-refused errors.
 
 The fixture site is still `spawn('python3', ...)`, which needs Python on
 `PATH`. That one works as-is on Windows, macOS and Linux, but it is the
