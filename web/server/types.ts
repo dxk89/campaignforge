@@ -45,6 +45,26 @@ export type Client = {
    */
   locked?: boolean;
   settings: ClientSettings;
+  nuelink?: NuelinkMapping;
+};
+
+/** Which Nuelink brand and, per social channel, which collection a post goes to. */
+export type NuelinkMapping = {
+  brandId: number | null;
+  collections: Partial<Record<'linkedin' | 'x' | 'instagram', number | null>>;
+};
+
+export type NuelinkResult = {
+  day: number; channel: string; scheduledAt: string | null;
+  status: 'posted' | 'failed' | 'skipped';
+  nuelinkPostId: string | null; mediaId: string | null; error: string | null;
+};
+
+/** One attempt to send a calendar to Nuelink. Kept so a second push skips what went. */
+export type NuelinkPush = {
+  pushId: string; createdAt: string; startDate: string;
+  publishMode: 'DRAFT' | 'SCHEDULE'; skipWeekends: boolean;
+  results: NuelinkResult[];
 };
 
 export type SourceDoc = {

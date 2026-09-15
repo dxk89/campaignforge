@@ -94,6 +94,18 @@ const storage = require('../web/.test-build/storage.js');
   assert.equal(totals.costEur, 0.07);
   assert.equal(totals.byAgent.copywriter, 0.05);
 
+  // Nuelink: the mapping lives on the client, the pushes under the campaign.
+  await db.updateClient(ws, client.clientId, { nuelink: { brandId: 35946, collections: { linkedin: 201, x: 202 } } });
+  assert.equal((await db.getClient(ws, client.clientId)).nuelink.collections.x, 202, 'mapping persists');
+  const push = await db.addNuelinkPush(ws, client.clientId, campaign.campaignId, {
+    startDate: '2026-09-07', publishMode: 'DRAFT', skipWeekends: true,
+    results: [{ day: 1, channel: 'linkedin', scheduledAt: null, status: 'posted', nuelinkPostId: 'p1', mediaId: null, error: null }],
+  });
+  assert.ok(push.pushId && push.createdAt, 'a push gets an id and a time');
+  const pushes = await db.listNuelinkPushes(ws, client.clientId, campaign.campaignId);
+  assert.equal(pushes.length, 1);
+  assert.equal(pushes[0].results[0].nuelinkPostId, 'p1');
+
   // deletion
   await db.deleteSource(ws, client.clientId, full[0].sourceId);
   assert.equal((await db.listSources(ws, client.clientId)).length, 0);

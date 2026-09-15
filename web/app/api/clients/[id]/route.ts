@@ -16,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   return guarded(async (session) => {
     const patch = await req.json();
-    const allowed = ['name', 'voice', 'settings', 'brandKit'] as const;
+    const allowed = ['name', 'voice', 'settings', 'brandKit', 'nuelink'] as const;
     const clean: any = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
     // The lock is the one field a reviewer must not set. It is what protects

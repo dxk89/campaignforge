@@ -9,7 +9,7 @@
  */
 import { randomUUID, createHash } from 'crypto';
 import { db as fsdb, storeEnabled } from './firebase';
-import type { Client, SourceDoc, Campaign, Version, LedgerEntry, Brief } from './types';
+import type { Client, SourceDoc, Campaign, Version, LedgerEntry, Brief, NuelinkPush } from './types';
 
 const now = () => new Date().toISOString();
 export const newId = () => randomUUID();
@@ -290,6 +290,23 @@ export function ledgerTotals(entries: LedgerEntry[]) {
     costEur += e.costEur;
   }
   return { byAgent, byClient, costEur: Number(costEur.toFixed(4)) };
+}
+
+// ---- nuelink pushes ------------------------------------------------------------
+
+export async function addNuelinkPush(ws: string, clientId: string, campaignId: string, push: Omit<NuelinkPush, 'pushId' | 'createdAt'>): Promise<NuelinkPush> {
+  const pushId = newId();
+  const doc: NuelinkPush = { ...push, pushId, createdAt: now() };
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/nuelink/${pushId}`).set(doc);
+  else memCol(memKey(ws, clientId, campaignId, 'nuelink')).set(pushId, doc);
+  return doc;
+}
+
+export async function listNuelinkPushes(ws: string, clientId: string, campaignId: string): Promise<NuelinkPush[]> {
+  let docs: NuelinkPush[];
+  if (!storeEnabled) docs = [...memCol(memKey(ws, clientId, campaignId, 'nuelink')).values()];
+  else docs = (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/nuelink`).get()).docs.map((d) => d.data() as NuelinkPush);
+  return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 // ---- helpers -----------------------------------------------------------------
