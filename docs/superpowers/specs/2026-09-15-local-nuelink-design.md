@@ -172,7 +172,7 @@ by the existing static check in `db.test.js`.
   2. Skip with a reason if the client has no collection for that channel.
   3. If the post has a graphic, render the card SVG with the logo embedded
      (as `graphics.js` already does for the export), rasterise to PNG with
-     `@resvg/resvg-js` (MIT), upload as media.
+     `@resvg/resvg-js` (MPL-2.0), upload as media.
   4. Create the post: caption is text plus hashtags on a new line, as the
      CSV export already builds it; `link` is the landing URL when present;
      `alt` is the card headline; `scheduledAt` only for `SCHEDULE`.

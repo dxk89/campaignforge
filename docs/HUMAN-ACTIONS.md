@@ -113,10 +113,11 @@ The same app, without sign-in, against the same Firestore and R2.
    social-post scheduler the Social tab sends the calendar to; add
    `NUELINK_API_KEY` from Nuelink → Settings → API.
 3. `npm install && cd web && npm install && cd ..` once.
-4. `npm run local` and open http://localhost:3000.
+4. `npm run local` and open http://127.0.0.1:3000.
 
 Leave the passwords and `SESSION_SECRET` out: `npm run local` sets
-`MOCK_AUTH=1`, so every request is you. Do not expose this port to the
+`MOCK_AUTH=1` and listens on 127.0.0.1 only, so every request is you and
+nothing else on the network can reach it. Do not expose this port to the
 internet.
 
 ---

@@ -81,12 +81,12 @@ const { spawn } = require('child_process');
 
 async function routeTests() {
   const fake = startFakeNuelink(8097);
-  const env = { ...process.env, MOCK_CLAUDE: '1', MOCK_AUTH: '1', PORT: '3227', NUELINK_API_KEY: 'test-key', NUELINK_BASE_URL: 'http://localhost:8097/api/public/v1' };
-  const server = startNext(3227, env);
+  const env = { ...process.env, MOCK_CLAUDE: '1', MOCK_AUTH: '1', PORT: '3230', NUELINK_API_KEY: 'test-key', NUELINK_BASE_URL: 'http://localhost:8097/api/public/v1' };
+  const server = startNext(3230, env);
   const site = spawn('python3', ['-m', 'http.server', '8096'], { cwd: path.join(__dirname, 'fixture-site'), stdio: 'ignore' });
   const stop = () => { server.kill(); site.kill(); fake.close(); };
   process.on('exit', stop);
-  const base = 'http://localhost:3227';
+  const base = 'http://localhost:3230';
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const api = async (p, opts = {}) => { const res = await fetch(base + p, opts); return { status: res.status, data: await res.json().catch(() => null) }; };
   const post = (p, body) => api(p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
@@ -138,6 +138,15 @@ async function routeTests() {
     const unmapped = await post(pushPath, { start: '2026-09-07', publishMode: 'DRAFT' });
     assert.equal(unmapped.status, 409);
     assert.match(unmapped.data.error, /collection/i);
+
+    // A caller-controlled id must not reach an outbound URL unvalidated. The
+    // route cleans brandId and each collection id to a positive number or
+    // null before storing, dropping anything else (a path-traversal string
+    // included).
+    const dirty = await patch(`/api/clients/${clientId}`, { nuelink: { brandId: 35946, collections: { linkedin: '201/../../../me', x: 202 } } });
+    assert.equal(dirty.status, 200);
+    assert.equal(dirty.data.client.nuelink.collections.linkedin, null, 'a non-numeric collection id is dropped, not stored');
+    assert.equal(dirty.data.client.nuelink.collections.x, 202, 'a valid id passes through');
 
     // Map LinkedIn and X only; Instagram is left out on purpose.
     await patch(`/api/clients/${clientId}`, { nuelink: { brandId: 35946, collections: { linkedin: 201, x: 202 } } });
@@ -193,6 +202,7 @@ async function routeTests() {
     const history = await api(pushPath);
     assert.equal(history.data.pushes.length, 4, 'every attempt is listed');
     assert.ok(history.data.sent.length >= 31, 'sent is the union of posted');
+    assert.ok(history.data.sent.every((s) => typeof s.key === 'string' && s.key.length), 'sent rows carry their idempotence key');
 
     // Caller mistakes are 400s with a sentence.
     const noDate = await post(pushPath, { publishMode: 'SCHEDULE' });

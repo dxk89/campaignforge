@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-type Result = { day: number; channel: string; scheduledAt: string | null; status: string; error: string | null };
+type Result = { day: number; channel: string; scheduledAt: string | null; status: string; error: string | null; key?: string };
 
 /**
  * Sending the month to Nuelink from the Social tab. The date and the mode
@@ -27,7 +27,7 @@ export function NuelinkPush({ clientId, campaignId, posts, start }: { clientId: 
 
   useEffect(() => {
     fetch('/api/nuelink').then((r) => r.json()).then((d) => setConfigured(Boolean(d.configured))).catch(() => setConfigured(false));
-    fetch(base).then((r) => r.json()).then((d) => setSent(new Set((d.sent || []).map((s: any) => `${s.day}-${s.channel}`)))).catch(() => {});
+    fetch(base).then((r) => r.json()).then((d) => setSent(new Set((d.sent || []).map((s: any) => s.key)))).catch(() => {});
   }, [base]);
 
   const willSend = posts.filter((p) => chosen.has(p.channel) && (force || !sent.has(`${p.day}-${p.channel}`))).length;
@@ -41,7 +41,7 @@ export function NuelinkPush({ clientId, campaignId, posts, start }: { clientId: 
       const d = await res.json();
       if (!res.ok) { setError(d.error || 'The push failed'); return; }
       setResults(d.push.results);
-      setSent((s) => { const n = new Set(s); for (const r of d.push.results) if (r.status === 'posted') n.add(`${r.day}-${r.channel}`); return n; });
+      setSent((s) => { const n = new Set(s); for (const r of d.push.results) if (r.status === 'posted' && r.key) n.add(r.key); return n; });
     } finally { setBusy(false); }
   }
 

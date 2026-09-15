@@ -3,6 +3,26 @@ import { getClient, updateClient, listSources, listCampaigns, deleteClient } fro
 
 export const runtime = 'nodejs';
 
+/**
+ * A positive integer, or null for anything else: a Nuelink brand or
+ * collection id is only ever used by being interpolated into a URL path
+ * (web/core/nuelink.js), so anything that is not one is a path-traversal
+ * attempt or junk, and either way it must not reach fetch().
+ */
+function cleanId(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** Strip a caller-supplied `nuelink` patch down to brandId and the three known channels. */
+function cleanNuelink(v: any): { brandId: number | null; collections: Record<string, number | null> } {
+  const collections: Record<string, number | null> = {};
+  for (const ch of ['linkedin', 'x', 'instagram']) {
+    collections[ch] = cleanId(v?.collections?.[ch]);
+  }
+  return { brandId: cleanId(v?.brandId), collections };
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   return guarded(async (session) => {
@@ -19,6 +39,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const allowed = ['name', 'voice', 'settings', 'brandKit', 'nuelink'] as const;
     const clean: any = {};
     for (const k of allowed) if (k in patch) clean[k] = patch[k];
+    if ('nuelink' in patch) clean.nuelink = cleanNuelink(patch.nuelink);
     // The lock is the one field a reviewer must not set. It is what protects
     // the curated campaign from being deleted, so letting a reviewer clear it
     // would make it decoration.

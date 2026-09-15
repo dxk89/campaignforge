@@ -14,9 +14,12 @@ Build specs are in `docs/build/`, indexed by `docs/build/00-README.md`. Work
 from the spec for the current phase; do not skip ahead. When a spec and this
 file disagree, this file wins.
 
-**Current position.** Phases 1 to 4 are built and committed (32 commits, 9 test
-suites, ~9,000 lines across `web/`, `lib/` and `evals/`). The backlog, in
-order, is in `HANDOVER.md` §6: agent training (`06-agent-training.md`), the
+**Current position.** Phases 1 to 4 are built and committed. The branch of
+15 September 2026 (`local-nuelink`) added running the product locally without
+sign-in, pushing a planned month to Nuelink, and driving the running app from
+Claude Code's own tools, and removed Gemini. `package.json`'s `test` script is
+the source of truth for the suite list, not a count written here. The
+backlog, in order, is in `HANDOVER.md` §6: agent training (`06-agent-training.md`), the
 rest of Week 2 (`01-week2-reviewers.md`: Art Director, Scout, citation
 verification, orchestrator fast path), the unbuilt tooling tasks
 (`07-tooling.md`), `04-phase3-authority.md` §11 to 15, and the PDF export pack
@@ -38,7 +41,7 @@ npm run web:build                    # Next production build; this typechecks
 npm run legacy                       # the retired Express prototype in legacy/
 MOCK_CLAUDE=1 npm run legacy         # same, on fixtures
 
-npm test                             # nine suites, in order (see Testing below)
+npm test                             # nineteen files, in order (see Testing below)
 npm run test:emulator                # data layer against real Firestore. Needs Java.
                                      # Not part of npm test; must pass before a release.
 
@@ -131,7 +134,7 @@ web/                         The product. Next.js 16, App Router
     memory/                  exemplars, learnings, corrections, approvedClaims;
                              Firestore with an in-memory fallback
     claude.js                the SDK client; throws at load if no key and no MOCK_CLAUDE
-    pricing.js limits.js utm.js graphics.js scraper.js images.js sources.js
+    pricing.js limits.js utm.js graphics.js scraper.js sources.js
     brief.js verdicts.js mock.js
     nuelink.js                the Nuelink public API client
     check.js                 checkCopy(text, opts): every deterministic verdict over
@@ -146,7 +149,7 @@ web/                         The product. Next.js 16, App Router
   server/cards.ts            renderCardPng via @resvg/resvg-js
   server/telemetry.ts assets.ts exemplars.ts results.ts resultsStore.ts storage.ts
   app/api/                   32 routes: agent runs, clients, campaigns, sources, claims,
-                             learnings, results, images, package, regenerate, audit,
+                             learnings, results, package, regenerate, audit,
                              ledger, prompts, settings, telemetry, export, files, health,
                              nuelink
   app/clients/               library and workbench pages

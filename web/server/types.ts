@@ -58,6 +58,13 @@ export type NuelinkResult = {
   day: number; channel: string; scheduledAt: string | null;
   status: 'posted' | 'failed' | 'skipped';
   nuelinkPostId: string | null; mediaId: string | null; error: string | null;
+  /**
+   * The idempotence key this row was sent under (day-channel, with `#n` for
+   * a repeat pair; see sentKey in server/nuelink.ts). Optional because rows
+   * written before this field existed have none; alreadySent recomputes the
+   * key for those from day and channel instead.
+   */
+  key?: string;
 };
 
 /** One attempt to send a calendar to Nuelink. Kept so a second push skips what went. */

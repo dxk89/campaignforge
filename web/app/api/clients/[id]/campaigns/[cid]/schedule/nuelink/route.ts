@@ -1,5 +1,5 @@
 import { guarded, bad } from '@/server/respond';
-import { pushCampaign, alreadySent } from '@/server/nuelink';
+import { pushCampaign, sentRows } from '@/server/nuelink';
 import { listNuelinkPushes } from '@/server/db';
 
 export const runtime = 'nodejs';
@@ -10,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id, cid } = await params;
   return guarded(async (session) => {
     const pushes = await listNuelinkPushes(session.workspaceId, id, cid);
-    const sent = [...await alreadySent(session.workspaceId, id, cid)].map((k) => { const [day, channel] = k.split('-'); return { day: Number(day), channel }; });
+    const sent = await sentRows(session.workspaceId, id, cid);
     return { pushes, sent };
   });
 }

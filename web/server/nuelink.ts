@@ -52,18 +52,35 @@ export function sentKey(counts: Map<string, number>, day: number, channel: strin
   return n === 1 ? pair : `${pair}#${n}`;
 }
 
-/** Day-and-channel pairs that some earlier push posted. */
-export async function alreadySent(ws: string, clientId: string, campaignId: string): Promise<Set<string>> {
+/** The posted rows across every push, day + channel + idempotence key. */
+async function postedRows(ws: string, clientId: string, campaignId: string): Promise<{ day: number; channel: string; key: string }[]> {
   const pushes = await listNuelinkPushes(ws, clientId, campaignId);
-  const sent = new Set<string>();
+  const rows: { day: number; channel: string; key: string }[] = [];
   for (const p of pushes) {
     const counts = new Map<string, number>();
     for (const r of p.results) {
-      const key = sentKey(counts, r.day, r.channel);
-      if (r.status === 'posted') sent.add(key);
+      // sentKey is called for every row, keyed or not, so `counts` advances
+      // in row order regardless: a later unkeyed row sharing a pair with an
+      // earlier keyed one must still get the next number, not collide with
+      // it. The stored key wins when present; the computed one is only the
+      // fallback for rows written before this field existed.
+      const computed = sentKey(counts, r.day, r.channel);
+      if (r.status === 'posted') rows.push({ day: r.day, channel: r.channel, key: r.key ?? computed });
     }
   }
-  return sent;
+  return rows;
+}
+
+/** Day-and-channel pairs that some earlier push posted, as their idempotence keys. */
+export async function alreadySent(ws: string, clientId: string, campaignId: string): Promise<Set<string>> {
+  return new Set((await postedRows(ws, clientId, campaignId)).map((r) => r.key));
+}
+
+/** The same posted rows, with day and channel, for the GET route to hand to the front end. */
+export async function sentRows(ws: string, clientId: string, campaignId: string): Promise<{ day: number; channel: string; key: string }[]> {
+  const byKey = new Map<string, { day: number; channel: string; key: string }>();
+  for (const r of await postedRows(ws, clientId, campaignId)) byKey.set(r.key, r);
+  return [...byKey.values()];
 }
 
 export async function pushCampaign(ws: string, clientId: string, campaignId: string, opts: PushOptions): Promise<NuelinkPush> {
@@ -80,6 +97,13 @@ export async function pushCampaign(ws: string, clientId: string, campaignId: str
   if (!mapping?.brandId || !Object.values(mapping.collections || {}).some(Boolean)) {
     throw bad('Choose a Nuelink brand and a collection per channel on the client page first', 409);
   }
+  // The route sanitises brandId and each collection id before storing them
+  // (web/app/api/clients/[id]/route.ts), but a mapping written before that
+  // guard existed, or restored from a backup, could still hold something
+  // that is not a positive finite number. Either becomes part of a Nuelink
+  // URL path (web/core/nuelink.js), so check again here rather than trust
+  // what is on the client doc.
+  const validId = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
   let rows: any[];
   try {
@@ -107,8 +131,16 @@ export async function pushCampaign(ws: string, clientId: string, campaignId: str
 
   let logo: string | null = null;
   if (client.brandKit?.logoRef) {
-    const f = await getFile(ws, client.brandKit.logoRef);
-    if (f) logo = `data:${f.mime};base64,${f.buffer.toString('base64')}`;
+    // Invariant 13: a storage fault must not sink the push. getFile rethrows
+    // any error that is not a 404 (see storage.ts), so an R2 outage here
+    // would otherwise take the whole campaign down before the first post.
+    // The card renders without a logo instead.
+    try {
+      const f = await getFile(ws, client.brandKit.logoRef);
+      if (f) logo = `data:${f.mime};base64,${f.buffer.toString('base64')}`;
+    } catch (err: any) {
+      console.warn(`nuelink push: could not read logo (${client.brandKit.logoRef}), continuing without it: ${err.message}`);
+    }
   }
 
   const sent = opts.force ? new Set<string>() : await alreadySent(ws, clientId, campaignId);
@@ -123,7 +155,7 @@ export async function pushCampaign(ws: string, clientId: string, campaignId: str
   for (const row of rows) {
     const key = sentKey(counts, row.day, row.channel);
     const scheduledAt = opts.publishMode === 'SCHEDULE' ? nuelink.formatScheduledAt(row.when) : null;
-    const result: NuelinkResult = { day: row.day, channel: row.channel, scheduledAt, status: 'skipped', nuelinkPostId: null, mediaId: null, error: null };
+    const result: NuelinkResult = { day: row.day, channel: row.channel, scheduledAt, status: 'skipped', nuelinkPostId: null, mediaId: null, error: null, key };
     results.push(result);
 
     await (async () => {
@@ -131,6 +163,7 @@ export async function pushCampaign(ws: string, clientId: string, campaignId: str
       if (sent.has(key)) { result.error = 'already sent in an earlier push'; return; }
       const collectionId = (mapping.collections as any)[row.channel];
       if (!collectionId) { result.error = `no Nuelink collection mapped for ${row.channel}`; return; }
+      if (!validId(mapping.brandId) || !validId(collectionId)) { result.error = 'invalid Nuelink collection id'; return; }
 
       const post = postOf.get(row.index);
       const body: any = { caption: messageOf(row), publishMode: opts.publishMode };
@@ -146,7 +179,7 @@ export async function pushCampaign(ws: string, clientId: string, campaignId: str
         }
         const up = await nuelink.uploadMedia(mapping.brandId, { buffer: png, mime: 'image/png', filename: `day${row.day}-${row.channel}.png` });
         if (up.error) { result.status = 'failed'; result.error = `upload: ${up.error}`; return; }
-        result.mediaId = up.data.id;
+        result.mediaId = String(up.data.id);
         body.media = [{ id: up.data.id }];
         if (post.graphic.headline) body.alt = post.graphic.headline;
       }
