@@ -64,8 +64,10 @@ const { TOOLS, callTool } = require('../mcp/server');
 
   // Against a running instance they round-trip. Same pattern as api.test.js.
   const { startNext } = require('./helpers/next-server');
+  const { spawn } = require('child_process');
   const server = startNext(3229, { ...process.env, MOCK_CLAUDE: '1', MOCK_AUTH: '1', PORT: '3229' });
-  process.on('exit', () => server.kill());
+  const fixtureSite = spawn('python3', ['-m', 'http.server', '8095'], { cwd: path.join(__dirname, 'fixture-site'), stdio: 'ignore' });
+  process.on('exit', () => { server.kill(); fixtureSite.kill(); });
   process.env.CF_URL = 'http://localhost:3229';
   for (let i = 0; i < 40; i++) { try { const r = await fetch('http://localhost:3229/api/health'); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 500)); }
   const none = await callTool('list_clients', {});
@@ -73,6 +75,13 @@ const { TOOLS, callTool } = require('../mcp/server');
   const made = await callTool('create_client', { name: 'Acme' });
   assert.match(made, /Acme/, 'a client can be created by name');
   const id = /id: ([0-9a-f-]{36})/.exec(made)[1];
+
+  // The url branch returns a flat object with the name under brandKit.siteName,
+  // not a top-level name: the render must not say "Created undefined".
+  const scanned = await callTool('create_client', { url: 'http://localhost:8095' });
+  assert.match(scanned, /Created .+ \(id: [0-9a-f-]{36}\)/, 'a client from a scanned site names itself');
+  assert.ok(!/undefined/.test(scanned), 'the site name is read from brandKit.siteName, not a missing top-level name');
+  assert.match(scanned, /sources? from the site/, 'and mentions the scanned sources');
   const camp = await callTool('create_campaign', { clientId: id, brief: { productName: 'Widget', productDescription: 'A widget', targetAudience: 'Buyers', objective: 'trial_signups', tone: 'direct', languages: ['en'], webResearch: false } });
   const cid = /id: ([0-9a-f-]{36})/.exec(camp)[1];
   const ran = await callTool('run_agent', { clientId: id, campaignId: cid, agent: 'brand-analyst' });
@@ -82,6 +91,7 @@ const { TOOLS, callTool } = require('../mcp/server');
   const spend = await callTool('cost', { campaignId: cid });
   assert.match(spend, /EUR/, 'cost is a money line');
   server.kill();
+  fixtureSite.kill();
 
   console.log('mcp tests: ok');
 })().catch((e) => { console.error('mcp tests FAILED', e); process.exit(1); });

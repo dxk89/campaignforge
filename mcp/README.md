@@ -25,6 +25,21 @@ Campaign Forge over HTTP.
 - **`push_to_nuelink`** — send a campaign's social calendar to Nuelink.
 - **`cost`** — what a campaign has cost so far, from the ledger.
 
+`list_clients`, `create_client`, `list_campaigns`, `create_campaign`,
+`run_agent`, `get_output`, `nuelink_setup`, `push_to_nuelink` and `cost`
+talk to Campaign Forge over HTTP at `CF_URL` (default
+`http://localhost:3000`). Start the app first with `npm run local`; without
+it every one of them answers with that instruction. They send no cookie, so
+they cannot reach the hosted deployment, which is deliberate.
+
+Claude Code picks the server up from `.mcp.json` at the repository root
+when you open the folder. Run `cd mcp && npm install` once for the SDK.
+
+A session looks like: "scan acme.com and make a client", "create a campaign
+for their new product with this brief", "run the passes in order and tell me
+the flags", "map the client to the IntelliNews brand with these collections",
+"send the month to Nuelink as drafts from 7 September".
+
 ## Where your text goes
 
 **`check_copy` makes no network calls.** It is pure functions over a string,
@@ -125,23 +140,6 @@ Checked without a client, so avoid terms, approved claims and brand spelling wer
  "pages": ["https://www.intellinews.com/"]
 }
 ```
-
-## The app tools
-
-`list_clients`, `create_client`, `list_campaigns`, `create_campaign`,
-`run_agent`, `get_output`, `nuelink_setup`, `push_to_nuelink` and `cost`
-talk to Campaign Forge over HTTP at `CF_URL` (default
-`http://localhost:3000`). Start the app first with `npm run local`; without
-it every one of them answers with that instruction. They send no cookie, so
-they cannot reach the hosted deployment, which is deliberate.
-
-Claude Code picks the server up from `.mcp.json` at the repository root
-when you open the folder. Run `cd mcp && npm install` once for the SDK.
-
-A session looks like: "scan acme.com and make a client", "create a campaign
-for their new product with this brief", "run the passes in order and tell me
-the flags", "map the client to the IntelliNews brand with these collections",
-"send the month to Nuelink as drafts from 7 September".
 
 The full rule catalogue, and what to do about each flag, is in
 [`docs/COPY-CHECKS.md`](../docs/COPY-CHECKS.md).

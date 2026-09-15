@@ -153,7 +153,7 @@ async function appTool(name, a) {
     case 'create_client':
       r = await app('POST', '/api/clients', a.url ? { url: a.url } : { name: a.name });
       if (r.error) return r.error;
-      { const c = r.client || r; return `Created ${c.name} (id: ${c.clientId}). ${r.sources ? r.sources.length + ' sources from the site.' : ''}`.trim(); }
+      { const c = r.client || r; const clientName = c.name || c.brandKit?.siteName || 'client'; return `Created ${clientName} (id: ${c.clientId}). ${r.sources ? r.sources.length + ' sources from the site.' : ''}`.trim(); }
     case 'list_campaigns':
       r = await app('GET', `/api/clients/${a.clientId}/campaigns`);
       if (r.error) return r.error;
