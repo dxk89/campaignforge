@@ -74,4 +74,40 @@ async function clientTests() {
   }
 }
 
-clientTests().catch((e) => { console.error('nuelink tests FAILED', e); process.exit(1); });
+// ---- the routes, against a running app in mock mode ------------------------------
+const { startNext } = require('./helpers/next-server');
+const path = require('path');
+const { spawn } = require('child_process');
+
+async function routeTests() {
+  const fake = startFakeNuelink(8097);
+  const env = { ...process.env, MOCK_CLAUDE: '1', MOCK_AUTH: '1', PORT: '3227', NUELINK_API_KEY: 'test-key', NUELINK_BASE_URL: 'http://localhost:8097/api/public/v1' };
+  const server = startNext(3227, env);
+  const site = spawn('python3', ['-m', 'http.server', '8096'], { cwd: path.join(__dirname, 'fixture-site'), stdio: 'ignore' });
+  const stop = () => { server.kill(); site.kill(); fake.close(); };
+  process.on('exit', stop);
+  const base = 'http://localhost:3227';
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const api = async (p, opts = {}) => { const res = await fetch(base + p, opts); return { status: res.status, data: await res.json().catch(() => null) }; };
+  const post = (p, body) => api(p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const patch = (p, body) => api(p, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+
+  try {
+    for (let i = 0; i < 40; i++) { try { const r = await fetch(base + '/api/health'); if (r.ok) break; } catch {} await wait(500); }
+
+    const look = await api('/api/nuelink');
+    assert.equal(look.status, 200);
+    assert.equal(look.data.configured, true);
+    assert.equal(look.data.brands[0].id, 35946, 'brands come back');
+    const deep = await api('/api/nuelink?brand=35946');
+    assert.equal(deep.data.collections.length, 4);
+    assert.ok(deep.data.channels.length >= 3);
+    console.log('  nuelink lookup ok');
+
+    console.log('nuelink route tests: ok');
+  } finally {
+    stop();
+  }
+}
+
+clientTests().then(routeTests).catch((e) => { console.error('nuelink tests FAILED', e); process.exit(1); });
