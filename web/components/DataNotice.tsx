@@ -17,7 +17,7 @@ export default function DataNotice({ variant = 'full' }: Props) {
   if (variant === 'inline') {
     return (
       <p className="data-notice-inline">
-        Anything you add here is sent to Anthropic, and to Google if you generate images.
+        Anything you add here is sent to Anthropic.
         Please do not upload personal data or material you are not free to share.{' '}
         <a href="/settings#data-handling">How your data is handled</a>
       </p>
@@ -34,8 +34,7 @@ export default function DataNotice({ variant = 'full' }: Props) {
       <ul>
         <li>
           <b>Where it goes.</b> Briefs, uploaded documents and scanned pages are sent to
-          Anthropic to generate copy. If you generate images, the visual brief and any
-          reference artwork are also sent to Google.
+          Anthropic to generate copy.
         </li>
         <li>
           <b>What is stored.</b> Text and files are held in Firestore and Cloudflare R2 in
