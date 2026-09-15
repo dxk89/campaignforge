@@ -41,10 +41,8 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
   const [reasons, setReasons] = useState<Record<string, string>>({});
   const [tab, setTab] = useState(outputs['brand-analyst'] ? 'research' : 'strategy');
   const [lang, setLang] = useState<'en' | 'pt'>('en');
-  const [imagesAvailable, setImagesAvailable] = useState(false);
   const [review, setReview] = useState<any>(null);
   const editing = useAssets(clientId, campaign.campaignId, lang);
-  useEffect(() => { fetch('/api/health').then((r) => r.json()).then((h) => setImagesAvailable(Boolean(h.images))).catch(() => {}); }, []);
 
   const assets = lang === 'pt' && outputs.localiser ? outputs.localiser : outputs.copywriter;
   // A skipped agent is settled, not outstanding: without this a finished run
@@ -198,7 +196,7 @@ export default function Workbench({ clientId, campaign, client, outputs, passes,
               {tab === 'linkedin' && <EditableChannel assets={editing.assets} channel="linkedin" title="LinkedIn" ctx={editing} />}
               {tab === 'google' && <EditableChannel assets={editing.assets} channel="google" title="Google RSA" ctx={editing} />}
               {tab === 'email' && <EditableChannel assets={editing.assets} channel="email" title="Email" ctx={editing} />}
-              {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} imagesAvailable={imagesAvailable} logoRef={client.brandKit?.logoRef} landingUrl={brief.landingUrl} />}
+              {tab === 'social' && <SocialPanel social={outputs['social-planner']} clientId={clientId} campaignId={campaign.campaignId} logoRef={client.brandKit?.logoRef} landingUrl={brief.landingUrl} />}
               {tab === 'landing' && <LandingPanel landing={outputs['landing-writer']} />}
               {tab === 'lifecycle' && <LifecyclePanel activation={outputs['ops-architect']} emails={outputs.copywriter?.email?.emails} />}
               {tab === 'handoff' && <HandoffPanel handoff={outputs['ops-architect']?.handoff} />}

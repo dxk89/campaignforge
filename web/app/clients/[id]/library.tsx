@@ -286,7 +286,7 @@ export default function Library({ client, sources, campaigns, admin }: Props) {
       </section>
 
       <section className="block">
-        <h2 className="block-title">Brand assets <span className="block-hint">logo goes on every graphic; artwork steers generated images</span></h2>
+        <h2 className="block-title">Brand assets <span className="block-hint">logo goes on every graphic</span></h2>
         <div className="brand-assets">
           <label className="asset-btn">
             <input type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" onChange={(e) => uploadAssets(e.target.files, 'logo')} />

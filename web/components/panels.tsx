@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, Line, CopyButton, LIMITS } from './Counter';
 import { fmtInt, wordCount } from './format';
 import { download } from './exports';
@@ -169,14 +169,8 @@ export function EmailPanel({ assets }: { assets: any }) {
   );
 }
 
-const IMAGE_COST_EUR = 0.058; // gemini image at 1K, EUR; see core/pricing.js
-
-export function SocialPanel({ social, clientId, campaignId, imagesAvailable, logoRef, landingUrl }:
-  { social: any; clientId?: string; campaignId?: string; imagesAvailable?: boolean; logoRef?: string | null; landingUrl?: string }) {
-  const [imgs, setImgs] = useState<Record<string, string>>({});
-  const [view, setView] = useState<Record<string, 'card' | 'photo'>>({});
-  const [busy, setBusy] = useState<string | null>(null);
-  const [bulk, setBulk] = useState<string | null>(null);
+export function SocialPanel({ social, clientId, campaignId, logoRef, landingUrl }:
+  { social: any; clientId?: string; campaignId?: string; logoRef?: string | null; landingUrl?: string }) {
   // The plan holds day numbers, so a start date is asked for rather than
   // guessed. Defaulted to the next Monday, because a B2B month that begins
   // mid-week wastes its first days.
@@ -186,64 +180,12 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
 
-  const keyOf = (p: any) => `${p.day}-${p.channel}`;
-
-  // Images generated in an earlier session are stored; bring them back.
-  useEffect(() => {
-    if (!clientId || !campaignId) return;
-    fetch(`/api/clients/${clientId}/campaigns/${campaignId}/images`)
-      .then((r) => r.json())
-      .then((d) => {
-        const next: Record<string, string> = {};
-        for (const im of d.images || []) next[`${im.postRef.day}-${im.postRef.channel}`] = `/api/files/${im.storageRef}`;
-        setImgs(next);
-      })
-      .catch(() => {});
-  }, [clientId, campaignId]);
-
-  async function generate(p: any) {
-    if (!clientId || !campaignId) return;
-    const k = keyOf(p);
-    setBusy(k);
-    try {
-      const res = await fetch(`/api/clients/${clientId}/campaigns/${campaignId}/images`, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ day: p.day, channel: p.channel }),
-      });
-      const data = await res.json();
-      if (res.ok) { setImgs((m) => ({ ...m, [k]: data.dataUrl })); setView((v) => ({ ...v, [k]: 'photo' })); }
-    } finally { setBusy(null); }
-  }
-
   if (!social?.posts?.length) return <p className="muted">No social calendar yet.</p>;
   const weeks: any[][] = [[], [], [], []];
   social.posts.forEach((p: any) => weeks[Math.min(3, Math.floor((p.day - 1) / 7))].push(p));
-  const pending = social.posts.filter((p: any) => p.graphic?.image_prompt && !imgs[keyOf(p)]);
-
-  async function generateAll() {
-    for (let i = 0; i < pending.length; i++) {
-      setBulk(`Generating… ${i + 1}/${pending.length}`);
-      await generate(pending[i]);
-    }
-    setBulk(null);
-  }
 
   return (
     <>
-      <div className="social-bar">
-        {imagesAvailable ? (
-          <>
-            <span>{pending.length} post{pending.length === 1 ? '' : 's'} with a visual brief and no image yet.</span>
-            {pending.length > 0 && (
-              <button type="button" className="btn-secondary" onClick={generateAll} disabled={Boolean(bulk || busy)}>
-                {bulk || `Generate all ${pending.length} images (≈ €${(pending.length * IMAGE_COST_EUR).toFixed(2)})`}
-              </button>
-            )}
-          </>
-        ) : (
-          <span>Image generation is off: add GEMINI_API_KEY to the server to turn the visual briefs below into pictures. The typographic cards work without it.</span>
-        )}
-      </div>
       {/*
         Handing the month to a scheduler. The date is the only thing the plan
         cannot know, so it is the only thing asked for.
@@ -300,23 +242,8 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
                 </div>
                 {p.graphic?.svg ? (
                   <div className="gfx">
-                    {imgs[keyOf(p)] && (
-                      <div className="gfx-tabs">
-                        {(['card', 'photo'] as const).map((v) => (
-                          <button key={v} type="button" aria-pressed={(view[keyOf(p)] || 'photo') === v}
-                            onClick={() => setView((s2) => ({ ...s2, [keyOf(p)]: v }))}>{v === 'card' ? 'Card' : 'Photo'}</button>
-                        ))}
-                      </div>
-                    )}
-                    {imgs[keyOf(p)] && (view[keyOf(p)] || 'photo') === 'photo'
-                      ? <img src={imgs[keyOf(p)]} alt="" />
-                      : <div dangerouslySetInnerHTML={{ __html: p.graphic.svg }} />}
-                    {imagesAvailable && !imgs[keyOf(p)] && p.graphic.image_prompt && (
-                      <button type="button" className="mini-copy" onClick={() => generate(p)} disabled={busy === keyOf(p)}>
-                        {busy === keyOf(p) ? 'Generating…' : 'Generate image'}
-                      </button>
-                    )}
-                    <button type="button" className="mini-copy" onClick={() => downloadGraphic(p, imgs[keyOf(p)], view[keyOf(p)], logoRef)}>
+                    <div dangerouslySetInnerHTML={{ __html: p.graphic.svg }} />
+                    <button type="button" className="mini-copy" onClick={() => downloadGraphic(p)}>
                       Download PNG
                     </button>
                     {p.graphic.image_prompt ? <div className="img-prompt">{p.graphic.image_prompt}</div> : null}
@@ -331,30 +258,17 @@ export function SocialPanel({ social, clientId, campaignId, imagesAvailable, log
   );
 }
 
-/** SVG or photo to a 1080 PNG, with the client logo composited bottom-right. */
-async function downloadGraphic(post: any, image: string | undefined, view: string | undefined, logoRef?: string | null) {
+/** The SVG card as a 1080 PNG. Falls back to the SVG itself if the canvas refuses. */
+async function downloadGraphic(post: any) {
   const name = `day${post.day}-${post.channel}.png`;
-  const usePhoto = image && (view || 'photo') === 'photo';
-  const src = usePhoto ? image! : 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(post.graphic.svg);
-  const load = (s: string) => new Promise<HTMLImageElement>((res, rej) => {
-    const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = s;
-  });
+  const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(post.graphic.svg);
   try {
-    const im = await load(src);
+    const im = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src;
+    });
     const c = document.createElement('canvas');
     c.width = 1080; c.height = 1080;
-    const ctx = c.getContext('2d')!;
-    const scale = Math.max(1080 / im.width, 1080 / im.height);
-    ctx.drawImage(im, (1080 - im.width * scale) / 2, (1080 - im.height * scale) / 2, im.width * scale, im.height * scale);
-    if (usePhoto && logoRef) {
-      try {
-        const lg = await load(`/api/files/${logoRef}`);
-        const w = 220, h = w * (lg.height / lg.width);
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(1080 - 96 - w - 24, 1080 - 96 - h - 24, w + 48, h + 48);
-        ctx.drawImage(lg, 1080 - 96 - w, 1080 - 96 - h, w, h);
-      } catch { /* logo unreadable; ship without */ }
-    }
+    c.getContext('2d')!.drawImage(im, 0, 0, 1080, 1080);
     c.toBlob((png) => png && download(name, 'image/png', png), 'image/png');
   } catch {
     download(name.replace(/\.png$/, '.svg'), 'image/svg+xml', post.graphic.svg);

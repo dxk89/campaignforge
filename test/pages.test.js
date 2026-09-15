@@ -75,22 +75,17 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   }
   console.log('  all agent payloads present');
 
-  // images: mock mode returns an SVG placeholder, stored and ledgered
-  const social = JSON.parse(wb.body.match(/"posts":\[/) ? '{}' : '{}');
-  const img = await post(`/api/clients/${clientId}/campaigns/${cid}/images`, { day: 3, channel: 'instagram' });
-  assert.equal(img.status, 200, JSON.stringify(img.data));
-  assert.ok(img.data.image.storageRef.includes('day3-instagram'), 'image stored under a readable path');
-  assert.ok(img.data.dataUrl.startsWith('data:'), 'data url returned for the UI');
-  console.log('  image generated and stored:', img.data.image.storageRef.split('/').pop());
+  // the image route is gone with Gemini. Fetched directly, not through the
+  // post() helper: a deleted route serves Next's HTML 404 page, and post()
+  // always calls r.json(), which throws on that body.
+  const goneRes = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/images`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ day: 3, channel: 'instagram' }),
+  });
+  assert.equal(goneRes.status, 404, 'image generation route removed');
 
-  const badImg = await post(`/api/clients/${clientId}/campaigns/${cid}/images`, { day: 99, channel: 'instagram' });
-  assert.equal(badImg.status, 404, 'unknown post refused');
-
-  // ledger page shows the image call
   const led = await html('/ledger');
   assert.equal(led.status, 200);
   assert.ok(led.body.includes('copywriter'), 'ledger lists agents');
-  assert.ok(led.body.includes('image'), 'ledger lists the image call');
   console.log('  ledger page ok');
 
   const set = await html('/settings');
@@ -144,14 +139,8 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.ok(wb2.body.includes('Assets CSV') && wb2.body.includes('Social CSV'), 'export buttons render');
   console.log('  tracking table and exports ok');
 
-  // stored images reappear after a reload (task 14)
-  const stored = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/images`).then((r) => r.json());
-  assert.ok(stored.images.length >= 1, 'images list persists');
-  // The image controls mount client-side after a /api/health fetch, so they are
-  // not in the server HTML. Assert the payload the client needs instead.
-  assert.ok(wb2.body.includes('image_prompt'), 'visual briefs reach the client for the generate buttons');
-  assert.ok(stored.images[0].storageRef.startsWith('users/'), 'stored image has a streamable ref');
-  console.log('  image state ok |', stored.images.length, 'stored');
+  // visual briefs still reach the page; they are a brief a person can use
+  assert.ok(wb2.body.includes('image_prompt'), 'visual briefs reach the client');
 
   // The clinic renders, and says what it is before asking for anything.
   const clinic = await html('/check');

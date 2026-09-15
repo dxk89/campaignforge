@@ -102,13 +102,13 @@ from the Root Directory; a copy at the repo root is silently ignored. Set
 web/                    The product: Next.js app, auth, Firestore layer, pages
 web/server/db.ts        Typed data layer; in-memory fallback when Firebase is absent
 web/server/inputs.ts    Assembles each agent's inputs from stored artifacts; staleness
-web/app/api/            One route per agent run, clients, sources, images, ledger, export
+web/app/api/            One route per agent run, clients, sources, ledger, export
 legacy/                 The prototype Express app and front end, kept for one release
 lib/app.js              Express routes for the legacy app
 lib/agents/runtime.js   The loop every agent runs on: tools, submit schema, validators as gates, budgets, trace
 lib/agents/orchestrator.js  Runs one agent with its packet and memory, or the default campaign plan
 lib/agents/roster/      One file per agent: role, model, tools, schema, packet, validate
-lib/agents/tools/       What agents can call: validators, compliance scanner, fetch, scan, render, images
+lib/agents/tools/       What agents can call: validators, compliance scanner, fetch, scan, render
 lib/memory/             Client memory interface (exemplars, learnings, corrections, claims); empty until Phase 1
 lib/claude.js           One helper: JSON-only call, fence stripping, usage capture
 lib/limits.js           Character limits, used by the prompts and the validator

@@ -81,7 +81,7 @@ Settings → Environment Variables, all environments, then redeploy.
 | `ADMIN_PASSWORD` | the owner's sign-in password |
 | `SESSION_SECRET` | at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 
-**Optional:** `GEMINI_API_KEY` (images; without it the typographic cards still work), `JINA_API_KEY` (better site scanning, free tier).
+**Optional:** `JINA_API_KEY` (better site scanning, free tier).
 
 `docs/DEPLOY.md` has the full table including what breaks when each is missing.
 

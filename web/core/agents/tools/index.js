@@ -14,7 +14,6 @@ const { extractUrl } = require('../../sources');
 const { scanSite } = require('../../scraper');
 const { trackingPlan } = require('../../utm');
 const { renderGraphic, TEMPLATES } = require('../../graphics');
-const { generateImage, available: imagesAvailable } = require('../../images');
 
 const obj = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: true });
 
@@ -74,17 +73,6 @@ const render_card = {
   run: ({ graphic }, packet) => { const svg = renderGraphic(graphic, packet.brandKit, 0); return { ok: true, chars: svg.length, truncated: svg.includes('…') }; },
 };
 
-const generate_image = {
-  name: 'generate_image',
-  description: 'Generate a picture from a visual brief using the image model, guided by the brand kit. Costs money; only when asked to. Returns a data URL.',
-  input_schema: obj({ prompt: { type: 'string' }, aspect: { type: 'string', enum: ['1:1', '4:5', '16:9'] } }, ['prompt']),
-  run: async ({ prompt, aspect }, packet) => {
-    if (!imagesAvailable()) return { error: 'image generation is not configured' };
-    const r = await generateImage({ prompt, brandKit: packet.brandKit, aspect });
-    return { image: `data:${r.mime};base64,${r.data}`, usage: r.usage };
-  },
-};
-
 const ask_critic = {
   name: 'ask_critic',
   description: 'Ask the editor to review your draft before you submit it. Returns must_fix items you must fix and suggestions you may take or leave. Call this once, on your near-final draft.',
@@ -99,6 +87,6 @@ const ask_critic = {
   },
 };
 
-const TOOLS = { ask_critic, check_limits, check_social_limits, check_compliance, validate_activation, fetch_url, scan_site, utm_plan, render_card, generate_image };
+const TOOLS = { ask_critic, check_limits, check_social_limits, check_compliance, validate_activation, fetch_url, scan_site, utm_plan, render_card };
 
 module.exports = { TOOLS, ...TOOLS };

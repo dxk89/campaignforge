@@ -100,17 +100,6 @@ export type Version = {
   createdAt: string;
 };
 
-export type ImageDoc = {
-  imageId: string;
-  postRef: { day: number; channel: string };
-  prompt: string;
-  storageRef: string;
-  mime: string;
-  status: 'candidate' | 'approved' | 'rejected';
-  note: string | null;
-  createdAt: string;
-};
-
 export type LedgerEntry = {
   entryId: string;
   clientId: string | null;

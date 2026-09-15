@@ -11,7 +11,6 @@ import Ceiling from './ceiling';
 
 const { INTEGRATIONS } = require('@core/integrations');
 
-const images = require('@core/images');
 const { MOCK } = require('@core/claude');
 
 export const dynamic = 'force-dynamic';
@@ -44,7 +43,6 @@ export default async function Settings() {
           <div><dt>Signed in</dt><dd>{session.admin ? 'Admin' : 'Reviewer'}</dd></div>
           <div><dt>Store</dt><dd>{storeEnabled ? 'Firebase' : 'In memory (no FIREBASE_SERVICE_ACCOUNT); nothing survives a restart'}</dd></div>
           <div><dt>Model calls</dt><dd>{MOCK ? 'Mock fixtures (MOCK_CLAUDE=1)' : 'Live'}</dd></div>
-          <div><dt>Images</dt><dd>{images.available() ? 'Available' : 'Off (no GEMINI_API_KEY)'}</dd></div>
         </dl>
         <p className="muted" style={{ marginTop: 8 }}><Link href="/ledger">View the ledger →</Link></p>
       </section>

@@ -65,8 +65,6 @@ The script copies `firestore.rules` into `.rules-build/`, which is gitignored.
 | `ACCESS_PASSWORD` | the password given to reviewers | Only the admin password works |
 | `ADMIN_PASSWORD` | the owner's sign-in password | Owner sign-in is refused |
 | `SESSION_SECRET` | at least 32 characters; generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | The app throws at startup rather than run with a weak or missing secret |
-| `GEMINI_API_KEY` | optional | Image generation is off; cards still work |
-| `GEMINI_IMAGE_MODEL` | optional override | Uses the default |
 | `JINA_API_KEY` | optional | Scanner falls back to plain fetch |
 | `PEXELS_API_KEY` | optional (Phase 3) | Stock photography unavailable |
 | `LANGUAGETOOL_URL` | optional (Phase 2) | Uses the public API's rate limit |
@@ -110,7 +108,6 @@ Set `MOCK_CLAUDE=1` in Vercel and redeploy. The app keeps working and returns fi
 | Signed in but every page is empty | `FIREBASE_SERVICE_ACCOUNT` missing, or you are looking at the wrong workspace |
 | Data vanishes on redeploy | `FIREBASE_SERVICE_ACCOUNT` missing; you are on the in-memory store |
 | Agent runs fail immediately | `ANTHROPIC_API_KEY` missing or invalid |
-| Images unavailable | `GEMINI_API_KEY` not set. Expected; cards still work |
 | A run stops partway | Open the campaign and press **Resume**. Finished passes are saved |
 
 ## 8. Local development

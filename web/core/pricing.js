@@ -12,11 +12,6 @@
  *   Web search : USD 10.00 per 1,000 searches (server tool, billed per search;
  *                the pages it reads are billed as ordinary input tokens)
  *
- * Image generation (optional, needs GEMINI_API_KEY), checked 27 Aug 2026:
- *   gemini-3.1-flash-image at 1K: USD 0.067 per image (1,120 output tokens
- *   at USD 60 per million). Reference images in: about USD 0.001 each,
- *   ignored here as rounding.
- *
  * Prompt caching, checked 31 Aug 2026: a write costs 1.25x the input rate and
  * a read costs 0.1x.
  *
@@ -48,13 +43,6 @@ const USD_TO_EUR = 0.86;
 
 const MODEL = 'claude-sonnet-4-6';
 
-const GEMINI_IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image';
-const USD_PER_IMAGE = 0.067;
-
-function imageCostEur(images) {
-  return images * USD_PER_IMAGE * USD_TO_EUR;
-}
-
 /**
  * Cost in EUR. Returns a number, not a string, so the caller decides on
  * rounding for display.
@@ -83,9 +71,6 @@ module.exports = {
   MODEL,
   MODELS,
   RATES,
-  GEMINI_IMAGE_MODEL,
-  USD_PER_IMAGE,
-  imageCostEur,
   USD_PER_MILLION_INPUT,
   USD_PER_MILLION_OUTPUT,
   USD_PER_WEB_SEARCH,

@@ -9,7 +9,7 @@
  */
 import { randomUUID, createHash } from 'crypto';
 import { db as fsdb, storeEnabled } from './firebase';
-import type { Client, SourceDoc, Campaign, Version, ImageDoc, LedgerEntry, Brief } from './types';
+import type { Client, SourceDoc, Campaign, Version, LedgerEntry, Brief } from './types';
 
 const now = () => new Date().toISOString();
 export const newId = () => randomUUID();
@@ -193,21 +193,6 @@ export async function currentOutputs(ws: string, clientId: string, campaignId: s
   return out;
 }
 
-// ---- images ------------------------------------------------------------------
-
-export async function addImage(ws: string, clientId: string, campaignId: string, img: Omit<ImageDoc, 'imageId' | 'createdAt'>): Promise<ImageDoc> {
-  const imageId = newId();
-  const doc: ImageDoc = { ...img, imageId, createdAt: now() };
-  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images/${imageId}`).set(doc);
-  else memCol(memKey(ws, clientId, campaignId, 'images')).set(imageId, doc);
-  return doc;
-}
-
-export async function listImages(ws: string, clientId: string, campaignId: string): Promise<ImageDoc[]> {
-  if (!storeEnabled) return [...memCol(memKey(ws, clientId, campaignId, 'images')).values()];
-  return (await fsdb().collection(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/images`).get()).docs.map((d) => d.data() as ImageDoc);
-}
-
 // ---- claims ------------------------------------------------------------------
 
 export type Claim = {
@@ -321,7 +306,7 @@ async function touch(ws: string, clientId: string) {
  * Remove a client and everything under it.
  *
  * Everything client-scoped lives under users/<ws>/clients/<id>, campaigns,
- * versions, images, sources, claims, assets, exemplars, results and
+ * versions, sources, claims, assets, exemplars, results and
  * learnings, so one recursive delete reaches all of it.
  *
  * The ledger is deliberately not touched. It records money that was actually
@@ -340,7 +325,7 @@ export async function deleteClient(ws: string, clientId: string): Promise<void> 
   }
 }
 
-/** Remove one campaign and its versions, images, assets and results. */
+/** Remove one campaign and its versions, assets and results. */
 export async function deleteCampaign(ws: string, clientId: string, campaignId: string): Promise<void> {
   if (storeEnabled) {
     await fsdb().recursiveDelete(fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}`));

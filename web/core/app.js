@@ -19,7 +19,6 @@ const research = require('./prompts/research');
 const { extractFile, extractUrl, fromPaste, MAX_UPLOAD_BYTES } = require('./sources');
 const { MOCK } = require('./claude');
 const { scanSite } = require('./scraper');
-const images = require('./images');
 
 const app = express();
 
@@ -40,7 +39,7 @@ const wrap = (fn) => (req, res) =>
     res.status(err.status || 502).json({ error: err.message || 'Request failed', pass: err.pass || null });
   });
 
-app.get('/api/health', (req, res) => res.json({ ok: true, mock: MOCK, images: images.available() }));
+app.get('/api/health', (req, res) => res.json({ ok: true, mock: MOCK }));
 
 // ---- Company voice sources -------------------------------------------------
 
@@ -149,14 +148,6 @@ app.post('/api/pass/localise', wrap(async (req, res) => {
   if (!req.body?.assets) return res.status(400).json({ error: 'assets is required' });
   const r = await orchestrator.runAgent('localiser', { assets: req.body.assets, glossary: req.body.glossary, brief: req.body.brief, context: req.body.context, clientId: req.body.brief?.clientId });
   res.json({ localised: r.output, issues: [...validateAssets(r.output || {}, 'pt'), ...asIssues(r, 'localise', 'pt')], ...meta(r) });
-}));
-
-// ---- Images (on demand, per post) --------------------------------------------
-
-app.post('/api/images/generate', wrap(async (req, res) => {
-  const prompt = String(req.body?.prompt || '').trim();
-  if (!prompt) return res.status(400).json({ error: 'prompt is required' });
-  res.json(await images.generateImage({ prompt, brandKit: req.body.brandKit, aspect: req.body.aspect }));
 }));
 
 // ---- The whole campaign in one request (scripts, curl) -----------------------

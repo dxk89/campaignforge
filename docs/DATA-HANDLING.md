@@ -18,7 +18,7 @@ The server is the only thing that reads or writes Firestore, using credentials t
 
 ## What leaves the system
 
-Generating a campaign sends the brief, the distilled company context and the relevant source text to Anthropic's API, and, when image generation is used, sends the visual brief and any reference artwork to Google's Gemini API. Web research sends search queries to those providers' search tools. API keys are held server-side and never reach the browser.
+Generating a campaign sends the brief, the distilled company context and the relevant source text to Anthropic's API. Web research sends search queries to those providers' search tools. API keys are held server-side and never reach the browser.
 
 No client data is sent anywhere else. There are no other integrations in this version.
 
@@ -36,7 +36,7 @@ The owner, and anyone the owner has given the access password to. They share one
 
 ## Questions this raises for a client, answered plainly
 
-*Is our material used to train models?* Two providers see your material, and each is governed separately. Anthropic's API terms govern the brief, company context and source text sent for campaign generation; they offer terms under which API content is not used for training. Google's Gemini API terms govern the visual brief and reference artwork sent when image generation is used, and those terms are not the same terms; check them separately. Check the terms in force for the accounts this deployment uses before answering a client in writing.
+*Is our material used to train models?* One provider sees your material: Anthropic's API terms govern the brief, company context and source text sent for campaign generation; they offer terms under which API content is not used for training. Check the terms in force for the account this deployment uses before answering a client in writing.
 
 *Can you delete everything?* Yes, per client, and the export lets you verify what existed first.
 
