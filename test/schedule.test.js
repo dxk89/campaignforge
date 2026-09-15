@@ -65,6 +65,22 @@ const cal = (posts) => ({ posts });
   );
   assert.deepEqual(ordered.map((r) => r.text), ['sooner', 'later'], 'sorted by when they go out');
 
+  // Each row carries the post's position in the day-sorted list scheduleRows
+  // iterates, not the final posting order: a caller pairing a row back to
+  // its post (attaching a card, say) needs a key that day+channel cannot
+  // promise is unique. Here "later" (day 3) is the second post in the
+  // day-sorted list, so its index is 1, even though it is the second row
+  // that goes out too; a duplicate day+channel pair below shows the two
+  // stay distinguishable.
+  assert.equal(ordered.find((r) => r.text === 'sooner').index, 0, 'day 1 post is first in day order');
+  assert.equal(ordered.find((r) => r.text === 'later').index, 1, 'day 3 post is second in day order');
+
+  const dupes = scheduleRows(
+    cal([{ day: 5, channel: 'x', text: 'first' }, { day: 5, channel: 'x', text: 'second' }]),
+    { startDate: '2026-09-07' }
+  );
+  assert.deepEqual(dupes.map((r) => r.index), [0, 1], 'two posts sharing a day and channel still get distinct indexes');
+
   // Hootsuite: three columns, no header, date first, and the hashtags are
   // part of the message rather than a column of their own.
   const rows = scheduleRows(

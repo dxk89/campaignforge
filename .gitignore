@@ -8,6 +8,8 @@ web/.next/
 web/node_modules/
 web/.test-build/
 web/.test-inputs.tsconfig.json
+web/.test-nuelink-build/
+web/.test-nuelink.tsconfig.json
 firestore-debug.log
 web/tsconfig.tsbuildinfo
 .vercel

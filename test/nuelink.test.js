@@ -206,4 +206,48 @@ async function routeTests() {
   }
 }
 
-clientTests().then(routeTests).catch((e) => { console.error('nuelink tests FAILED', e); process.exit(1); });
+/**
+ * sentKey: the pure helper that keeps a duplicate day+channel pair from
+ * colliding with itself in the "already sent" set. Compiled on its own,
+ * following the same @core-alias workaround `db.test.js` uses for
+ * inputs.ts: tsc rewrites types but not require paths, so a runtime hook
+ * on Module._resolveFilename is what makes `@core/...` resolve outside
+ * Next's own bundler.
+ */
+async function sentKeyTests() {
+  const path = require('path');
+  const cp = require('child_process');
+  const fs = require('fs');
+  const web = path.join(__dirname, '..', 'web');
+
+  const cfg = path.join(web, '.test-nuelink.tsconfig.json');
+  fs.writeFileSync(cfg, JSON.stringify({
+    compilerOptions: {
+      outDir: '.test-nuelink-build', module: 'commonjs', target: 'es2022',
+      skipLibCheck: true, esModuleInterop: true, moduleResolution: 'node',
+      baseUrl: '.', paths: { '@core/*': ['core/*'] },
+    },
+    files: ['server/nuelink.ts'],
+  }));
+  cp.execSync('npx tsc -p .test-nuelink.tsconfig.json', { cwd: web, stdio: 'pipe' });
+
+  const Module = require('module');
+  const resolve = Module._resolveFilename;
+  Module._resolveFilename = function (request, ...rest) {
+    const req = request.startsWith('@core/') ? path.join(web, 'core', request.slice('@core/'.length)) : request;
+    return resolve.call(this, req, ...rest);
+  };
+
+  const { sentKey } = require(path.join(web, '.test-nuelink-build', 'nuelink.js'));
+
+  const counts = new Map();
+  assert.equal(sentKey(counts, 5, 'x'), '5-x', 'the first post on a pair keeps the plain key');
+  assert.equal(sentKey(counts, 5, 'x'), '5-x#2', 'a second post sharing the pair is numbered');
+  assert.equal(sentKey(counts, 5, 'x'), '5-x#3', 'and a third');
+  assert.equal(sentKey(counts, 6, 'linkedin'), '6-linkedin', 'a different pair is unaffected');
+  assert.equal(sentKey(new Map(), 5, 'x'), '5-x', 'a fresh count map starts the numbering over');
+
+  console.log('sentKey tests: ok');
+}
+
+clientTests().then(sentKeyTests).then(routeTests).catch((e) => { console.error('nuelink tests FAILED', e); process.exit(1); });

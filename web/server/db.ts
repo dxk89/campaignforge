@@ -309,6 +309,29 @@ export async function listNuelinkPushes(ws: string, clientId: string, campaignId
   return docs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+async function getNuelinkPush(ws: string, clientId: string, campaignId: string, pushId: string): Promise<NuelinkPush | null> {
+  if (!storeEnabled) return memCol(memKey(ws, clientId, campaignId, 'nuelink')).get(pushId) ?? null;
+  const d = await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/nuelink/${pushId}`).get();
+  return d.exists ? (d.data() as NuelinkPush) : null;
+}
+
+/**
+ * Merge a patch into a push record already on disk, so the record can be
+ * created before a push starts (with empty results) and kept current as
+ * each post resolves. A process that dies mid-push, which a Hobby function
+ * timeout makes possible, then leaves a record of exactly how far it got,
+ * rather than nothing at all, and the next push does not re-send what the
+ * dead run had already posted.
+ */
+export async function updateNuelinkPush(ws: string, clientId: string, campaignId: string, pushId: string, patch: Partial<NuelinkPush>): Promise<NuelinkPush | null> {
+  const existing = await getNuelinkPush(ws, clientId, campaignId, pushId);
+  if (!existing) return null;
+  const merged = { ...existing, ...patch, pushId } as NuelinkPush;
+  if (storeEnabled) await fsdb().doc(`${root(ws)}/clients/${clientId}/campaigns/${campaignId}/nuelink/${pushId}`).set(merged);
+  else memCol(memKey(ws, clientId, campaignId, 'nuelink')).set(pushId, merged);
+  return merged;
+}
+
 // ---- helpers -----------------------------------------------------------------
 
 async function touch(ws: string, clientId: string) {

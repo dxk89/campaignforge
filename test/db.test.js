@@ -106,6 +106,24 @@ const storage = require('../web/.test-build/storage.js');
   assert.equal(pushes.length, 1);
   assert.equal(pushes[0].results[0].nuelinkPostId, 'p1');
 
+  // A push record is created before its loop runs, empty, then rewritten as
+  // rows resolve, so a process that dies mid-push still leaves a record of
+  // how far it got. updateNuelinkPush is the merge that makes that possible.
+  const updated = await db.updateNuelinkPush(ws, client.clientId, campaign.campaignId, push.pushId, {
+    results: [
+      { day: 1, channel: 'linkedin', scheduledAt: null, status: 'posted', nuelinkPostId: 'p1', mediaId: null, error: null },
+      { day: 2, channel: 'x', scheduledAt: null, status: 'posted', nuelinkPostId: 'p2', mediaId: null, error: null },
+    ],
+  });
+  assert.equal(updated.pushId, push.pushId, 'the same push is updated, not a new one');
+  assert.equal(updated.results.length, 2, 'the merged patch is reflected');
+  assert.equal(updated.startDate, '2026-09-07', 'fields not in the patch survive the merge');
+  const reread = await db.listNuelinkPushes(ws, client.clientId, campaign.campaignId);
+  assert.equal(reread.length, 1, 'still one push document, updated in place');
+  assert.equal(reread[0].results.length, 2, 'the read-back copy is the updated one');
+  const missing = await db.updateNuelinkPush(ws, client.clientId, campaign.campaignId, 'no-such-push', { results: [] });
+  assert.equal(missing, null, 'updating a push that does not exist returns null rather than creating one');
+
   // deletion
   await db.deleteSource(ws, client.clientId, full[0].sourceId);
   assert.equal((await db.listSources(ws, client.clientId)).length, 0);

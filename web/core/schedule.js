@@ -51,7 +51,8 @@ function parseDay(value) {
  *   the following Monday. On by default because a B2B post on a Saturday is
  *   spend without an audience; set false to keep the plan's days exactly.
  * @returns {Array<{ when: Date, day: number, channel: string, pillar: string,
- *   text: string, hashtags: string[], cta: string, link: string, moved: boolean }>}
+ *   text: string, hashtags: string[], cta: string, link: string, moved: boolean,
+ *   index: number }>}
  */
 function scheduleRows(social, opts = {}) {
   const start = parseDay(opts.startDate);
@@ -63,7 +64,11 @@ function scheduleRows(social, opts = {}) {
   const taken = new Set();
   const rows = [];
 
-  for (const p of posts) {
+  // `index` is the post's position in this day-sorted list, not the day or
+  // channel. day+channel is how a person names a post, but the schema does
+  // not promise it is unique, and a caller pairing a row back to its post
+  // (attaching a card, say) needs a key that cannot collide.
+  for (const [index, p] of posts.entries()) {
     const when = new Date(start);
     when.setDate(start.getDate() + (Math.max(1, p.day || 1) - 1));
 
@@ -96,6 +101,7 @@ function scheduleRows(social, opts = {}) {
       cta: p.cta || '',
       link: p.link || opts.link || '',
       moved,
+      index,
     });
   }
 
