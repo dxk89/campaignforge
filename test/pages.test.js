@@ -92,6 +92,7 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   assert.equal(set.status, 200);
   assert.ok(set.body.includes('Data handling'), 'settings shows the data-handling statement');
   assert.ok(set.body.includes('In memory'), 'settings is honest about the store');
+  assert.ok(set.body.includes('Local, no sign-in'), 'settings says it is the local run (MOCK_AUTH=1 in tests)');
   // The demo-accounts panel went with the account system. What Settings must
   // still show an admin is the thing only an admin may change.
   assert.ok(set.body.includes('Monthly ceiling'), 'settings shows the spend ceiling to an admin');

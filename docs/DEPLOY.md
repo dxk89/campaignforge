@@ -115,7 +115,8 @@ Set `MOCK_CLAUDE=1` in Vercel and redeploy. The app keeps working and returns fi
 ```bash
 npm install && cd web && npm install && cd ..
 MOCK_CLAUDE=1 MOCK_AUTH=1 npm run web     # no keys, no accounts, in-memory
+npm run local                              # you, no sign-in, real keys from web/.env
 npm test                                   # six suites
 ```
 
-To develop against real Firebase locally, put the same variables in `web/.env.local`.
+To develop against real Firebase locally, put the same variables in `web/.env` and use `npm run local`.

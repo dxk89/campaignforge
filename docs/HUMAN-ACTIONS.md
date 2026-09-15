@@ -102,6 +102,24 @@ In this order. Each step depends on the one before.
 
 ---
 
+## 4b. Running it on your own machine (5 minutes)
+
+The same app, without sign-in, against the same Firestore and R2.
+
+1. Copy `.env.example` to `web/.env`.
+2. From the Vercel project's Environment Variables, copy `ANTHROPIC_API_KEY`,
+   `FIREBASE_SERVICE_ACCOUNT`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+   `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` into `web/.env`. Add
+   `NUELINK_API_KEY` from Nuelink → Settings → API.
+3. `npm install && cd web && npm install && cd ..` once.
+4. `npm run local` and open http://localhost:3000.
+
+Leave the passwords and `SESSION_SECRET` out: `npm run local` sets
+`MOCK_AUTH=1`, so every request is you. Do not expose this port to the
+internet.
+
+---
+
 ## 5. Run the emulator test once (10 minutes, needs Java)
 
 Every automated test runs against the in-memory store. The Firestore path, the one production uses, has never actually executed. I could not run it here: the emulator downloads its JAR from `storage.googleapis.com`, which my sandbox blocks.

@@ -40,7 +40,7 @@ export default async function Settings() {
       <section className="block">
         <h2 className="block-title">Status</h2>
         <dl className="kv">
-          <div><dt>Signed in</dt><dd>{session.admin ? 'Admin' : 'Reviewer'}</dd></div>
+          <div><dt>Mode</dt><dd>{process.env.MOCK_AUTH === '1' ? 'Local, no sign-in (MOCK_AUTH=1)' : `Hosted, signed in as ${session.admin ? 'admin' : 'reviewer'}`}</dd></div>
           <div><dt>Store</dt><dd>{storeEnabled ? 'Firebase' : 'In memory (no FIREBASE_SERVICE_ACCOUNT); nothing survives a restart'}</dd></div>
           <div><dt>Model calls</dt><dd>{MOCK ? 'Mock fixtures (MOCK_CLAUDE=1)' : 'Live'}</dd></div>
         </dl>

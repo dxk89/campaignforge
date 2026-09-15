@@ -47,6 +47,7 @@ npm install                 # shared lib/ and the legacy app
 cd web && npm install && cd ..
 cp .env.example .env        # ANTHROPIC_API_KEY; everything else is optional
 npm run web                 # http://localhost:3000
+npm run local               # you, no sign-in, real keys from web/.env
 ```
 
 No key, no Firebase project, no accounts:

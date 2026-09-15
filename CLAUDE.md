@@ -32,6 +32,7 @@ cd web && npm install && cd ..       # the product; this is where the real deps 
 
 npm run web                          # Next dev server on web/ (http://localhost:3000)
 MOCK_CLAUDE=1 MOCK_AUTH=1 npm run web    # the whole product on fixtures, no key, no Firebase
+npm run local                        # you, no sign-in, real keys from web/.env
 
 npm run web:build                    # Next production build; this typechecks
 npm run legacy                       # the retired Express prototype in legacy/
