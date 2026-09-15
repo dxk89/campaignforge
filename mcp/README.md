@@ -1,16 +1,29 @@
 # Campaign Forge MCP server
 
-Campaign Forge's copy checks, available inside Claude Desktop, Claude Code, or
-any other MCP client. Ask it to check a line while you are writing, without
-opening the app.
+Campaign Forge's tools, available inside Claude Desktop, Claude Code, or any
+other MCP client. There are two kinds: the offline checks, which are pure
+functions and need nothing running, and the app tools, which drive a running
+Campaign Forge over HTTP.
 
-Two tools:
+## The offline checks
 
 - **`check_copy`** — platform character limits, house style, the client's
   rules where they apply, and the AI-tell catalogue. Reports only; it never
   rewrites.
 - **`scan_site`** — reads a company website and returns its brand kit:
   palette, fonts, logo, and which pages were read.
+
+## The app tools
+
+- **`list_clients`** — the clients in the running app, with their ids.
+- **`create_client`** — from a website URL (scans it) or a name alone.
+- **`list_campaigns`** — a client's campaigns, with ids and status.
+- **`create_campaign`** — from a brief.
+- **`run_agent`** — run one agent pass on a campaign and wait for it.
+- **`get_output`** — one agent's current output on a campaign, as JSON text.
+- **`nuelink_setup`** — list Nuelink brands and a client's mapping, or save one.
+- **`push_to_nuelink`** — send a campaign's social calendar to Nuelink.
+- **`cost`** — what a campaign has cost so far, from the ledger.
 
 ## Where your text goes
 
@@ -113,12 +126,22 @@ Checked without a client, so avoid terms, approved claims and brand spelling wer
 }
 ```
 
-## What it does not do
+## The app tools
 
-It cannot reach your campaigns, your clients or your ledger. Those need a
-session and live in the deployed app. This server exposes the parts that are
-pure functions, which is deliberate: it is the half that is useful offline and
-carries no access to anything.
+`list_clients`, `create_client`, `list_campaigns`, `create_campaign`,
+`run_agent`, `get_output`, `nuelink_setup`, `push_to_nuelink` and `cost`
+talk to Campaign Forge over HTTP at `CF_URL` (default
+`http://localhost:3000`). Start the app first with `npm run local`; without
+it every one of them answers with that instruction. They send no cookie, so
+they cannot reach the hosted deployment, which is deliberate.
+
+Claude Code picks the server up from `.mcp.json` at the repository root
+when you open the folder. Run `cd mcp && npm install` once for the SDK.
+
+A session looks like: "scan acme.com and make a client", "create a campaign
+for their new product with this brief", "run the passes in order and tell me
+the flags", "map the client to the IntelliNews brand with these collections",
+"send the month to Nuelink as drafts from 7 September".
 
 The full rule catalogue, and what to do about each flag, is in
 [`docs/COPY-CHECKS.md`](../docs/COPY-CHECKS.md).

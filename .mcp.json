@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "campaign-forge": {
+      "command": "node",
+      "args": ["mcp/server.js"],
+      "env": { "CF_URL": "http://localhost:3000" }
+    }
+  }
+}
