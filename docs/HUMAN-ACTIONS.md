@@ -109,7 +109,8 @@ The same app, without sign-in, against the same Firestore and R2.
 1. Copy `.env.example` to `web/.env`.
 2. From the Vercel project's Environment Variables, copy `ANTHROPIC_API_KEY`,
    `FIREBASE_SERVICE_ACCOUNT`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-   `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` into `web/.env`. Add
+   `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` into `web/.env`. Nuelink is the
+   social-post scheduler the Social tab sends the calendar to; add
    `NUELINK_API_KEY` from Nuelink → Settings → API.
 3. `npm install && cd web && npm install && cd ..` once.
 4. `npm run local` and open http://localhost:3000.
@@ -117,6 +118,24 @@ The same app, without sign-in, against the same Firestore and R2.
 Leave the passwords and `SESSION_SECRET` out: `npm run local` sets
 `MOCK_AUTH=1`, so every request is you. Do not expose this port to the
 internet.
+
+---
+
+## 4c. Nuelink collections (5 minutes, once per client)
+
+Nuelink sends a post to every channel in its collection, and Campaign
+Forge writes different copy for LinkedIn, X and Instagram. So each channel
+needs a collection that holds only it:
+
+1. In Nuelink, open the brand, then Collections, then New collection.
+2. Make three: "Forge LinkedIn" with only the LinkedIn channel, "Forge X"
+   with only X, "Forge Instagram" with only Instagram.
+3. In Campaign Forge, open the client, find the Nuelink section, choose the
+   brand, then pick the matching collection for each channel. A warning
+   appears if a chosen collection carries other channels.
+
+The existing "Global Queue" and RSS collections fan out to everything; do
+not map them.
 
 ---
 

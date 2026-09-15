@@ -62,6 +62,15 @@ without holding the password.
 5. **`docs/superpowers/specs/2026-08-31-copy-checks-design.md`** has a
    Project 2 for platform execution that was deliberately not started.
 
+**Updated 15 September 2026.** Gemini image generation was removed: the
+image pipeline is on-demand typographic cards rendered in code, and nothing
+here calls a second model provider. In its place, campaigns now push their
+social calendar straight to Nuelink, and the app is drivable from Claude
+Code through the MCP server's app tools (`list_clients`, `create_client`,
+`run_agent`, `push_to_nuelink` and the rest). `npm run local` is the owner's
+way of running the product day to day: no sign-in, real keys from
+`web/.env`, the same Firestore and R2 as production.
+
 **Two things only the owner can do:** flip `ADMIN_PASSWORD` and
 `R2_SECRET_ACCESS_KEY` to Sensitive in Vercel, where they are currently
 readable from the dashboard; and start the LinkedIn API review if that route
@@ -250,7 +259,7 @@ Written down because each one cost time to discover.
 Ask the owner rather than choosing:
 
 - Anything that would store or transmit client data differently from `docs/DATA-HANDLING.md`.
-- Adding a second model provider, a queue, multi-user support, or platform publishing integrations. All are deliberately deferred and named in the specs.
+- Adding a second model provider, a queue, multi-user support, or a second publishing integration (Nuelink is in). All are deliberately deferred and named in the specs.
 - Changing a phase's contracts. Contracts are fixed within a phase; adapt to what shipped, do not redesign.
 - Deleting `legacy/` before task 20 says so.
 - Loosening any gate, validator or compliance rule to make an agent's output pass.

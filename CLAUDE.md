@@ -57,8 +57,8 @@ npm run gate                         # compare the last two real runs, fail on r
    That is the guard doing its job, not a bug. On Vercel the key is set as an
    environment variable so the build passes there.
 
-2. **Five of the nine test suites need a built `web/.next` first.** `api`,
-   `pages`, `phase2`, `phase3` and `phase4` each spawn `next start`, which
+2. **Several test suites need a built `web/.next` first.** `api`, `pages`,
+   `phase2`, `phase3`, `phase4` and `mcp` each spawn `next start`, which
    refuses to run without a production build. `npm test` does not build for
    you. Run `MOCK_CLAUDE=1 npm run web:build` before `npm test` on a fresh
    clone or after changing anything under `web/`.
@@ -133,6 +133,7 @@ web/                         The product. Next.js 16, App Router
     claude.js                the SDK client; throws at load if no key and no MOCK_CLAUDE
     pricing.js limits.js utm.js graphics.js scraper.js images.js sources.js
     brief.js verdicts.js mock.js
+    nuelink.js                the Nuelink public API client
     check.js                 checkCopy(text, opts): every deterministic verdict over
                              one string. Backs the clinic, /api/check and the MCP server
   server/db.ts               typed data layer, Firestore or in-memory
@@ -141,12 +142,15 @@ web/                         The product. Next.js 16, App Router
                              the owner's, ACCESS_PASSWORD is the reviewer's, and both
                              share one workspace. Only admin may change the ceiling
   server/spend.ts            the monthly ceiling; refuses a run before it spends
+  server/nuelink.ts          pushCampaign, alreadySent, sentKey
+  server/cards.ts            renderCardPng via @resvg/resvg-js
   server/telemetry.ts assets.ts exemplars.ts results.ts resultsStore.ts storage.ts
-  app/api/                   29 routes: agent runs, clients, campaigns, sources, claims,
+  app/api/                   32 routes: agent runs, clients, campaigns, sources, claims,
                              learnings, results, images, package, regenerate, audit,
-                             ledger, prompts, settings, telemetry, export, files, health
+                             ledger, prompts, settings, telemetry, export, files, health,
+                             nuelink
   app/clients/               library and workbench pages
-  components/                panels, counters, tabs, editors
+  components/                panels, counters, tabs, editors, NuelinkCard, NuelinkPush
   types/archiver.d.ts        local declaration; do not install @types/archiver
 
 mcp/                         a local stdio MCP server exposing the copy checks and the
@@ -159,9 +163,10 @@ legacy/                      the prototype Express app and vanilla front end. St
                              kept because it exercises the runtime through a second client
 knowledge/                   per-agent expertise packs and worked examples. 47 files
 evals/                       golden briefs, scorers, merge gate. See evals/README.md
-test/                        nine suites plus fixture-site/
+test/                        nineteen suites plus fixture-site/
 scripts/deploy-rules.js      copies firestore.rules into .rules-build/ for deploy
 docs/build/                  phase specs
+docs/superpowers/            specs and plans for work in progress
 ```
 
 **Roster today** (12 agents, `web/core/agents/roster/index.js`): brief-reader
@@ -211,10 +216,15 @@ not the same as the agent existing.
 | `phase4.test.js` | Cost ceiling, telemetry, audit mode, prompts API |
 | `pages.test.js` | Pages render populated data server-side; image round trip; ledger and settings. Catches the port bugs typechecking misses |
 | `frontend.test.js` | The legacy front end, driving the runtime through a different client. Must end with `JS errors: []`. Delete with `legacy/` when task 20 says so |
+| `nuelink.test.js` | The client against a fake Nuelink, then the push route end to end |
 
-Nine files, eleven named suites: `runtime.test.js` reports `critic` and
-`runtime` separately, and `db.test.js` reports `memory` and `db`. Both counts
-appear in older notes and both are right.
+`npm test` runs nineteen files (`package.json`'s `test` script is the source
+of truth for the order); this table names the original nine plus `nuelink`.
+`runtime.test.js` reports `critic` and `runtime` separately, and `db.test.js`
+reports `memory` and `db`, so file counts and suite counts never match; both
+appear in older notes and both are right. `mcp.test.js` now starts a built
+Next server and the fixture site (it used to assert schemas only), so it
+needs `web/.next` too, the same as the five suites above.
 
 The five server-backed suites start Next through
 `test/helpers/next-server.js`, which spawns the CLI's JS entry point with this
@@ -323,6 +333,14 @@ Each of these cost someone time to discover.
   Claude 5 family now exists. Changing them is a pricing and quality decision
   for the owner, not a maintenance edit. Invariant 6 applies: any new rate
   carries the date it was checked.
+- **A Nuelink post goes to every channel in its collection.** There is no
+  per-post channel choice in the API. The mapping is one collection per
+  channel, and the client page warns when a chosen collection carries
+  others. The owner has to create those collections in Nuelink by hand.
+- **`brief-reader` is not runnable through `run/[agent]`.** It is only used
+  by the brief-upload route, which calls it directly rather than through the
+  generic agent-run path the rest of the roster uses. This cost a task to
+  discover.
 
 ## Do not
 
@@ -334,9 +352,10 @@ Each of these cost someone time to discover.
   pass.
 - Do not delete `legacy/` before task 20 says so.
 - Do not convert `web/core/` to TypeScript or ESM.
-- Do not add a second model provider, a queue, multi-user support, or platform
-  publishing integrations. All are deliberately deferred; see `HANDOVER.md` §8
-  for the full list of what is the owner's call rather than yours.
+- Do not add a second model provider, a queue, multi-user support, or a second
+  publishing integration. Nuelink is the one scheduler, chosen by the owner;
+  ad platforms remain deferred. See `HANDOVER.md` §8 for the full list of
+  what is the owner's call rather than yours.
 
 ## Deploying
 

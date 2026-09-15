@@ -794,7 +794,7 @@ function renderSocial(cal) {
   const pending = cal.posts.filter((p) => p.graphic?.image_prompt && !p.graphic.image).length;
   const bar = imagesAvailable
     ? `<div class="social-bar"><span>${pending} post${pending === 1 ? '' : 's'} with a visual brief and no image yet.</span>${pending ? `<button type="button" class="btn-secondary" id="gen-all">Generate all ${pending} images (≈ €${(pending * 0.058).toFixed(2)})</button>` : ''}</div>`
-    : `<div class="social-bar"><span>Image generation is off: add GEMINI_API_KEY to the server to turn the visual briefs below into pictures. The typographic cards work without it.</span></div>`;
+    : `<div class="social-bar"><span>Photo generation is off. The typographic cards below still render.</span></div>`;
   return bar + `<div class="pillars">${(cal.pillars || []).map((pl) => `<div><b>${esc(pl.name)}</b>${esc(pl.theme)}</div>`).join('')}</div>
     ${weeks.map((w, i) => w.length ? `<div class="week"><h3>Week ${i + 1} · ${w.length} posts</h3>${w.map(post).join('')}</div>` : '').join('')}`;
 }

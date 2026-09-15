@@ -20,7 +20,9 @@ The server is the only thing that reads or writes Firestore, using credentials t
 
 Generating a campaign sends the brief, the distilled company context and the relevant source text to Anthropic's API. Web research sends search queries to those providers' search tools. API keys are held server-side and never reach the browser.
 
-No client data is sent anywhere else. There are no other integrations in this version.
+Sending a calendar to Nuelink sends, per post, the caption, the landing link and a PNG of the typographic card, which carries the client's colours, name and logo. Nothing else about the client goes: not the brief, not the sources, not the research. Nuelink's own terms govern what happens to a post after that, and the account is the owner's.
+
+No client data is sent anywhere else.
 
 ## Retention
 

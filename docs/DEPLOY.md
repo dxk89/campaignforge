@@ -68,6 +68,7 @@ The script copies `firestore.rules` into `.rules-build/`, which is gitignored.
 | `JINA_API_KEY` | optional | Scanner falls back to plain fetch |
 | `PEXELS_API_KEY` | optional (Phase 3) | Stock photography unavailable |
 | `LANGUAGETOOL_URL` | optional (Phase 2) | Uses the public API's rate limit |
+| `NUELINK_API_KEY` | optional | The Social tab cannot send to Nuelink; CSV exports still work |
 | `MOCK_CLAUDE` | leave unset | `1` returns fixtures and spends nothing |
 
 4. Deploy.

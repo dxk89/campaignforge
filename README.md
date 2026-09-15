@@ -23,6 +23,7 @@ Built as a portfolio piece by a marketer who ships production apps with AI assis
 4. **Check.** Every character limit is stated in the prompt and then validated in code. Breaches are flagged in the interface, not silently accepted.
 5. **Economics.** Tokens in and out per pass, web searches, cost in EUR at dated rates, generation time.
 6. **Export.** Copy any asset. Export everything as JSON, or as CSV with one row per field.
+7. **Schedule.** Send the month's social calendar to Nuelink, per channel, with the typographic card rendered and attached to each post.
 
 ## Checking copy the tool did not write
 
@@ -95,7 +96,7 @@ takes two to four minutes. It lives inside `web/` because Vercel reads it
 from the Root Directory; a copy at the repo root is silently ignored. Set
 `MOCK_CLAUDE=1` as an environment variable to demo without spend.
 
-**Render.** `render.yaml` describes one free-tier web service. Connect the repo, deploy, then add `ANTHROPIC_API_KEY` in the dashboard. Health check is `/api/health`.
+There is no other hosting target. `render.yaml` was deleted when the app moved off Render; Vercel is the only deployment this repository supports.
 
 ## Layout
 
@@ -145,4 +146,4 @@ An agency or a fractional marketer has never met the client's buyer and does not
 
 ## Not included
 
-Live posting to ad platforms or social schedulers, CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI, headless-browser scraping, image editing after generation. See `ARCHITECTURE.md` for how each would be added.
+Live posting to ad platforms (Nuelink handles the social calendar), CRM sync, history, accounts, prompt caching, streaming, retrying a single failed pass from the UI, headless-browser scraping, image editing after generation. See `ARCHITECTURE.md` for how each would be added.
