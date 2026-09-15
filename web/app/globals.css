@@ -442,6 +442,11 @@ input[type="file"] { font-size: 12.5px; color: var(--muted); max-width: 100%; }
 .post-foot { display: flex; align-items: center; gap: 10px; margin-top: 9px; flex-wrap: wrap; }
 .week { font-family: var(--display); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 16px 0 8px; }
 .social-bar, .results-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.nuelink-push { flex-wrap: wrap; gap: 10px; }
+.nuelink-results { width: 100%; font-size: 13px; margin-top: 8px; border-collapse: collapse; }
+.nuelink-results td, .nuelink-results th { padding: 4px 8px; border-bottom: 1px solid var(--line, #e5e7eb); text-align: left; }
+.nuelink-results tr.failed td { color: #9e1d0a; }
+.nuelink-results tr.skipped td { color: #5b6470; }
 
 /* ---------- Results and misc panels ---------- */
 .results-panel, .brief-panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }

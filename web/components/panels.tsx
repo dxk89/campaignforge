@@ -5,6 +5,7 @@ import { Card, Line, CopyButton, LIMITS } from './Counter';
 import { fmtInt, wordCount } from './format';
 import { download } from './exports';
 import FlowDiagram from './FlowDiagram';
+import { NuelinkPush } from './NuelinkPush';
 
 const { lifecycleToMermaid } = require('@core/flow');
 const { entriesOf } = require('@core/lifecycle');
@@ -203,6 +204,7 @@ export function SocialPanel({ social, clientId, campaignId, logoRef, landingUrl 
         >Schedule CSV</a>
         <span className="muted">Weekend posts move to the Monday after.</span>
       </div>
+      {clientId && campaignId ? <NuelinkPush clientId={clientId} campaignId={campaignId} posts={social.posts} start={start} /> : null}
       <div className="pillars">
         {(social.pillars || []).map((pl: any, i: number) => <div key={i}><b>{pl.name}</b>{pl.theme}</div>)}
       </div>

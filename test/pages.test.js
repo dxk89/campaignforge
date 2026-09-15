@@ -143,6 +143,17 @@ const html = async (p) => { const r = await fetch(base + p); return { status: r.
   // visual briefs still reach the page; they are a brief a person can use
   assert.ok(wb2.body.includes('image_prompt'), 'visual briefs reach the client');
 
+  // Nuelink: the Social tab is client-rendered and not the workbench's
+  // default tab, so its "Send to Nuelink" heading does not reach this
+  // server-rendered HTML (unlike "Hootsuite CSV", also inside that tab,
+  // which is absent from wb2.body for the same reason). Assert the API
+  // instead, and that the client page carries the mapping section.
+  const hist = await fetch(`${base}/api/clients/${clientId}/campaigns/${cid}/schedule/nuelink`).then((r) => r.json());
+  assert.deepEqual(hist, { pushes: [], sent: [] }, 'no pushes yet');
+  const nlLib = await html(`/clients/${clientId}`);
+  assert.ok(nlLib.body.includes('Nuelink'), 'the client page has the Nuelink mapping section');
+  console.log('  nuelink: ok');
+
   // The clinic renders, and says what it is before asking for anything.
   const clinic = await html('/check');
   assert.equal(clinic.status, 200, 'the clinic page renders');

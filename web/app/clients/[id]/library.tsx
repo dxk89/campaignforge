@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Claims from './claims';
+import { NuelinkCard } from '@/components/NuelinkCard';
 
 type Props = { client: any; sources: any[]; campaigns: any[]; admin?: boolean };
 
@@ -347,6 +348,11 @@ export default function Library({ client, sources, campaigns, admin }: Props) {
       </section>
 
       <Claims clientId={client.clientId} />
+
+      <section className="block">
+        <h2 className="block-title">Nuelink <span className="block-hint">where each channel's posts are sent</span></h2>
+        <NuelinkCard clientId={client.clientId} initial={client.nuelink} />
+      </section>
 
       <section className="block">
         <h2 className="block-title">Campaigns</h2>
